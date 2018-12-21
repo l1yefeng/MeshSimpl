@@ -1,6 +1,11 @@
 #ifndef MESH_SIMPL_LIBRARY_H
 #define MESH_SIMPL_LIBRARY_H
 
+namespace MeshSimpl
+{
+
 void hello();
+
+}
 
 #endif
