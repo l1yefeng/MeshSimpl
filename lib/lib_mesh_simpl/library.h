@@ -83,8 +83,10 @@ std::pair<std::vector<Edge>, std::vector<vec3u>>
 edge_topology(const std::vector<std::vector<idx>>& indices, const size_t vertex_cnt)
 {
     const auto edge_cmp = [](const Edge& a, const Edge& b)->bool {
-        if (a.vertices[0] < b.vertices[0]) { return true; }
-        if (a.vertices[0] > b.vertices[0]) { return false; }
+        if (a.vertices[0] < b.vertices[0])
+            return true;
+        if (a.vertices[0] > b.vertices[0])
+            return false;
         return a.vertices[1] < b.vertices[1];
     };
     std::set<Edge, decltype(edge_cmp)> edge_set(edge_cmp);
@@ -197,6 +199,52 @@ void update_edge(Edge& edge, const Quadric& q0, const Quadric& q1, const idx v0,
     update_edge(edge, q0, q1);
 }
 
+void compact_data(std::vector<std::vector<double>>& vertices,
+                  std::vector<std::vector<idx>>& indices,
+                  const std::vector<bool>& vertex_deleted,
+                  const std::vector<bool>& face_deleted)
+{
+    std::vector<std::array<std::vector<idx>, 3>> vertex2face(vertices.size());
+
+    // get rid of all deleted faces
+    size_t i = 0, j = indices.size()-1;
+    while (true) {
+        while (!face_deleted[i] && i <= j)
+            ++i;
+        while (face_deleted[j] && i < j)
+            --j;
+        if (i >= j)
+            break;
+        std::swap(indices[i++], indices[j--]);
+    }
+    indices.resize(i);
+
+    // create mapping from v to f
+    for (i = 0; i < vertices.size(); ++i)
+        for (j = 0; j < 3; ++j)
+            vertex2face[indices[i][j]][j].push_back(static_cast<idx>(i));
+
+    // get rid of deleted vertices and keep the mapping valid
+    i = 0, j = vertices.size()-1;
+    while (true) {
+        while (!vertex_deleted[i] && i <= j)
+            ++i;
+        while (vertex_deleted[j] && i < j)
+            --j;
+        if (i >= j)
+            break;
+        std::swap(vertices[i], vertices[j]);
+        std::swap(vertex2face[i], vertex2face[j]);
+    }
+    vertices.resize(i);
+    vertex2face.resize(i);
+
+    for (i = 0; i < vertex2face.size(); ++i)
+        for (j = 0; j < 3; ++j)
+            for (const idx f : vertex2face[i][j])
+                indices[f][j] = static_cast<idx>(i);
+}
+
 } // namespace MeshSimpl::Internal
 
 // Mesh simplification main method. Simplify given mesh until remaining number of vertices/faces
@@ -206,7 +254,7 @@ void simplify(const std::vector<std::vector<double>>& vertices,
               const std::vector<std::vector<idx>>& indices,
               float strength)
 {
-    const auto out_nv = static_cast<idx>((1-strength)*vertices.size());
+    const auto out_nv = static_cast<size_t>((1-strength)*vertices.size());
     auto out_vertices = vertices;
     auto out_indices = indices;
 
@@ -340,6 +388,9 @@ void simplify(const std::vector<std::vector<double>>& vertices,
 
         --nv;
     }
+
+    // edges are pointless from this point on, but need to fix vertices and indices
+    Internal::compact_data(out_vertices, out_indices, vertex_deleted, face_deleted);
 }
 
 } // namespace MeshSimpl
