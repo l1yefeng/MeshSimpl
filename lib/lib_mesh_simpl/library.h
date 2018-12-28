@@ -9,7 +9,6 @@
 #include <queue>
 #include <cmath>
 #include <algorithm>
-#include <functional>
 
 namespace MeshSimpl
 {

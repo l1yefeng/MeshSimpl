@@ -7,7 +7,6 @@
 
 #include <array>
 #include <vector>
-#include <algorithm>
 
 namespace MeshSimpl
 {
