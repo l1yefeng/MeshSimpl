@@ -14,6 +14,8 @@ namespace MeshSimpl
 typedef unsigned int idx;
 typedef std::array<double, 3> vec3d;
 typedef std::array<unsigned int, 3> vec3u;
+typedef std::vector<std::vector<double>> V;
+typedef std::vector<std::vector<unsigned int>> F;
 
 double dot(const vec3d& a, const vec3d& b) { return a[0]*b[0]+a[1]*b[1]+a[2]*b[2]; }
 double dot(const vec3d& b, const std::vector<double>& a) { return a[0]*b[0]+a[1]*b[1]+a[2]*b[2]; }
@@ -26,19 +28,6 @@ typedef std::array<double, 10> Quadric;
 
 // A convenient method converting std::vector to std::array (double * 3)
 vec3d vec2arr(const std::vector<double>& v) { return {v[0], v[1], v[2]}; }
-
-Quadric& operator+=(Quadric& lfs, const Quadric& rhs)
-{
-    for (unsigned int i = 0; i < rhs.size(); ++i)
-        lfs[i] += rhs[i];
-    return lfs;
-}
-
-Quadric operator+(const Quadric& a, const Quadric& b)
-{
-    Quadric q(a);
-    return q += b;
-}
 
 // Compute the optimal position: v = -inv(A)*b
 vec3d optimal_v_pos(const Quadric& q)
@@ -79,5 +68,20 @@ double q_error(const Quadric& q, const vec3d& v, bool optimal)
 } // namespace MeshSimpl::Internal
 
 } // namespace MeshSimpl
+
+MeshSimpl::Internal::Quadric&
+operator+=(MeshSimpl::Internal::Quadric& lfs, const MeshSimpl::Internal::Quadric& rhs)
+{
+    for (unsigned int i = 0; i < rhs.size(); ++i)
+        lfs[i] += rhs[i];
+    return lfs;
+}
+
+MeshSimpl::Internal::Quadric
+operator+(const MeshSimpl::Internal::Quadric& a, const MeshSimpl::Internal::Quadric& b)
+{
+    MeshSimpl::Internal::Quadric q(a);
+    return q += b;
+}
 
 #endif // MESH_SIMPL_UTIL_H

@@ -33,9 +33,7 @@ struct Edge
 
 // Compute quadrics Q for every vertex. If not weighted by area then it's uniform
 std::vector<Quadric>
-compute_quadrics(const std::vector<std::vector<double>>& vertices,
-                 const std::vector<std::vector<idx>>& indices,
-                 const bool weight_by_area = true)
+compute_quadrics(const V& vertices, const F& indices, const bool weight_by_area = true)
 {
     // quadrics are initialized with all zeros
     std::vector<Quadric> quadrics(vertices.size());
@@ -80,7 +78,7 @@ compute_quadrics(const std::vector<std::vector<double>>& vertices,
 // Returns face2edge and edges. face2edge is NFx3 with each value indexing a unique edge in edges.
 // This method does not initialize members optimal_pos and error in struct Edge.
 std::pair<std::vector<Edge>, std::vector<vec3u>>
-edge_topology(const std::vector<std::vector<idx>>& indices, const size_t vertex_cnt)
+edge_topology(const F& indices, const size_t vertex_cnt)
 {
     const auto edge_cmp = [](const Edge& a, const Edge& b)->bool {
         if (a.vertices[0] < b.vertices[0])
@@ -143,7 +141,7 @@ edge_topology(const std::vector<std::vector<idx>>& indices, const size_t vertex_
 }
 
 // Compute quadric error for every edge at initialization.
-void init_edge_errors(const std::vector<std::vector<double>>& vertices,
+void init_edge_errors(const V& vertices,
                       const std::vector<Quadric>& quadrics,
                       std::vector<Edge>& edges)
 {
@@ -199,8 +197,7 @@ void update_edge(Edge& edge, const Quadric& q0, const Quadric& q1, const idx v0,
     update_edge(edge, q0, q1);
 }
 
-void compact_data(std::vector<std::vector<double>>& vertices,
-                  std::vector<std::vector<idx>>& indices,
+void compact_data(V& vertices, F& indices,
                   const std::vector<bool>& vertex_deleted,
                   const std::vector<bool>& face_deleted)
 {
@@ -225,7 +222,8 @@ void compact_data(std::vector<std::vector<double>>& vertices,
             vertex2face[indices[i][j]][j].push_back(static_cast<idx>(i));
 
     // get rid of deleted vertices and keep the mapping valid
-    i = 0, j = vertices.size()-1;
+    i = 0;
+    j = vertices.size()-1;
     while (true) {
         while (!vertex_deleted[i] && i <= j)
             ++i;
@@ -250,9 +248,7 @@ void compact_data(std::vector<std::vector<double>>& vertices,
 // Mesh simplification main method. Simplify given mesh until remaining number of vertices/faces
 // is (1-strength) of the original. Returns output vertices and indices as in inputs.
 // TODO: Ignoring the 4th and the following values (if exist) in vertices.
-void simplify(const std::vector<std::vector<double>>& vertices,
-              const std::vector<std::vector<idx>>& indices,
-              float strength)
+std::pair<V, F> simplify(const V& vertices, const F& indices, float strength)
 {
     const auto out_nv = static_cast<size_t>((1-strength)*vertices.size());
     auto out_vertices = vertices;
@@ -281,7 +277,7 @@ void simplify(const std::vector<std::vector<double>>& vertices,
 
     // returns f,v,e of next neighbor face centered around v_center;
     // indexes v and e are local in face (0,1,2) in both input and output.
-    const auto iter_next = [&](const vec3u& fve, const idx v_center)->vec3u {
+    const auto iter_next = [&](const vec3u& fve)->vec3u {
         const idx f = fve[0], v = fve[1], e = fve[2];
         const auto& edge = edges[face2edge[f][v]];
         const idx f_idx_to_edge = edge.faces[0] == f ? 0 : 1;
@@ -326,7 +322,7 @@ void simplify(const std::vector<std::vector<double>>& vertices,
             // starting from ff[0], iterate through faces centered around v_del and modify
             std::array<idx, 2> v_kept_in_ff{vi_in_face(ff[0], v_kept), vi_in_face(ff[1], v_kept)};
             std::array<idx, 2> v_del_in_ff{vi_in_face(ff[0], v_del), vi_in_face(ff[1], v_del)};
-            vec3u fve = iter_next({ff[0], v_kept_in_ff[0], edge.idx_in_face[0]}, v_del);
+            vec3u fve = iter_next({ff[0], v_kept_in_ff[0], edge.idx_in_face[0]});
             vec3u fve_next;
             std::array<idx, 2> e_kept{};
             for (idx i = 0; i < 2; ++i)
@@ -335,7 +331,7 @@ void simplify(const std::vector<std::vector<double>>& vertices,
             bool first_iter = true;
             while (true) {
                 const idx f = fve[0], v = fve[1], e = fve[2];
-                fve_next = iter_next(fve, v_del);
+                fve_next = iter_next(fve);
                 // v_del got replaced by v_kept
                 out_indices[f][vi_in_face(v_del, f)] = v_kept;
                 // deal with the first edge
@@ -364,7 +360,6 @@ void simplify(const std::vector<std::vector<double>>& vertices,
                     const idx fi_in_edge = edge_kept.faces[0] == ff[1] ? 0 : 1;
                     edge_kept.faces[fi_in_edge] = f;
                     edge_kept.idx_in_face[fi_in_edge] = v;
-
                     break;
                 }
 
@@ -373,8 +368,8 @@ void simplify(const std::vector<std::vector<double>>& vertices,
             }
 
             // starting from ff[1], iterate through faces centered around v_kept and update edges
-            fve = iter_next({fve_next[0], v_del_in_ff[1], edge.idx_in_face[1]}, v_kept);
-            for (;; fve = iter_next(fve, v_kept)) {
+            fve = iter_next({fve_next[0], v_del_in_ff[1], edge.idx_in_face[1]});
+            for (;; fve = iter_next(fve)) {
                 const idx f = fve[0], v = fve[1], e = fve[2];
                 auto& edge_dirty = edges[face2edge[f][e]];
                 Internal::update_edge(edge_dirty, quadrics[out_indices[f][v]], edge.q);
@@ -383,7 +378,7 @@ void simplify(const std::vector<std::vector<double>>& vertices,
             }
         }
         else {
-            //
+            // TODO: handle boundary cases
         }
 
         --nv;
@@ -391,6 +386,7 @@ void simplify(const std::vector<std::vector<double>>& vertices,
 
     // edges are pointless from this point on, but need to fix vertices and indices
     Internal::compact_data(out_vertices, out_indices, vertex_deleted, face_deleted);
+    return {out_vertices, out_indices};
 }
 
 } // namespace MeshSimpl
