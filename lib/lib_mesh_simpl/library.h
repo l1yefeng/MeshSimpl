@@ -290,7 +290,7 @@ std::pair<V, F> simplify(const V& vertices, const F& indices, float strength)
         const auto& edge = edges[e_collapsed];
         if (edge.dirty) {
             // this edge was modified and is having an error no less than before
-            edges[e_collapsed].dirty = true;
+            edges[e_collapsed].dirty = false;
             heap.push(e_collapsed);
             continue;
         }
