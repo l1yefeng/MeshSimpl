@@ -8,3 +8,20 @@ add_library(lib_mesh_simpl SHARED
             library.h
             library.cpp
             util.h)
+
+# testing
+find_package(Catch2 QUIET)
+if(Catch2_FOUND)
+    message(STATUS "Library Catch2 was found")
+    enable_testing()
+    add_executable(test
+                   test.cpp
+                   util.h
+                   library.h)
+    target_link_libraries(test Catch2::Catch2)
+    include(CTest)
+    include(Catch)
+    catch_discover_tests(test)
+else()
+    message(WARNING "Library Catch2 was not found -- Skipping building of tests")
+endif()

@@ -7,6 +7,8 @@
 
 #include <array>
 #include <vector>
+#include <cassert>
+#include <cmath>
 
 namespace MeshSimpl
 {
@@ -19,6 +21,11 @@ typedef std::vector<std::vector<unsigned int>> F;
 
 double dot(const vec3d& a, const vec3d& b) { return a[0]*b[0]+a[1]*b[1]+a[2]*b[2]; }
 double dot(const vec3d& b, const std::vector<double>& a) { return a[0]*b[0]+a[1]*b[1]+a[2]*b[2]; }
+vec3d cross(const vec3d& a, const vec3d& b)
+{
+    return {a[1]*b[2]-a[2]*b[1], a[2]*b[0]-a[0]*b[2], a[0]*b[1]-a[1]*b[0]};
+}
+double magnitude(const vec3d& x) { return sqrt(x[0]*x[0]+x[1]*x[1]+x[2]*x[2]); }
 
 namespace Internal
 {
@@ -26,8 +33,16 @@ namespace Internal
 // A quadric Q consists of a symmetric 3x3 matrix A, a vec3 b, and a scalar c
 typedef std::array<double, 10> Quadric;
 
-// A convenient method converting std::vector to std::array (double * 3)
-vec3d vec2arr(const std::vector<double>& v) { return {v[0], v[1], v[2]}; }
+// Calculate quadric Q = (A, b, c) = (nn', dn, d*d)
+Quadric make_quadric(const vec3d& normal, double d)
+{
+    return {
+        /* A row 1 */ normal[0]*normal[0], normal[0]*normal[1], normal[0]*normal[2],
+        /* A row 2 */                      normal[1]*normal[1], normal[1]*normal[2],
+        /* A row 3 */                                           normal[2]*normal[2],
+        /*    b    */ normal[0]*d, normal[1]*d, normal[2]*d,
+        /*    c    */ d*d};
+}
 
 // Compute the optimal position: v = -inv(A)*b
 vec3d optimal_v_pos(const Quadric& q)
@@ -38,6 +53,7 @@ vec3d optimal_v_pos(const Quadric& q)
         +q[2]*(q[1]*q[4]-q[3]*q[2]);
 
     // FIXME: unsafe
+    assert(a_det != 0);
     const double a_det_inv = 1.0/a_det;
     const std::array<double, 6> a_inv{(q[3]*q[5]-q[4]*q[4])*a_det_inv,
                                       (q[2]*q[4]-q[1]*q[5])*a_det_inv,
@@ -77,11 +93,33 @@ operator+=(MeshSimpl::Internal::Quadric& lfs, const MeshSimpl::Internal::Quadric
     return lfs;
 }
 
+MeshSimpl::Internal::Quadric&
+operator*=(MeshSimpl::Internal::Quadric& lfs, double rhs)
+{
+    for (auto& x : lfs)
+        x *= rhs;
+    return lfs;
+}
+
 MeshSimpl::Internal::Quadric
 operator+(const MeshSimpl::Internal::Quadric& a, const MeshSimpl::Internal::Quadric& b)
 {
     MeshSimpl::Internal::Quadric q(a);
     return q += b;
+}
+
+MeshSimpl::vec3d&
+operator/=(MeshSimpl::vec3d& lfs, double rhs)
+{
+    for (auto& x : lfs)
+        x /= rhs;
+    return lfs;
+}
+
+MeshSimpl::vec3d
+operator-(const std::vector<double>& a, const std::vector<double>& b)
+{
+    return {a[0]-b[0], a[1]-b[1], a[2]-b[2]};
 }
 
 #endif // MESH_SIMPL_UTIL_H

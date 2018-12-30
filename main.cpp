@@ -1,5 +1,6 @@
 #include <library.h>
 #include <readOBJ.h>
+#include <iomanip>
 
 using namespace std;
 
@@ -53,31 +54,33 @@ void write_obj(const string& filename,
                const vector<vector<double>>& vertices,
                const vector<vector<unsigned int>>& indices)
 {
+    const int precision = 9;
+    int v_col_len = 1;
+    for (auto sz = vertices.size(); sz > 0; sz /= 10, ++v_col_len) { }
+
     ofstream ofs(filename);
 
     ofs << "#" << endl
-        << "# author: nickl" << endl
-        << "#" << endl
         << "# number of vertices: " << vertices.size() << endl
         << "# number of faces: " << indices.size() << endl
         << "#" << endl
         << endl;
 
+    ofs << fixed << setprecision(precision);
     for (const auto& v : vertices) {
         ofs << "v";
         for (const double x : v)
-            ofs << " " << x;
+            ofs << right << setw(precision+4) << x;
         ofs << endl;
     }
-
     ofs << endl;
-
     for (const auto& f : indices) {
         ofs << "f";
         for (const unsigned int v : f)
-            ofs << " " << v;
+            ofs << right << setw(v_col_len) << v+1;
         ofs << endl;
     }
+    ofs << endl;
 
     ofs.close();
 }

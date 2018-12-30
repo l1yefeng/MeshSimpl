@@ -7,7 +7,6 @@
 #include <set>
 #include <ostream>
 #include <queue>
-#include <cmath>
 #include <algorithm>
 
 namespace MeshSimpl
@@ -33,40 +32,27 @@ struct Edge
 
 // Compute quadrics Q for every vertex. If not weighted by area then it's uniform
 std::vector<Quadric>
-compute_quadrics(const V& vertices, const F& indices, const bool weight_by_area = true)
+compute_quadrics(const V& vertices, const F& indices, bool weight_by_area)
 {
     // quadrics are initialized with all zeros
     std::vector<Quadric> quadrics(vertices.size());
 
     for (const auto& face : indices) {
         // calculate the plane of this face (n and d: n'v+d=0 defines the plane)
-        const vec3d edge1{vertices[face[1]][0]-vertices[face[0]][0],
-                          vertices[face[1]][1]-vertices[face[0]][1],
-                          vertices[face[1]][2]-vertices[face[0]][2]};
-        const vec3d edge2{vertices[face[2]][0]-vertices[face[0]][0],
-                          vertices[face[2]][1]-vertices[face[0]][1],
-                          vertices[face[2]][2]-vertices[face[0]][2]};
-        vec3d normal{edge1[1]*edge2[2]-edge1[2]*edge2[1],
-                     edge1[2]*edge2[0]-edge1[0]*edge2[2],
-                     edge1[0]*edge2[1]-edge1[1]*edge2[0]};
+        const vec3d edge1 = vertices[face[1]]-vertices[face[0]];
+        const vec3d edge2 = vertices[face[2]]-vertices[face[0]];
+        vec3d normal = cross(edge1, edge2);
         // |normal| = area, used for normalization and weighting quadrics
-        double area = sqrt(normal[0]*normal[0]+normal[1]*normal[1]+normal[2]*normal[2]);
-        for (double& x : normal)
-            x /= area;
+        double area = magnitude(normal);
+        normal /= area;
         // d = -n*v0
         double d = -dot(normal, vertices[face[0]]);
 
         // calculate quadric Q = (A, b, c) = (nn', dn, d*d)
-        Quadric q{
-            /* A row 1 */ normal[0]*normal[0], normal[0]*normal[1], normal[0]*normal[2],
-            /* A row 2 */                      normal[1]*normal[1], normal[1]*normal[2],
-            /* A row 3 */                                           normal[2]*normal[2],
-            /*    b    */ normal[0]*d, normal[1]*d, normal[2]*d,
-            /*    c    */ d*d};
+        Quadric q = make_quadric(normal, d);
 
         if (weight_by_area)
-            for (double& x : q)
-                x *= area;
+            q *= area;
 
         for (const auto& v : face)
             quadrics[v] += q;
@@ -94,10 +80,10 @@ edge_topology(const F& indices, const size_t vertex_cnt)
         const auto& face = indices[f];
         for (idx i = 0; i < 3; ++i) {
             idx j = (i+1)%3;
-            idx v1 = face[i], v2 = face[j];
-            if (v1 > v2)
-                std::swap(v1, v2);
-            auto it_and_inserted = edge_set.insert({{v1, v2}, {f}, {i}, BOUNDARY_V::BOTH});
+            idx v0 = face[i], v1 = face[j];
+            if (v0 > v1)
+                std::swap(v0, v1);
+            auto it_and_inserted = edge_set.insert({{v0, v1}, {f}, {i}, BOUNDARY_V::BOTH});
             auto it = it_and_inserted.first;
             if (!it_and_inserted.second) {
                 // edge was not inserted because it is already there
@@ -111,7 +97,7 @@ edge_topology(const F& indices, const size_t vertex_cnt)
 
     // convert edges from set to vector
     std::vector<Edge> edges(edge_set.begin(), edge_set.end());
-    std::vector<bool> vertex_on_boundary(vertex_cnt);
+    std::vector<bool> vertex_on_boundary(vertex_cnt, false);
     std::vector<vec3u> face2edge(indices.size());
 
     for (idx i = 0; i < edges.size(); ++i) {
@@ -129,12 +115,15 @@ edge_topology(const F& indices, const size_t vertex_cnt)
 
     // non-boundary edges may have one vertex on boundary, find them in this loop
     for (auto& edge : edges) {
-        if (edge.boundary_v == BOUNDARY_V::NONE) {
-            if (vertex_on_boundary[edge.vertices[0]])
-                edge.boundary_v = BOUNDARY_V::V0;
-            if (vertex_on_boundary[edge.vertices[1]])
-                edge.boundary_v = BOUNDARY_V::V1;
-        }
+        if (edge.boundary_v == BOUNDARY_V::BOTH)
+            continue;
+        if (vertex_on_boundary[edge.vertices[0]] && vertex_on_boundary[edge.vertices[1]])
+            edge.boundary_v = BOUNDARY_V::BOTH;
+        else if (vertex_on_boundary[edge.vertices[0]])
+            edge.boundary_v = BOUNDARY_V::V0;
+        else if (vertex_on_boundary[edge.vertices[1]])
+            edge.boundary_v = BOUNDARY_V::V1;
+        // else totally within the boundary
     }
 
     return {edges, face2edge};
@@ -155,9 +144,9 @@ void init_edge_errors(const V& vertices,
         Quadric q = quadrics[vv[0]]+quadrics[vv[1]];
 
         if (edge.boundary_v == BOUNDARY_V::V0)
-            edge.center = vec2arr(vertices[vv[0]]);
+            std::copy(vertices[vv[0]].begin(), vertices[vv[0]].end(), edge.center.begin());
         else if (edge.boundary_v == BOUNDARY_V::V1)
-            edge.center = vec2arr(vertices[vv[1]]);
+            std::copy(vertices[vv[1]].begin(), vertices[vv[1]].end(), edge.center.begin());
         else // edge.optimal_pos == V_ON_BOUNDARY::NONE
             edge.center = optimal_v_pos(q);
 
@@ -197,6 +186,7 @@ void update_edge(Edge& edge, const Quadric& q0, const Quadric& q1, const idx v0,
     update_edge(edge, q0, q1);
 }
 
+// Remove the vertices and indices that are marked deleted, and reduce the vector size
 void compact_data(V& vertices, F& indices,
                   const std::vector<bool>& vertex_deleted,
                   const std::vector<bool>& face_deleted)
@@ -233,6 +223,8 @@ void compact_data(V& vertices, F& indices,
             break;
         std::swap(vertices[i], vertices[j]);
         std::swap(vertex2face[i], vertex2face[j]);
+        ++i;
+        --j;
     }
     vertices.resize(i);
     vertex2face.resize(i);
@@ -250,11 +242,11 @@ void compact_data(V& vertices, F& indices,
 // TODO: Ignoring the 4th and the following values (if exist) in vertices.
 std::pair<V, F> simplify(const V& vertices, const F& indices, float strength)
 {
-    const auto out_nv = static_cast<size_t>((1-strength)*vertices.size());
+    const auto out_nv = static_cast<size_t>(std::lround((1-strength)*vertices.size()));
     auto out_vertices = vertices;
     auto out_indices = indices;
 
-    auto quadrics = Internal::compute_quadrics(vertices, indices);
+    auto quadrics = Internal::compute_quadrics(vertices, indices, true);
 
     auto edge_topo = Internal::edge_topology(indices, vertices.size());
     auto& edges = edge_topo.first;
@@ -299,6 +291,7 @@ std::pair<V, F> simplify(const V& vertices, const F& indices, float strength)
         const auto& edge = edges[e_collapsed];
         if (edge.dirty) {
             // this edge was modified and is having an error no less than before
+            edges[e_collapsed].dirty = true;
             heap.push(e_collapsed);
             continue;
         }
