@@ -36,9 +36,6 @@ int main(int argc, char* argv[])
         return 1;
     }
 
-    cout << "Received input: mesh data location: " << argv[1] << endl
-         << "                simplification strength: " << strength << endl;
-
     // read obj file
     vector<vector<double>> vertices;
     vector<vector<unsigned int>> indices;
@@ -62,7 +59,7 @@ void write_obj(const string& filename,
 
     ofs << "#" << endl
         << "# number of vertices: " << vertices.size() << endl
-        << "# number of faces: " << indices.size() << endl
+        << "# number of faces:    " << indices.size() << endl
         << "#" << endl
         << endl;
 

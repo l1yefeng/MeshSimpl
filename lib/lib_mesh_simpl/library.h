@@ -5,7 +5,6 @@
 #include <vector>
 #include <array>
 #include <set>
-#include <ostream>
 #include <queue>
 #include <algorithm>
 
@@ -63,7 +62,7 @@ compute_quadrics(const V& vertices, const F& indices, bool weight_by_area)
 
 // Returns face2edge and edges. face2edge is NFx3 with each value indexing a unique edge in edges.
 // This method does not initialize members optimal_pos and error in struct Edge.
-std::pair<std::vector<Edge>, std::vector<vec3u>>
+std::pair<std::vector<Edge>, std::vector<vec3i>>
 edge_topology(const F& indices, const size_t vertex_cnt)
 {
     const auto edge_cmp = [](const Edge& a, const Edge& b)->bool {
@@ -79,18 +78,19 @@ edge_topology(const F& indices, const size_t vertex_cnt)
     for (idx f = 0; f < indices.size(); ++f) {
         const auto& face = indices[f];
         for (idx i = 0; i < 3; ++i) {
-            idx j = (i+1)%3;
+            const idx j = (i+1)%3; // face[i] and face[j] forms this edge
+            const idx k = (i+2)%3; // k is index of the other vertex and of this edge local to face
             idx v0 = face[i], v1 = face[j];
             if (v0 > v1)
                 std::swap(v0, v1);
-            auto it_and_inserted = edge_set.insert({{v0, v1}, {f}, {i}, BOUNDARY_V::BOTH});
+            auto it_and_inserted = edge_set.insert({{v0, v1}, {f}, {k}, BOUNDARY_V::BOTH});
             auto it = it_and_inserted.first;
             if (!it_and_inserted.second) {
                 // edge was not inserted because it is already there
                 // modifying through immutable iterator only if do not affect order
                 *const_cast<BOUNDARY_V*>(&it->boundary_v) = BOUNDARY_V::NONE;
                 *const_cast<idx*>(&it->faces[1]) = f;
-                *const_cast<idx*>(&it->idx_in_face[1]) = (i+2)%3;
+                *const_cast<idx*>(&it->idx_in_face[1]) = k;
             }
         }
     }
@@ -98,7 +98,7 @@ edge_topology(const F& indices, const size_t vertex_cnt)
     // convert edges from set to vector
     std::vector<Edge> edges(edge_set.begin(), edge_set.end());
     std::vector<bool> vertex_on_boundary(vertex_cnt, false);
-    std::vector<vec3u> face2edge(indices.size());
+    std::vector<vec3i> face2edge(indices.size());
 
     for (idx i = 0; i < edges.size(); ++i) {
         const auto& edge = edges[i];
@@ -194,45 +194,42 @@ void compact_data(V& vertices, F& indices,
     std::vector<std::array<std::vector<idx>, 3>> vertex2face(vertices.size());
 
     // get rid of all deleted faces
-    size_t i = 0, j = indices.size()-1;
-    while (true) {
-        while (!face_deleted[i] && i <= j)
-            ++i;
-        while (face_deleted[j] && i < j)
-            --j;
-        if (i >= j)
+    for (size_t lo = 0, hi = indices.size()-1;; ++lo, --hi) {
+        while (!face_deleted[lo] && lo <= hi)
+            ++lo;
+        while (face_deleted[hi] && lo < hi)
+            --hi;
+        if (lo >= hi) {
+            indices.resize(lo);
             break;
-        std::swap(indices[i++], indices[j--]);
+        }
+        std::swap(indices[lo], indices[hi]);
     }
-    indices.resize(i);
 
     // create mapping from v to f
-    for (i = 0; i < vertices.size(); ++i)
-        for (j = 0; j < 3; ++j)
-            vertex2face[indices[i][j]][j].push_back(static_cast<idx>(i));
+    for (idx f = 0; f < indices.size(); ++f)
+        for (idx i = 0; i < 3; ++i)
+            vertex2face[indices[f][i]][i].push_back(static_cast<idx>(f));
 
     // get rid of deleted vertices and keep the mapping valid
-    i = 0;
-    j = vertices.size()-1;
-    while (true) {
-        while (!vertex_deleted[i] && i <= j)
-            ++i;
-        while (vertex_deleted[j] && i < j)
-            --j;
-        if (i >= j)
+    for (size_t lo = 0, hi = vertices.size()-1;; ++lo, --hi) {
+        while (!vertex_deleted[lo] && lo <= hi)
+            ++lo;
+        while (vertex_deleted[hi] && lo < hi)
+            --hi;
+        if (lo >= hi) {
+            vertices.resize(lo);
+            vertex2face.resize(lo);
             break;
-        std::swap(vertices[i], vertices[j]);
-        std::swap(vertex2face[i], vertex2face[j]);
-        ++i;
-        --j;
+        }
+        std::swap(vertex2face[lo], vertex2face[hi]);
+        std::swap(vertices[lo], vertices[hi]);
     }
-    vertices.resize(i);
-    vertex2face.resize(i);
 
-    for (i = 0; i < vertex2face.size(); ++i)
-        for (j = 0; j < 3; ++j)
-            for (const idx f : vertex2face[i][j])
-                indices[f][j] = static_cast<idx>(i);
+    for (idx v = 0; v < vertex2face.size(); ++v)
+        for (idx i = 0; i < 3; ++i)
+            for (const idx f : vertex2face[v][i])
+                indices[f][i] = static_cast<idx>(v);
 }
 
 } // namespace MeshSimpl::Internal
@@ -256,21 +253,23 @@ std::pair<V, F> simplify(const V& vertices, const F& indices, float strength)
 
     // create priority queue on quadric error
     auto heap = Internal::build_min_heap(edges);
-    size_t nv = vertices.size();
     std::vector<bool> vertex_deleted(vertices.size(), false);
     std::vector<bool> face_deleted(indices.size(), false);
     std::vector<bool> edge_deleted(edges.size(), false);
 
     // returns the position of vertex in face. a convenient method but make sure v EXISTS in face
-    const auto vi_in_face = [&](const idx v, const idx f)->idx {
-        const auto& vec = out_indices[f];
-        return static_cast<idx>(std::distance(vec.begin(), std::find(vec.begin(), vec.end(), v)));
+    const auto vi_in_face = [&](const idx f, const idx v)->idx {
+        const auto& row = out_indices[f];
+        auto i = std::distance(row.begin(), std::find(row.begin(), row.end(), v));
+        assert(i < 3);
+        return static_cast<idx>(i);
     };
 
     // returns f,v,e of next neighbor face centered around v_center;
     // indexes v and e are local in face (0,1,2) in both input and output.
-    const auto iter_next = [&](const vec3u& fve)->vec3u {
+    const auto iter_next = [&](const vec3i& fve)->vec3i {
         const idx f = fve[0], v = fve[1], e = fve[2];
+        assert(v != e);
         const auto& edge = edges[face2edge[f][v]];
         const idx f_idx_to_edge = edge.faces[0] == f ? 0 : 1;
         const idx of = edge.faces[1-f_idx_to_edge];
@@ -280,7 +279,7 @@ std::pair<V, F> simplify(const V& vertices, const F& indices, float strength)
         return {of, ov, oe};
     };
 
-    while (!heap.empty() && nv > out_nv) {
+    for (auto nv = vertices.size(); !heap.empty() && nv > out_nv;) {
         // collapse an edge to remove 1 vertex and 2 faces in each iteration
         const idx e_collapsed = heap.top();
         heap.pop();
@@ -296,39 +295,44 @@ std::pair<V, F> simplify(const V& vertices, const F& indices, float strength)
             continue;
         }
 
-        // some aliases
-        const auto& vv = edge.vertices;
-        const auto& ff = edge.faces;
+        const auto& vv = edge.vertices; // one is kept and another will be deleted
+        const auto& ff = edge.faces;    // two faces that will be deleted
 
         if (edge.boundary_v == Internal::BOUNDARY_V::NONE) {
             // the choice of deletion does not matter
             const idx v_kept = vv[0];
             const idx v_del = vv[1];
-            // mark as deleted
+            // mark 2 faces, 1 vertex, and 1 edge as deleted;
+            // 2 more edges will be marked in the loop later
             face_deleted[ff[0]] = true;
             face_deleted[ff[1]] = true;
             vertex_deleted[v_del] = true;
+            edge_deleted[e_collapsed] = true;
             // update vertex position and quadric
             std::copy(edge.center.begin(), edge.center.end(), out_vertices[v_kept].begin());
             quadrics[v_kept] = edge.q;
 
-            // starting from ff[0], iterate through faces centered around v_del and modify
-            std::array<idx, 2> v_kept_in_ff{vi_in_face(ff[0], v_kept), vi_in_face(ff[1], v_kept)};
-            std::array<idx, 2> v_del_in_ff{vi_in_face(ff[0], v_del), vi_in_face(ff[1], v_del)};
-            vec3u fve = iter_next({ff[0], v_kept_in_ff[0], edge.idx_in_face[0]});
-            vec3u fve_next;
-            std::array<idx, 2> e_kept{};
-            for (idx i = 0; i < 2; ++i)
-                e_kept[i] = face2edge[ff[i]][v_del_in_ff[i]];
+            // local indexes of v_kept in two deleted faces
+            const std::array<idx, 2> v_kept_in_ff{vi_in_face(ff[0], v_kept),
+                                                  vi_in_face(ff[1], v_kept)};
+            // local indexes of v_kept in two deleted faces
+            const std::array<idx, 2> v_del_in_ff{vi_in_face(ff[0], v_del),
+                                                 vi_in_face(ff[1], v_del)};
+            // global index of kept edge in two deleted faces
+            const std::array<idx, 2> e_kept{face2edge[ff[0]][v_del_in_ff[0]],
+                                            face2edge[ff[1]][v_del_in_ff[1]]};
 
-            bool first_iter = true;
-            while (true) {
+            // starting from ff[0], iterate through faces centered around v_del and modify
+            vec3i fve = iter_next({ff[0], v_kept_in_ff[0], edge.idx_in_face[0]});
+            vec3i fve_next;
+            for (bool first_iter = true;; fve = fve_next) {
                 const idx f = fve[0], v = fve[1], e = fve[2];
                 fve_next = iter_next(fve);
                 // v_del got replaced by v_kept
-                out_indices[f][vi_in_face(v_del, f)] = v_kept;
+                out_indices[f][vi_in_face(f, v_del)] = v_kept;
                 // deal with the first edge
                 if (first_iter) {
+                    first_iter = false;
                     edge_deleted[face2edge[f][e]] = true;
                     face2edge[f][e] = e_kept[0];
 
@@ -355,13 +359,10 @@ std::pair<V, F> simplify(const V& vertices, const F& indices, float strength)
                     edge_kept.idx_in_face[fi_in_edge] = v;
                     break;
                 }
-
-                fve = fve_next;
-                first_iter = false;
             }
 
             // starting from ff[1], iterate through faces centered around v_kept and update edges
-            fve = iter_next({fve_next[0], v_del_in_ff[1], edge.idx_in_face[1]});
+            fve = iter_next({ff[1], v_del_in_ff[1], edge.idx_in_face[1]});
             for (;; fve = iter_next(fve)) {
                 const idx f = fve[0], v = fve[1], e = fve[2];
                 auto& edge_dirty = edges[face2edge[f][e]];
@@ -372,6 +373,7 @@ std::pair<V, F> simplify(const V& vertices, const F& indices, float strength)
         }
         else {
             // TODO: handle boundary cases
+            assert(false);
         }
 
         --nv;

@@ -14,8 +14,8 @@ namespace MeshSimpl
 {
 
 typedef unsigned int idx;
-typedef std::array<double, 3> vec3d;
-typedef std::array<unsigned int, 3> vec3u;
+typedef std::array<double, 3> vec3d; // double
+typedef std::array<idx, 3> vec3i;    // unsigned int
 typedef std::vector<std::vector<double>> V;
 typedef std::vector<std::vector<unsigned int>> F;
 
