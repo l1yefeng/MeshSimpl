@@ -6,9 +6,6 @@ set(CMAKE_CXX_STANDARD 14)
 # build lib_mesh_simpl beforehand which is itself a cmake project
 add_subdirectory(lib/lib_mesh_simpl)
 
-# find libraries
-find_package(Threads)
-
 # find eigen library (required by libigl)
 find_package(Eigen3 3.3 REQUIRED NO_MODULE)
 # include igl headers
@@ -21,5 +18,4 @@ add_executable(mesh_simpl
 
 target_link_libraries(mesh_simpl
                       lib_mesh_simpl
-                      Eigen3::Eigen
-                      ${CMAKE_THREAD_LIBS_INIT})
+                      Eigen3::Eigen)
