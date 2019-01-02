@@ -1,0 +1,5 @@
+* Which is faster? std::find or if-else?
+* What is a good value of FOLD_OVER_PENALTY?
+* Make a graph explaining e-collapse implementation
+* Make sure where auto is used, it is easy to understand
+* ! Boundary issue

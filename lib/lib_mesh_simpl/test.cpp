@@ -6,7 +6,6 @@
 
 #include "util.h"
 #include "library.h"
-#include <algorithm>
 #include <catch2/catch.hpp>
 
 using namespace std;
