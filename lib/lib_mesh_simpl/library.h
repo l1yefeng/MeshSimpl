@@ -6,7 +6,6 @@
 #include <array>
 #include <set>
 #include <queue>
-#include <algorithm>
 
 namespace MeshSimpl
 {
@@ -14,7 +13,7 @@ namespace MeshSimpl
 namespace Internal
 {
 
-static const double FOLD_OVER_PENALTY = 1.5;
+static const double FOLD_OVER_PENALTY = 1.1;
 static const size_t MIN_NR_VERTICES = 4;
 
 enum BOUNDARY_V { NONE, BOTH, V0, V1 };
@@ -274,10 +273,7 @@ std::pair<V, F> simplify(const V& vertices, const F& indices, float strength)
 
     // returns the position of vertex in face. a convenient method but make sure v EXISTS in face
     const auto vi_in_face = [&](const idx f, const idx v)->idx {
-        const auto& row = out_indices[f];
-        auto i = std::distance(row.begin(), std::find(row.begin(), row.end(), v));
-        assert(i < 3);
-        return static_cast<idx>(i);
+        return out_indices[f][0] == v ? 0 : (out_indices[f][1] == v ? 1 : 2);
     };
 
     const auto fi_in_edge = [](const Internal::Edge& edge, const idx f)->idx {
@@ -333,7 +329,7 @@ std::pair<V, F> simplify(const V& vertices, const F& indices, float strength)
             // test run iterating faces: need to increase error and abort if fold-over is identified
             bool danger_of_fold_over = false;
             std::queue<vec3i> fve_queue_v_del, fve_queue_v_kept;
-            vec3i fve{};
+            vec3i fve;
             const idx& f = fve[0];
             const idx& v = fve[1];
             const idx& e = fve[2]; // they always refer to fve; updated on each `fve = ...'
@@ -386,7 +382,8 @@ std::pair<V, F> simplify(const V& vertices, const F& indices, float strength)
             tgt_edge->faces[ff0_in_edge] = f;
             tgt_edge->idx_in_face[ff0_in_edge] = e;
             // every face centered around deleted vertex
-            for (fve_queue_v_del.pop(); !fve_queue_v_del.empty(); fve_queue_v_del.pop()) {
+            fve_queue_v_del.pop();
+            for (; !fve_queue_v_del.empty(); fve_queue_v_del.pop()) {
                 fve = fve_queue_v_del.front();
                 out_indices[f][3-v-e] = v_kept;
                 tgt_edge = &edges[face2edge[f][e]];
