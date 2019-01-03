@@ -14,7 +14,8 @@ include_directories(lib/libigl/include/igl
 
 add_executable(mesh_simpl
                main.cpp
-               measure.h)
+               measure.h
+               write_obj.h)
 
 target_link_libraries(mesh_simpl
                       lib_mesh_simpl

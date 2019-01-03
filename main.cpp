@@ -1,12 +1,9 @@
+#include "measure.h"
+#include "write_obj.h"
 #include <library.h>
 #include <readOBJ.h>
-#include <iomanip>
 
 using namespace std;
-
-void write_obj(const string& filename,
-               const vector<vector<double>>& vertices,
-               const vector<vector<unsigned int>>& indices);
 
 int main(int argc, char* argv[])
 {
@@ -41,44 +38,11 @@ int main(int argc, char* argv[])
     vector<vector<unsigned int>> indices;
     igl::readOBJ(argv[1], vertices, indices);
 
+    Measure measure;
     const auto res = MeshSimpl::simplify(vertices, indices, strength);
+    long duration = measure.stop();
+    std::cout << "[INFO] Simplification completed (" << duration << " milliseconds)" << std::endl;
     write_obj(argv[2], res.first, res.second);
 
     return 0;
 }
-
-void write_obj(const string& filename,
-               const vector<vector<double>>& vertices,
-               const vector<vector<unsigned int>>& indices)
-{
-    const int precision = 9;
-    int v_col_len = 1;
-    for (auto sz = vertices.size(); sz > 0; sz /= 10, ++v_col_len) { }
-
-    ofstream ofs(filename);
-
-    ofs << "#" << endl
-        << "# number of vertices: " << vertices.size() << endl
-        << "# number of faces:    " << indices.size() << endl
-        << "#" << endl
-        << endl;
-
-    ofs << fixed << setprecision(precision);
-    for (const auto& v : vertices) {
-        ofs << "v";
-        for (const double x : v)
-            ofs << right << setw(precision+4) << x;
-        ofs << endl;
-    }
-    ofs << endl;
-    for (const auto& f : indices) {
-        ofs << "f";
-        for (const unsigned int v : f)
-            ofs << right << setw(v_col_len) << v+1;
-        ofs << endl;
-    }
-    ofs << endl;
-
-    ofs.close();
-}
-
