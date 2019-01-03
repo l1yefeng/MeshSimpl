@@ -6,6 +6,7 @@
 #include <array>
 #include <set>
 #include <queue>
+#include <limits>
 
 namespace MeshSimpl
 {
@@ -13,7 +14,6 @@ namespace MeshSimpl
 namespace Internal
 {
 
-static const double FOLD_OVER_PENALTY = 1.1;
 static const size_t MIN_NR_VERTICES = 4;
 
 enum BOUNDARY_V { NONE, BOTH, V0, V1 };
@@ -172,10 +172,13 @@ void ecol_vertex_placement(const V& vertices, Edge& edge)
 }
 
 // Compute quadric error for every edge at initialization.
-void init_edge_errors(const V& vertices,
-                      const std::vector<Quadric>& quadrics,
-                      std::vector<Edge>& edges)
+// Returns the range of error, can be used to decide fold-over penalty factor
+double init_edge_errors(const V& vertices,
+                        const std::vector<Quadric>& quadrics,
+                        std::vector<Edge>& edges)
 {
+    double min_error = std::numeric_limits<double>::max();
+    double max_error = std::numeric_limits<double>::lowest();
     for (auto& edge : edges) {
         // boundary edges will not be touched during simplification
         if (edge.boundary_v == BOUNDARY_V::BOTH)
@@ -185,14 +188,18 @@ void init_edge_errors(const V& vertices,
         const idx v0 = edge.vertices[0], v1 = edge.vertices[1];
         edge.q = quadrics[v0]+quadrics[v1];
 
-        if (edge.boundary_v == BOUNDARY_V::NONE) {
+        if (edge.boundary_v == BOUNDARY_V::NONE)
             ecol_vertex_placement(vertices, edge);
-            continue;
+        else {
+            copy_vertex_position(vertices[edge.boundary_v == BOUNDARY_V::V0 ? v0 : v1],
+                                 edge.center);
+            edge.error = q_error(edge.q, edge.center);
         }
-
-        copy_vertex_position(vertices[edge.boundary_v == BOUNDARY_V::V0 ? v0 : v1], edge.center);
-        edge.error = q_error(edge.q, edge.center);
+        min_error = std::min(min_error, edge.error);
+        max_error = std::max(max_error, edge.error);
     }
+
+    return max_error-min_error;
 }
 
 // Returns a min-heap consists of all non-boundary edge indexes.
@@ -301,7 +308,7 @@ std::pair<V, F> simplify(const V& vertices, const F& indices, float strength)
     std::vector<Internal::Edge>& edges = edge_topo.first;
     std::vector<vec3i>& face2edge = edge_topo.second;
 
-    Internal::init_edge_errors(vertices, quadrics, edges);
+    const double error_penalty_factor = Internal::init_edge_errors(vertices, quadrics, edges)/100;
 
     // create priority queue on quadric error
     auto heap = Internal::build_min_heap(edges);
@@ -393,7 +400,7 @@ std::pair<V, F> simplify(const V& vertices, const F& indices, float strength)
             }
             if (danger_of_fold_over) {
                 // penalize this edge by increasing its error and then push back to min-heap
-                edges[e_collapsed].error *= Internal::FOLD_OVER_PENALTY;
+                edges[e_collapsed].error += error_penalty_factor;
                 heap.push(e_collapsed);
                 continue;
             }
