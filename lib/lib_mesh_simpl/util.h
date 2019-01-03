@@ -14,24 +14,28 @@ namespace MeshSimpl
 {
 
 typedef unsigned int idx;
-typedef std::array<double, 3> vec3d; // double
-typedef std::array<idx, 3> vec3i;    // unsigned int
-typedef std::vector<std::vector<double>> V;
-typedef std::vector<std::vector<unsigned int>> F;
-
-double dot(const vec3d& a, const vec3d& b) { return a[0]*b[0]+a[1]*b[1]+a[2]*b[2]; }
-double dot(const vec3d& b, const std::vector<double>& a) { return a[0]*b[0]+a[1]*b[1]+a[2]*b[2]; }
-vec3d cross(const vec3d& a, const vec3d& b)
-{
-    return {a[1]*b[2]-a[2]*b[1], a[2]*b[0]-a[0]*b[2], a[0]*b[1]-a[1]*b[0]};
-}
-double magnitude(const vec3d& x) { return sqrt(x[0]*x[0]+x[1]*x[1]+x[2]*x[2]); }
+typedef std::array<double, 3> vec3d;               // double
+typedef std::array<idx, 3> vec3i;                  // idx
+typedef std::array<idx, 2> vec2i;                  // idx
+typedef std::vector<std::vector<double>> V;        // input/output vertex positions
+typedef std::vector<std::vector<unsigned int>> F;  // input/output face indices
 
 namespace Internal
 {
 
 // A quadric Q consists of a symmetric 3x3 matrix A, a vec3 b, and a scalar c
 typedef std::array<double, 10> Quadric;
+
+double dot(const vec3d& a, const vec3d& b) { return a[0]*b[0]+a[1]*b[1]+a[2]*b[2]; }
+
+double dot(const vec3d& b, const std::vector<double>& a) { return a[0]*b[0]+a[1]*b[1]+a[2]*b[2]; }
+
+vec3d cross(const vec3d& a, const vec3d& b)
+{
+    return {a[1]*b[2]-a[2]*b[1], a[2]*b[0]-a[0]*b[2], a[0]*b[1]-a[1]*b[0]};
+}
+
+double magnitude(const vec3d& x) { return sqrt(x[0]*x[0]+x[1]*x[1]+x[2]*x[2]); }
 
 // Calculate quadric Q = (A, b, c) = (nn', dn, d*d)
 Quadric make_quadric(const vec3d& normal, double d)

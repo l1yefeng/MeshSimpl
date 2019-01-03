@@ -22,14 +22,14 @@ enum BOUNDARY_V { NONE, BOTH, V0, V1 };
 // Edge defines the struct of an edge
 struct Edge
 {
-    std::array<idx, 2> vertices;    // index of two end vertices, unique, v0 < v1
-    std::array<idx, 2> faces;       // index of two incident faces
-    std::array<idx, 2> idx_in_face; // index of this (0, 1, 2) in faces
-    BOUNDARY_V boundary_v;          // vertices on boundary
-    vec3d center;                   // where this edge collapse into
-    double error;                   // quadric error value, undefined if on boundary
-    Quadric q;                      // sum of quadrics of two vertices
-    bool dirty;                     // true if this edge has wrong position in heap
+    vec2i vertices;        // index of two end vertices, unique, v0 < v1
+    vec2i faces;           // index of two incident faces
+    vec2i idx_in_face;     // index of this (0, 1, 2) in faces
+    BOUNDARY_V boundary_v; // vertices on boundary
+    vec3d center;          // where this edge collapse into
+    double error;          // quadric error value, undefined if on boundary
+    Quadric q;             // sum of quadrics of two vertices
+    bool dirty;            // true if this edge has wrong position in heap
 };
 
 // Compute quadrics Q for every vertex. If not weighted by area then it's uniform
@@ -176,8 +176,8 @@ bool face_fold_over(const V& vertices, const idx v0, const idx v1, const idx v2_
     const vec3d e0 = vertices[v1]-vertices[v0];
     const vec3d e1_prev = vertices[v2_prev]-vertices[v1];
     const vec3d e1_new = v2_new_pos-vertices[v1];
-    const auto normal_prev = cross(e0, e1_prev);
-    const auto normal_new = cross(e0, e1_new);
+    const vec3d normal_prev = cross(e0, e1_prev);
+    const vec3d normal_new = cross(e0, e1_new);
     return dot(normal_prev, normal_new) < 0;
 }
 
@@ -322,12 +322,9 @@ std::pair<V, F> simplify(const V& vertices, const F& indices, float strength)
             const idx v_kept = vv[0];
             const idx v_del = vv[1];
 
-            // local indexes of v_kept in two deleted faces
-            const std::array<idx, 2> v_kept_in_ff{vi_in_face(ff[0], v_kept),
-                                                  vi_in_face(ff[1], v_kept)};
-            // local indexes of v_kept in two deleted faces
-            const std::array<idx, 2> v_del_in_ff{vi_in_face(ff[0], v_del),
-                                                 vi_in_face(ff[1], v_del)};
+            // local indexes of v_kept/v_del in two deleted faces
+            const vec2i v_kept_in_ff{vi_in_face(ff[0], v_kept), vi_in_face(ff[1], v_kept)};
+            const vec2i v_del_in_ff{vi_in_face(ff[0], v_del), vi_in_face(ff[1], v_del)};
 
             // starting point of fve iterations at two deleted faces
             const vec3i fve_begin_v_del{ff[0], v_kept_in_ff[0], edge.idx_in_face[0]};
@@ -335,13 +332,13 @@ std::pair<V, F> simplify(const V& vertices, const F& indices, float strength)
 
             // test run iterating faces: need to increase error and abort if fold-over is identified
             bool danger_of_fold_over = false;
-            std::queue<vec3i> fves_v_del, fves_v_kept;
+            std::queue<vec3i> fve_queue_v_del, fve_queue_v_kept;
             vec3i fve{};
             const idx& f = fve[0];
             const idx& v = fve[1];
             const idx& e = fve[2]; // they always refer to fve; updated on each `fve = ...'
             for (fve = iter_next(fve_begin_v_del); f != ff[1]; fve = iter_next(fve)) {
-                fves_v_del.push(fve);
+                fve_queue_v_del.push(fve);
                 if (Internal::face_fold_over(out_vertices, out_indices[f][e], out_indices[f][v],
                                              v_del, edge.center)) {
                     danger_of_fold_over = true;
@@ -350,7 +347,7 @@ std::pair<V, F> simplify(const V& vertices, const F& indices, float strength)
             }
             if (!danger_of_fold_over) {
                 for (fve = iter_next(fve_begin_v_kept); f != ff[0]; fve = iter_next(fve)) {
-                    fves_v_kept.push(fve);
+                    fve_queue_v_kept.push(fve);
                     if (Internal::face_fold_over(out_vertices, out_indices[f][e], out_indices[f][v],
                                                  v_kept, edge.center)) {
                         danger_of_fold_over = true;
@@ -367,8 +364,7 @@ std::pair<V, F> simplify(const V& vertices, const F& indices, float strength)
             }
 
             // global index of kept edge in two deleted faces
-            const std::array<idx, 2> e_kept{face2edge[ff[0]][v_del_in_ff[0]],
-                                            face2edge[ff[1]][v_del_in_ff[1]]};
+            const vec2i e_kept{face2edge[ff[0]][v_del_in_ff[0]], face2edge[ff[1]][v_del_in_ff[1]]};
 
             // mark 2 faces, 1 vertex, and 1 edge as deleted;
             // 2 more edges will be marked in the loop later
@@ -380,7 +376,7 @@ std::pair<V, F> simplify(const V& vertices, const F& indices, float strength)
             std::copy(edge.center.begin(), edge.center.end(), out_vertices[v_kept].begin());
             quadrics[v_kept] = edge.q;
 
-            fve = fves_v_del.front();
+            fve = fve_queue_v_del.front();
             Internal::Edge* tgt_edge = &edges[e_kept[0]];
             // first face to process: deleted face 0
             out_indices[f][3-v-e] = v_kept;
@@ -390,8 +386,8 @@ std::pair<V, F> simplify(const V& vertices, const F& indices, float strength)
             tgt_edge->faces[ff0_in_edge] = f;
             tgt_edge->idx_in_face[ff0_in_edge] = e;
             // every face centered around deleted vertex
-            for (fves_v_del.pop(); !fves_v_del.empty(); fves_v_del.pop()) {
-                fve = fves_v_del.front();
+            for (fve_queue_v_del.pop(); !fve_queue_v_del.empty(); fve_queue_v_del.pop()) {
+                fve = fve_queue_v_del.front();
                 out_indices[f][3-v-e] = v_kept;
                 tgt_edge = &edges[face2edge[f][e]];
                 Internal::update_edge(*tgt_edge, quadrics[out_indices[f][v]], edge.q,
@@ -406,8 +402,8 @@ std::pair<V, F> simplify(const V& vertices, const F& indices, float strength)
             tgt_edge->idx_in_face[ff1_in_edge] = v;
 
             // every face centered around the kept vertex
-            for (; !fves_v_kept.empty(); fves_v_kept.pop()) {
-                fve = fves_v_kept.front();
+            for (; !fve_queue_v_kept.empty(); fve_queue_v_kept.pop()) {
+                fve = fve_queue_v_kept.front();
                 tgt_edge = &edges[face2edge[f][e]];
                 Internal::update_edge(*tgt_edge, quadrics[out_indices[f][v]], edge.q);
             }
