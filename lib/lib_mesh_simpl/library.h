@@ -131,6 +131,46 @@ edge_topology(const F& indices, const size_t vertex_cnt)
     return {edges, face2edge};
 }
 
+// Set error and center of edge by choosing a position to collapse into
+void ecol_vertex_placement(const V& vertices, Edge& edge)
+{
+    const Quadric& q = edge.q;
+    const vec3d b{q[6], q[7], q[8]};
+    const double c = q[9];
+
+    // computes the inverse of matrix A in quadric
+    const double a_det = q[0]*(q[3]*q[5]-q[4]*q[4])
+        -q[1]*(q[1]*q[5]-q[4]*q[2])
+        +q[2]*(q[1]*q[4]-q[3]*q[2]);
+
+    if (a_det != 0) {
+        // invertible, find position yielding minimal error
+        const double a_det_inv = 1.0/a_det;
+        const std::array<double, 6> a_inv{(q[3]*q[5]-q[4]*q[4])*a_det_inv,
+                                          (q[2]*q[4]-q[1]*q[5])*a_det_inv,
+                                          (q[1]*q[4]-q[2]*q[3])*a_det_inv,
+                                          (q[0]*q[5]-q[2]*q[2])*a_det_inv,
+                                          (q[1]*q[2]-q[0]*q[4])*a_det_inv,
+                                          (q[0]*q[3]-q[1]*q[1])*a_det_inv};
+        edge.center = {-dot({a_inv[0], a_inv[1], a_inv[2]}, b),
+                       -dot({a_inv[1], a_inv[3], a_inv[4]}, b),
+                       -dot({a_inv[2], a_inv[4], a_inv[5]}, b)};
+        edge.error = dot(b, edge.center)+c;
+    }
+    else {
+        // not invertible, choose from endpoints and midpoint
+        edge.center = midpoint(vertices[edge.vertices[0]], vertices[edge.vertices[1]]);
+        edge.error = q_error(edge.q, edge.center);
+        for (const idx v : edge.vertices) {
+            const double err = q_error(edge.q, vertices[v]);
+            if (err < edge.error) {
+                copy_vertex_position(vertices[v], edge.center);
+                edge.error = err;
+            }
+        }
+    }
+}
+
 // Compute quadric error for every edge at initialization.
 void init_edge_errors(const V& vertices,
                       const std::vector<Quadric>& quadrics,
@@ -142,18 +182,16 @@ void init_edge_errors(const V& vertices,
             continue;
 
         // error = v(Q1+Q2)v = vQv, v is new vertex position after edge-collapse
-        const auto& vv = edge.vertices;
-        Quadric q = quadrics[vv[0]]+quadrics[vv[1]];
+        const idx v0 = edge.vertices[0], v1 = edge.vertices[1];
+        edge.q = quadrics[v0]+quadrics[v1];
 
-        if (edge.boundary_v == BOUNDARY_V::V0)
-            std::copy(vertices[vv[0]].begin(), vertices[vv[0]].end(), edge.center.begin());
-        else if (edge.boundary_v == BOUNDARY_V::V1)
-            std::copy(vertices[vv[1]].begin(), vertices[vv[1]].end(), edge.center.begin());
-        else // edge.optimal_pos == V_ON_BOUNDARY::NONE
-            edge.center = optimal_v_pos(q);
+        if (edge.boundary_v == BOUNDARY_V::NONE) {
+            ecol_vertex_placement(vertices, edge);
+            continue;
+        }
 
-        edge.error = q_error(q, edge.center, edge.boundary_v == BOUNDARY_V::NONE);
-        edge.q = q;
+        copy_vertex_position(vertices[edge.boundary_v == BOUNDARY_V::V0 ? v0 : v1], edge.center);
+        edge.error = q_error(edge.q, edge.center);
     }
 }
 
@@ -182,21 +220,21 @@ bool face_fold_over(const V& vertices, const idx v0, const idx v1, const idx v2_
 
 // Replace a vertex in edge, and update other members then mark dirty.
 // FIXME: only for non-boundary cases for the time being
-void update_edge(Edge& edge, const Quadric& q0, const Quadric& q1)
+void update_edge(const V& vertices, Edge& edge, const Quadric& q0, const Quadric& q1)
 {
     edge.q = q0+q1;
-    edge.center = optimal_v_pos(edge.q);
-    edge.error = q_error(edge.q, edge.center, true);
+    ecol_vertex_placement(vertices, edge);
     edge.dirty = true;
 }
 
 // Replace a vertex in edge, and update other members then mark dirty.
 // FIXME: only for non-boundary cases for the time being
-void update_edge(Edge& edge, const Quadric& q0, const Quadric& q1, const idx v0, const idx v1)
+void update_edge(const V& vertices, Edge& edge, const Quadric& q0, const Quadric& q1, const idx v0,
+                 const idx v1)
 {
     edge.vertices[0] = v0;
     edge.vertices[1] = v1;
-    update_edge(edge, q0, q1);
+    update_edge(vertices, edge, q0, q1);
 }
 
 // Remove the vertices and indices that are marked deleted, and reduce the vector size
@@ -370,7 +408,7 @@ std::pair<V, F> simplify(const V& vertices, const F& indices, float strength)
             vertex_deleted[v_del] = true;
             edge_deleted[e_collapsed] = true;
             // update vertex position and quadric
-            std::copy(edge.center.begin(), edge.center.end(), out_vertices[v_kept].begin());
+            Internal::copy_vertex_position(edge.center, out_vertices[v_kept]);
             quadrics[v_kept] = edge.q;
 
             fve = fve_queue_v_del.front();
@@ -388,7 +426,7 @@ std::pair<V, F> simplify(const V& vertices, const F& indices, float strength)
                 fve = fve_queue_v_del.front();
                 out_indices[f][3-v-e] = v_kept;
                 tgt_edge = &edges[face2edge[f][e]];
-                Internal::update_edge(*tgt_edge, quadrics[out_indices[f][v]], edge.q,
+                Internal::update_edge(out_vertices, *tgt_edge, quadrics[out_indices[f][v]], edge.q,
                                       out_indices[f][v], v_kept);
             }
             // the deleted face 1
@@ -403,10 +441,10 @@ std::pair<V, F> simplify(const V& vertices, const F& indices, float strength)
             for (; !fve_queue_v_kept.empty(); fve_queue_v_kept.pop()) {
                 fve = fve_queue_v_kept.front();
                 tgt_edge = &edges[face2edge[f][e]];
-                Internal::update_edge(*tgt_edge, quadrics[out_indices[f][v]], edge.q);
+                Internal::update_edge(out_vertices, *tgt_edge, quadrics[out_indices[f][v]], edge.q);
             }
             tgt_edge = &edges[face2edge[f][v]];
-            Internal::update_edge(*tgt_edge, quadrics[out_indices[f][e]], edge.q);
+            Internal::update_edge(out_vertices, *tgt_edge, quadrics[out_indices[f][e]], edge.q);
         }
         else {
             // TODO: handle boundary cases
