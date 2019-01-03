@@ -18,24 +18,6 @@ TEST_CASE("Quadric error should be zero when v is on the plane", "[q_error]")
     REQUIRE(err == 0.0);
 }
 
-TEST_CASE("The edge with smallest error should be popped", "[build_min_heap]")
-{
-    vector<Edge> edges(3);
-    for (auto& edge : edges)
-        edge.boundary_v = BOUNDARY_V::NONE;
-    edges[0].error = 0.1;
-    edges[1].error = 2.2;
-    edges[2].error = 0.7;
-    edges.push_back({});
-    edges[3].boundary_v = BOUNDARY_V::BOTH;
-    auto heap = build_min_heap(edges);
-
-    REQUIRE(heap.size() == 3);
-    REQUIRE(heap.top() == 0);
-    heap.pop();
-    REQUIRE(heap.top() == 2);
-}
-
 TEST_CASE("Deleted values should be gone", "[compact_data]")
 {
     vector<vector<double>> V{
