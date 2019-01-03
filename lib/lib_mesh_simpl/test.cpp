@@ -14,7 +14,7 @@ using namespace MeshSimpl::Internal;
 TEST_CASE("Quadric error should be zero when v is on the plane", "[q_error]")
 {
     Quadric q = make_quadric({0, 1, 0}, -0.5);
-    double err = q_error(q, {1, 0.5, 1}, false);
+    double err = q_error(q, std::vector<double>{1, 0.5, 1});
     REQUIRE(err == 0.0);
 }
 

@@ -2,12 +2,15 @@ cmake_minimum_required(VERSION 3.13)
 project(lib_mesh_simpl
         LANGUAGES CXX)
 
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 11)
 
 add_library(lib_mesh_simpl SHARED
             library.h
             library.cpp
             util.h)
+
+target_compile_features(lib_mesh_simpl PUBLIC cxx_std_11)
+set_target_properties(lib_mesh_simpl PROPERTIES CXX_EXTENSIONS OFF)
 
 # testing
 find_package(Catch2 QUIET)

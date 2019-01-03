@@ -74,7 +74,7 @@ inline double q_error(const Quadric& q, const Position& v)
 MeshSimpl::Internal::Quadric&
 operator+=(MeshSimpl::Internal::Quadric& lfs, const MeshSimpl::Internal::Quadric& rhs)
 {
-    for (unsigned int i = 0; i < rhs.size(); ++i)
+    for (unsigned int i = 0; i < 10; ++i)
         lfs[i] += rhs[i];
     return lfs;
 }
@@ -90,8 +90,10 @@ operator*=(MeshSimpl::Internal::Quadric& lfs, double rhs)
 MeshSimpl::Internal::Quadric
 operator+(const MeshSimpl::Internal::Quadric& a, const MeshSimpl::Internal::Quadric& b)
 {
-    MeshSimpl::Internal::Quadric q(a);
-    return q += b;
+    MeshSimpl::Internal::Quadric q;
+    for (unsigned int i = 0; i < 10; ++i)
+        q[i] = a[i]+b[i];
+    return q;
 }
 
 MeshSimpl::vec3d&
