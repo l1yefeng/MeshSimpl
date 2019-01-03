@@ -271,11 +271,10 @@ std::pair<V, F> simplify(const V& vertices, const F& indices, float strength)
     std::vector<bool> face_deleted(indices.size(), false);
     std::vector<bool> edge_deleted(edges.size(), false);
 
-    // returns the position of vertex in face. a convenient method but make sure v EXISTS in face
+    // convenient method used to get local index of v/f in a face/edge but ensure they CAN be found
     const auto vi_in_face = [&](const idx f, const idx v)->idx {
         return out_indices[f][0] == v ? 0 : (out_indices[f][1] == v ? 1 : 2);
     };
-
     const auto fi_in_edge = [](const Internal::Edge& edge, const idx f)->idx {
         return edge.faces[0] == f ? 0 : 1;
     };
@@ -294,6 +293,7 @@ std::pair<V, F> simplify(const V& vertices, const F& indices, float strength)
         return {of, ov, oe};
     };
 
+    std::queue<vec3i> fve_queue_v_del, fve_queue_v_kept;
     for (auto nv = vertices.size(); !heap.empty() && nv > nv_target;) {
         // collapse an edge to remove 1 vertex and 2 faces in each iteration
         const idx e_collapsed = heap.top();
@@ -328,7 +328,6 @@ std::pair<V, F> simplify(const V& vertices, const F& indices, float strength)
 
             // test run iterating faces: need to increase error and abort if fold-over is identified
             bool danger_of_fold_over = false;
-            std::queue<vec3i> fve_queue_v_del, fve_queue_v_kept;
             vec3i fve;
             const idx& f = fve[0];
             const idx& v = fve[1];
@@ -338,6 +337,7 @@ std::pair<V, F> simplify(const V& vertices, const F& indices, float strength)
                 if (Internal::face_fold_over(out_vertices, out_indices[f][e], out_indices[f][v],
                                              v_del, edge.center)) {
                     danger_of_fold_over = true;
+                    fve_queue_v_del = std::queue<vec3i>();
                     break;
                 }
             }
@@ -347,13 +347,14 @@ std::pair<V, F> simplify(const V& vertices, const F& indices, float strength)
                     if (Internal::face_fold_over(out_vertices, out_indices[f][e], out_indices[f][v],
                                                  v_kept, edge.center)) {
                         danger_of_fold_over = true;
+                        fve_queue_v_del = std::queue<vec3i>();
+                        fve_queue_v_kept = std::queue<vec3i>();
                         break;
                     }
                 }
             }
             if (danger_of_fold_over) {
                 // penalize this edge by increasing its error and then push back to min-heap
-                // TODO: the value of FOLD_OVER_PENALTY need to be tested out
                 edges[e_collapsed].error *= Internal::FOLD_OVER_PENALTY;
                 heap.push(e_collapsed);
                 continue;
