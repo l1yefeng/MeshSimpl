@@ -18,7 +18,7 @@ void write_obj(const std::string& filename,
 {
     const int precision = 9;
 
-    int coord_col_len = precision+3;
+    int coord_col_len = precision+4;
     double coord = 0.0;
     for (const auto& v : vertices)
         coord = std::max({coord, std::abs(v[0]), std::abs(v[1]), std::abs(v[2])});
