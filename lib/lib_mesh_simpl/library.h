@@ -209,9 +209,16 @@ bool face_fold_over(const V& vertices, const idx v0, const idx v1, const idx v2_
     const vec3d e0 = vertices[v1]-vertices[v0];
     const vec3d e1_prev = vertices[v2_prev]-vertices[v1];
     const vec3d e1_new = v2_new_pos-vertices[v1];
-    const vec3d normal_prev = cross(e0, e1_prev);
-    const vec3d normal_new = cross(e0, e1_new);
-    return dot(normal_prev, normal_new) <= 0;
+    vec3d normal_prev = cross(e0, e1_prev);
+    vec3d normal_new = cross(e0, e1_new);
+    double normal_prev_mag = magnitude(normal_prev);
+    if (normal_prev_mag == 0)
+        return true;
+    double normal_new_mag = magnitude(normal_new);
+    if (normal_new_mag == 0)
+        return true;
+    double cos = dot(normal_prev /= normal_prev_mag, normal_new /= normal_new_mag);
+    return cos < -0.97562931279;
 }
 
 // Replace a vertex in edge, and update other members then mark dirty.
@@ -268,8 +275,6 @@ void compact_data(const std::vector<bool>& deleted_vertex, const std::vector<boo
                 indices[f][i] = static_cast<idx>(v);
 }
 
-} // namespace MeshSimpl::Internal
-
 inline idx vi_in_face(const F& indices, const idx f, const idx v)
 {
     if (indices[f][0] == v)
@@ -280,7 +285,7 @@ inline idx vi_in_face(const F& indices, const idx f, const idx v)
     return 2;
 }
 
-inline idx fi_in_edge(const Internal::Edge& edge, const idx f)
+inline idx fi_in_edge(const Edge& edge, const idx f)
 {
     if (edge.faces[0] == f)
         return 0;
@@ -288,7 +293,7 @@ inline idx fi_in_edge(const Internal::Edge& edge, const idx f)
     return 1;
 };
 
-inline idx vi_in_edge(const Internal::Edge& edge, const idx v)
+inline idx vi_in_edge(const Edge& edge, const idx v)
 {
     if (edge.vertices[0] == v)
         return 0;
@@ -298,9 +303,9 @@ inline idx vi_in_edge(const Internal::Edge& edge, const idx v)
 
 // Returns true if edge is collapsed
 bool collapse_interior_edge(V& vertices, F& indices,
-                            std::vector<Internal::Edge>& edges,
+                            std::vector<Edge>& edges,
                             std::vector<vec3i>& face2edge,
-                            std::vector<Internal::Quadric>& quadrics,
+                            std::vector<Quadric>& quadrics,
                             std::vector<bool>& deleted_vertex,
                             std::vector<bool>& deleted_face,
                             std::vector<bool>& deleted_edge,
@@ -347,11 +352,11 @@ bool collapse_interior_edge(V& vertices, F& indices,
             tgt_edge->faces[i] = f;
             tgt_edge->idx_in_face[i] = e;
         }
-        Internal::copy_vertex_position(edge.center, vertices[v_kept]);
+        copy_vertex_position(edge.center, vertices[v_kept]);
         quadrics[v_kept] = edge.q;
         // update the lucky edge
         tgt_edge->vertices[1-vi_in_edge(*tgt_edge, v_del)] = v_kept;
-        Internal::update_error_and_center(vertices, quadrics, *tgt_edge);
+        update_error_and_center(vertices, quadrics, *tgt_edge);
 
         return true;
     }
@@ -380,11 +385,11 @@ bool collapse_interior_edge(V& vertices, F& indices,
     deleted_vertex[v_del] = true;
     deleted_edge[ecol_target] = true;
     // update vertex position and quadric
-    Internal::copy_vertex_position(edge.center, vertices[v_kept]);
+    copy_vertex_position(edge.center, vertices[v_kept]);
     quadrics[v_kept] = edge.q;
 
     fve = fve_queue_v_del.front();
-    Internal::Edge* tgt_edge = &edges[e_kept[0]];
+    Edge* tgt_edge = &edges[e_kept[0]];
     // first face to process: deleted face 0
     indices[f][3-v-e] = v_kept;
     deleted_edge[face2edge[f][e]] = true;
@@ -400,7 +405,7 @@ bool collapse_interior_edge(V& vertices, F& indices,
         indices[f][3-v-e] = v_kept;
         tgt_edge = &edges[face2edge[f][e]];
         tgt_edge->vertices = {indices[f][v], v_kept};
-        Internal::update_error_and_center(vertices, quadrics, *tgt_edge);
+        update_error_and_center(vertices, quadrics, *tgt_edge);
     }
     // the deleted face 1
     deleted_edge[face2edge[f][v]] = true;
@@ -415,14 +420,16 @@ bool collapse_interior_edge(V& vertices, F& indices,
     for (; !fve_queue_v_kept.empty(); fve_queue_v_kept.pop()) {
         fve = fve_queue_v_kept.front();
         tgt_edge = &edges[face2edge[f][e]];
-        Internal::update_error_and_center(vertices, quadrics, *tgt_edge);
+        update_error_and_center(vertices, quadrics, *tgt_edge);
     }
     assert(face2edge[f][v] == e_kept[0]);
     tgt_edge = &edges[face2edge[f][v]];
-    Internal::update_error_and_center(vertices, quadrics, *tgt_edge);
+    update_error_and_center(vertices, quadrics, *tgt_edge);
 
     return true;
 }
+
+} // namespace MeshSimpl::Internal
 
 // Mesh simplification main method. Simplify given mesh until remaining number of vertices/faces
 // is (1-strength) of the original. Returns output vertices and indices as in inputs.
@@ -437,7 +444,7 @@ std::pair<V, F> simplify(const V& vertices, const F& indices, float strength)
     if (nv_target == vertices.size())
         return {out_vertices, out_indices};
 
-    auto quadrics = Internal::compute_quadrics(vertices, indices, true);
+    auto quadrics = Internal::compute_quadrics(vertices, indices, false);
 
     auto edge_topo = Internal::edge_topology(indices, vertices.size());
     std::vector<Internal::Edge>& edges = edge_topo.first;
@@ -466,7 +473,7 @@ std::pair<V, F> simplify(const V& vertices, const F& indices, float strength)
         const idx of = edge.faces[1-f_idx_to_edge];
         assert(f != of);
         const idx ov_global = out_indices[f][e];
-        const idx ov = vi_in_face(out_indices, of, ov_global);
+        const idx ov = Internal::vi_in_face(out_indices, of, ov_global);
         assert(face2edge[of][ov] != face2edge[f][e]);
         const idx oe = edge.idx_in_face[1-f_idx_to_edge];
         fve = {of, ov, oe};
@@ -488,10 +495,8 @@ std::pair<V, F> simplify(const V& vertices, const F& indices, float strength)
             continue;
         }
 
-        const auto& ff = edge.faces;
-
         assert(edge.vertices[0] != edge.vertices[1]);
-        assert(ff[0] != ff[1]);
+        assert(edge.faces[0] != edge.faces[1]);
 
         if (edge.boundary_v == Internal::BOUNDARY_V::NONE) {
             if (collapse_interior_edge(out_vertices, out_indices, edges, face2edge, quadrics,
