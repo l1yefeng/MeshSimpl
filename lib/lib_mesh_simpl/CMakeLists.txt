@@ -18,15 +18,11 @@ set_target_properties(lib_mesh_simpl PROPERTIES CXX_EXTENSIONS OFF)
 find_package(Catch2 QUIET)
 if(Catch2_FOUND)
     message(STATUS "Library Catch2 was found")
-    enable_testing()
-    add_executable(test
+    add_executable(tests
                    test.cpp
                    util.h
                    library.h)
-    target_link_libraries(test Catch2::Catch2)
-    include(CTest)
-    include(Catch)
-    catch_discover_tests(test)
+    target_link_libraries(tests Catch2::Catch2)
 else()
     message(WARNING "Library Catch2 was not found -- Skipping building of tests")
 endif()

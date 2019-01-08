@@ -218,6 +218,27 @@ void update_error_and_center(const V& vertices, const std::vector<Quadric>& quad
     heap.fix(edge_ptr, edge_ptr->error > error_prev);
 }
 
+bool topology_preservation_check(const std::vector<vec3i>& face2edge,
+                                 const std::queue<vec3i>& fve_queue_v_del,
+                                 const std::queue<vec3i>& fve_queue_v_kept)
+{
+    vec3i fve;
+    const idx& f = fve[0];
+    const idx& v = fve[1];
+    const idx& e = fve[2];
+    fve = fve_queue_v_del.back();
+    idx e_of_interest = face2edge[f][3-e-v];
+    fve = fve_queue_v_kept.front();
+    if (e_of_interest == face2edge[f][3-e-v])
+        return false;
+    fve = fve_queue_v_kept.back();
+    e_of_interest = face2edge[f][3-e-v];
+    fve = fve_queue_v_del.front();
+    if (e_of_interest == face2edge[f][3-e-v])
+        return false;
+    return true;
+}
+
 // Remove the vertices and indices that are marked deleted, and reduce the vector size
 void compact_data(const std::vector<bool>& deleted_vertex, const std::vector<bool>& deleted_face,
                   V& vertices, F& indices)
@@ -316,37 +337,6 @@ bool collapse_interior_edge(V& vertices, F& indices,
     const idx& v = fve[1];
     const idx& e = fve[2]; // they always refer to fve; updated on each `fve = ...'
 
-    if (face2edge[ff[0]][v_kept_in_ff[0]] == face2edge[ff[1]][v_kept_in_ff[1]] ||
-        face2edge[ff[0]][v_del_in_ff[0]] == face2edge[ff[1]][v_del_in_ff[1]]) {
-        // degenerated faces appeared
-        if (face2edge[ff[0]][v_del_in_ff[0]] == face2edge[ff[1]][v_del_in_ff[1]]) {
-            // swap the two vertices so that the situation is easier to handle
-            std::swap(v_kept_in_ff, v_del_in_ff);
-            std::swap(v_kept, v_del);
-            e_kept = {face2edge[ff[0]][v_kept_in_ff[0]], face2edge[ff[1]][v_kept_in_ff[1]]};
-        }
-
-        const idx the_only_e = face2edge[ff[0]][v_kept_in_ff[0]];
-        auto tgt_edge = &edges[the_only_e];
-        for (auto i : {0, 1}) {
-            deleted_face[ff[i]] = true;
-            heap.erase(e_kept[i]);
-            // update the vertex kept
-            iter_next(fve = {ff[i], v_del_in_ff[i], edge.idx_in_face[i]});
-            // update face2edge
-            face2edge[f][e] = the_only_e;
-            tgt_edge->faces[i] = f;
-            tgt_edge->idx_in_face[i] = e;
-        }
-        copy_vertex_position(edge.center, vertices[v_kept]);
-        quadrics[v_kept] = edge.q;
-        // update the lucky edge
-        tgt_edge->vertices[1-vi_in_edge(*tgt_edge, v_del)] = v_kept;
-        update_error_and_center(vertices, quadrics, heap, tgt_edge);
-
-        return true;
-    }
-
     // starting point of fve iterations at two deleted faces
     const vec3i fve_begin_v_del{ff[0], v_kept_in_ff[0], edge.idx_in_face[0]};
     const vec3i fve_begin_v_kept{ff[1], v_del_in_ff[1], edge.idx_in_face[1]};
@@ -364,12 +354,16 @@ bool collapse_interior_edge(V& vertices, F& indices,
             return false;
     }
 
+    // check if this operation will damage topology (create 3-manifold)
+    if (!topology_preservation_check(face2edge, fve_queue_v_del, fve_queue_v_kept))
+        return false;
+
     // mark 2 faces, 1 vertex, and 1 edge as deleted;
     // 2 more edges will be marked in the loop later
     deleted_face[ff[0]] = true;
     deleted_face[ff[1]] = true;
     deleted_vertex[v_del] = true;
-    heap.erase(ecol_target);
+    heap.pop();
     // update vertex position and quadric
     copy_vertex_position(edge.center, vertices[v_kept]);
     quadrics[v_kept] = edge.q;
@@ -430,7 +424,7 @@ std::pair<V, F> simplify(const V& vertices, const F& indices, float strength)
     if (nv_target == vertices.size())
         return {out_vertices, out_indices};
 
-    auto quadrics = Internal::compute_quadrics(vertices, indices, false);
+    auto quadrics = Internal::compute_quadrics(vertices, indices, true);
 
     auto edge_topo = Internal::edge_topology(indices, vertices.size());
     std::vector<Internal::Edge>& edges = edge_topo.first;
@@ -473,7 +467,6 @@ std::pair<V, F> simplify(const V& vertices, const F& indices, float strength)
                                        deleted_vertex, deleted_face,
                                        iter_next, heap, e_collapsed)) {
                 --nv;
-                heap.pop();
             }
             else {
                 // cause of failure is fold-over, let's penalize it and give it a second chance
