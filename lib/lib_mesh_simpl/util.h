@@ -5,7 +5,7 @@
 #ifndef MESH_SIMPL_UTIL_H
 #define MESH_SIMPL_UTIL_H
 
-#include "typedef.h"
+#include "types.h"
 #include <array>
 #include <vector>
 #include <cassert>

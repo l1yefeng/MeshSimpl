@@ -5,7 +5,7 @@
 #ifndef MESH_SIMPL_QEM_HEAP_H
 #define MESH_SIMPL_QEM_HEAP_H
 
-#include "typedef.h"
+#include "types.h"
 #include <limits>
 #include <vector>
 
