@@ -6,6 +6,7 @@
 
 #include "util.h"
 #include "library.h"
+#include "qem_heap.h"
 #include <catch2/catch.hpp>
 
 using namespace std;
@@ -49,7 +50,7 @@ TEST_CASE("Deleted values should be gone", "[compact_data]")
     vector<bool> f_del(F.size(), false);
     for (int i : {0, 6, 7, 10, 11})
         f_del[i] = true;
-    compact_data(V, F, v_del, f_del);
+    compact_data(v_del, f_del, V, F);
 
     SECTION("Vertices") {
         REQUIRE(V.size() == 7);
@@ -61,5 +62,61 @@ TEST_CASE("Deleted values should be gone", "[compact_data]")
             return !(face[0] < V.size() && face[1] < V.size() && face[2] < V.size());
         });
         REQUIRE(it == F.end());
+    }
+}
+
+TEST_CASE("QEM heap should behave normally", "[QEMHeap]")
+{
+    vector<Edge> edges(10);
+    for (int i = 0; i < 10; ++i) {
+        edges[i].error = 1.1*((i+5)%10);
+        edges[i].boundary_v = BOUNDARY_V::NONE;
+    }
+    Edge edge_should_ignore{};
+    edge_should_ignore.boundary_v = BOUNDARY_V::BOTH;
+    edges.push_back(edge_should_ignore);
+
+    QEMHeap heap(edges);
+    REQUIRE(heap.size() == 10);
+
+    SECTION("constructor") {
+        vector<unsigned int> e_results{5, 6, 7, 8, 9, 0, 1, 2, 3, 4};
+        for (int i = 0; i < 10; ++i) {
+            REQUIRE(heap.top() == e_results[i]);
+            heap.pop();
+        }
+    }
+
+    SECTION("size()") {
+        REQUIRE(heap.size() == 10);
+    }
+
+    SECTION("fix()") {
+        edges[0].error = -1.0;
+        heap.fix(0);
+        vector<unsigned int> e_results{0, 5, 6, 7, 8, 9, 1, 2, 3, 4};
+        for (int i = 0; i < 10; ++i) {
+            REQUIRE(heap.top() == e_results[i]);
+            heap.pop();
+        }
+    }
+
+    SECTION("penalize()") {
+        heap.penalize(0);
+        vector<unsigned int> e_results{5, 6, 7, 8, 9, 1, 2, 3, 4, 0};
+        for (int i = 0; i < 10; ++i) {
+            REQUIRE(heap.top() == e_results[i]);
+            heap.pop();
+        }
+    }
+
+    SECTION("erase()") {
+        heap.erase(0);
+        REQUIRE(heap.size() == 9);
+        vector<unsigned int> e_results{5, 6, 7, 8, 9, 1, 2, 3, 4};
+        for (int i = 0; i < 9; ++i) {
+            REQUIRE(heap.top() == e_results[i]);
+            heap.pop();
+        }
     }
 }

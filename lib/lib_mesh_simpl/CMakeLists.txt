@@ -4,10 +4,14 @@ project(lib_mesh_simpl
 
 set(CMAKE_CXX_STANDARD 11)
 
+find_package(Boost REQUIRED)
+
+include_directories(${Boost_INCLUDE_DIR})
+
 add_library(lib_mesh_simpl SHARED
             library.h
             library.cpp
-            util.h)
+            util.h qem_heap.h)
 
 target_compile_features(lib_mesh_simpl PUBLIC cxx_std_11)
 set_target_properties(lib_mesh_simpl PROPERTIES CXX_EXTENSIONS OFF)
