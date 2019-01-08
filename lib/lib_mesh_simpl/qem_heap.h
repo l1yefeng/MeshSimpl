@@ -5,7 +5,7 @@
 #ifndef MESH_SIMPL_QEM_HEAP_H
 #define MESH_SIMPL_QEM_HEAP_H
 
-#include "library.h"
+#include "typedef.h"
 #include <limits>
 #include <boost/heap/binomial_heap.hpp>
 
@@ -42,6 +42,7 @@ public:
     void pop() { min_heap.pop(); }
     // Fix the priority of an edge after the error value is modified
     void fix(idx e) { min_heap.update(handles[e]); }
+    void fix(Edge* const ptr) { min_heap.update(handles[ptr-edges.data()]); }
     // Suppress this edge until it is, if ever, updated next time
     void penalize(idx e)
     {
@@ -57,7 +58,8 @@ public:
 private:
     const std::vector<Edge>& edges;
     boost::heap::binomial_heap<QEMHeapNode, boost::heap::compare<QEMHeapCmp>> min_heap;
-    std::vector<boost::heap::binomial_heap<QEMHeapNode, boost::heap::compare<QEMHeapCmp>>::handle_type> handles;
+    std::vector<boost::heap::binomial_heap<
+        QEMHeapNode, boost::heap::compare<QEMHeapCmp>>::handle_type> handles;
 };
 
 }

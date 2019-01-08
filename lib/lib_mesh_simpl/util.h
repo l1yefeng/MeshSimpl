@@ -5,6 +5,7 @@
 #ifndef MESH_SIMPL_UTIL_H
 #define MESH_SIMPL_UTIL_H
 
+#include "typedef.h"
 #include <array>
 #include <vector>
 #include <cassert>
@@ -13,18 +14,8 @@
 namespace MeshSimpl
 {
 
-typedef unsigned int idx;
-typedef std::array<double, 3> vec3d;               // double
-typedef std::array<idx, 3> vec3i;                  // idx
-typedef std::array<idx, 2> vec2i;                  // idx
-typedef std::vector<std::vector<double>> V;        // input/output vertex positions
-typedef std::vector<std::vector<unsigned int>> F;  // input/output face indices
-
 namespace Internal
 {
-
-// A quadric Q consists of a symmetric 3x3 matrix A, a vec3 b, and a scalar c
-typedef std::array<double, 10> Quadric;
 
 template<typename Position>
 inline double dot(const vec3d& a, const Position& b) { return a[0]*b[0]+a[1]*b[1]+a[2]*b[2]; }

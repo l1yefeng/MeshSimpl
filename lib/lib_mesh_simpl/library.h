@@ -1,7 +1,9 @@
 #ifndef MESH_SIMPL_LIBRARY_H
 #define MESH_SIMPL_LIBRARY_H
 
+#include "typedef.h"
 #include "util.h"
+#include "qem_heap.h"
 #include <vector>
 #include <array>
 #include <set>
@@ -16,21 +18,6 @@ namespace Internal
 {
 
 static const size_t MIN_NR_VERTICES = 4;
-
-enum BOUNDARY_V { NONE, BOTH, V0, V1 };
-
-// Edge defines the struct of an edge
-struct Edge
-{
-    vec2i vertices;        // index of two end vertices, unique, v0 < v1
-    vec2i faces;           // index of two incident faces
-    vec2i idx_in_face;     // index of this (0, 1, 2) in faces
-    BOUNDARY_V boundary_v; // vertices on boundary
-    vec3d center;          // where this edge collapse into
-    double error;          // quadric error value, undefined if on boundary
-    Quadric q;             // sum of quadrics of two vertices
-    bool dirty;            // true if this edge has wrong position in heap
-};
 
 // Compute quadrics Q for every vertex. If not weighted by area then it's uniform
 std::vector<Quadric>
@@ -221,13 +208,13 @@ bool face_fold_over(const V& vertices, const idx v0, const idx v1, const idx v2_
     return cos < -0.97562931279;
 }
 
-// Replace a vertex in edge, and update other members then mark dirty.
-// FIXME: only for non-boundary cases for the time being
-void update_error_and_center(const V& vertices, const std::vector<Quadric>& quadrics, Edge& edge)
+// Replace a vertex in edge, and update other members then fix priority in heap
+void update_error_and_center(const V& vertices, const std::vector<Quadric>& quadrics,
+                             QEMHeap& heap, Edge* const edge_ptr)
 {
-    edge.q = quadrics[edge.vertices[0]]+quadrics[edge.vertices[1]];
-    ecol_vertex_placement(vertices, edge);
-    edge.dirty = true;
+    edge_ptr->q = quadrics[edge_ptr->vertices[0]]+quadrics[edge_ptr->vertices[1]];
+    ecol_vertex_placement(vertices, *edge_ptr);
+    heap.fix(edge_ptr);
 }
 
 // Remove the vertices and indices that are marked deleted, and reduce the vector size
@@ -308,9 +295,8 @@ bool collapse_interior_edge(V& vertices, F& indices,
                             std::vector<Quadric>& quadrics,
                             std::vector<bool>& deleted_vertex,
                             std::vector<bool>& deleted_face,
-                            std::vector<bool>& deleted_edge,
                             const std::function<void(vec3i&)>& iter_next,
-                            const idx ecol_target)
+                            QEMHeap& heap, const idx ecol_target)
 {
     const auto& edge = edges[ecol_target];
     const vec2i& ff = edge.faces;
@@ -339,12 +325,11 @@ bool collapse_interior_edge(V& vertices, F& indices,
             e_kept = {face2edge[ff[0]][v_kept_in_ff[0]], face2edge[ff[1]][v_kept_in_ff[1]]};
         }
 
-        deleted_edge[ecol_target] = true;
         const idx the_only_e = face2edge[ff[0]][v_kept_in_ff[0]];
         auto tgt_edge = &edges[the_only_e];
         for (auto i : {0, 1}) {
             deleted_face[ff[i]] = true;
-            deleted_edge[e_kept[i]] = true;
+            heap.erase(e_kept[i]);
             // update the vertex kept
             iter_next(fve = {ff[i], v_del_in_ff[i], edge.idx_in_face[i]});
             // update face2edge
@@ -356,7 +341,7 @@ bool collapse_interior_edge(V& vertices, F& indices,
         quadrics[v_kept] = edge.q;
         // update the lucky edge
         tgt_edge->vertices[1-vi_in_edge(*tgt_edge, v_del)] = v_kept;
-        update_error_and_center(vertices, quadrics, *tgt_edge);
+        update_error_and_center(vertices, quadrics, heap, tgt_edge);
 
         return true;
     }
@@ -383,7 +368,7 @@ bool collapse_interior_edge(V& vertices, F& indices,
     deleted_face[ff[0]] = true;
     deleted_face[ff[1]] = true;
     deleted_vertex[v_del] = true;
-    deleted_edge[ecol_target] = true;
+    heap.erase(ecol_target);
     // update vertex position and quadric
     copy_vertex_position(edge.center, vertices[v_kept]);
     quadrics[v_kept] = edge.q;
@@ -392,7 +377,7 @@ bool collapse_interior_edge(V& vertices, F& indices,
     Edge* tgt_edge = &edges[e_kept[0]];
     // first face to process: deleted face 0
     indices[f][3-v-e] = v_kept;
-    deleted_edge[face2edge[f][e]] = true;
+    heap.erase(face2edge[f][e]);
     face2edge[f][e] = e_kept[0];
     const idx ff0_in_edge = fi_in_edge(*tgt_edge, ff[0]);
     assert(ff[0] != f);
@@ -405,10 +390,10 @@ bool collapse_interior_edge(V& vertices, F& indices,
         indices[f][3-v-e] = v_kept;
         tgt_edge = &edges[face2edge[f][e]];
         tgt_edge->vertices = {indices[f][v], v_kept};
-        update_error_and_center(vertices, quadrics, *tgt_edge);
+        update_error_and_center(vertices, quadrics, heap, tgt_edge);
     }
     // the deleted face 1
-    deleted_edge[face2edge[f][v]] = true;
+    heap.erase(face2edge[f][v]);
     face2edge[f][v] = e_kept[1];
     tgt_edge = &edges[e_kept[1]];
     const idx ff1_in_edge = fi_in_edge(*tgt_edge, ff[1]);
@@ -420,11 +405,11 @@ bool collapse_interior_edge(V& vertices, F& indices,
     for (; !fve_queue_v_kept.empty(); fve_queue_v_kept.pop()) {
         fve = fve_queue_v_kept.front();
         tgt_edge = &edges[face2edge[f][e]];
-        update_error_and_center(vertices, quadrics, *tgt_edge);
+        update_error_and_center(vertices, quadrics, heap, tgt_edge);
     }
     assert(face2edge[f][v] == e_kept[0]);
     tgt_edge = &edges[face2edge[f][v]];
-    update_error_and_center(vertices, quadrics, *tgt_edge);
+    update_error_and_center(vertices, quadrics, heap, tgt_edge);
 
     return true;
 }
@@ -453,15 +438,10 @@ std::pair<V, F> simplify(const V& vertices, const F& indices, float strength)
     const double error_penalty_factor = Internal::init_edge_errors(vertices, quadrics, edges)/100;
 
     // create priority queue on quadric error
-    const auto heap_cmp = [&](idx a, idx b)->bool { return edges[a].error > edges[b].error; };
-    std::priority_queue<idx, std::vector<idx>, decltype(heap_cmp)> heap(heap_cmp);
-    for (idx i = 0; i < edges.size(); ++i)
-        if (edges[i].boundary_v != Internal::BOUNDARY_V::BOTH)
-            heap.push(i);
+    Internal::QEMHeap heap(edges);
 
     std::vector<bool> deleted_vertex(vertices.size(), false);
     std::vector<bool> deleted_face(indices.size(), false);
-    std::vector<bool> deleted_edge(edges.size(), false);
 
     // returns f,v,e of next neighbor face centered around v_center;
     // indexes v and e are local in face (0,1,2) in both input and output.
@@ -482,31 +462,21 @@ std::pair<V, F> simplify(const V& vertices, const F& indices, float strength)
     for (auto nv = vertices.size(); !heap.empty() && nv > nv_target;) {
         // collapse an edge to remove 1 vertex and 2 faces in each iteration
         const idx e_collapsed = heap.top();
-        heap.pop();
-
-        if (deleted_edge[e_collapsed])
-            continue;
 
         const auto& edge = edges[e_collapsed];
-        if (edge.dirty) {
-            // this edge was modified and is having an error no less than before
-            edges[e_collapsed].dirty = false;
-            heap.push(e_collapsed);
-            continue;
-        }
-
         assert(edge.vertices[0] != edge.vertices[1]);
         assert(edge.faces[0] != edge.faces[1]);
 
         if (edge.boundary_v == Internal::BOUNDARY_V::NONE) {
             if (collapse_interior_edge(out_vertices, out_indices, edges, face2edge, quadrics,
-                                       deleted_vertex, deleted_face, deleted_edge,
-                                       iter_next, e_collapsed))
+                                       deleted_vertex, deleted_face,
+                                       iter_next, heap, e_collapsed)) {
                 --nv;
+                heap.pop();
+            }
             else {
                 // cause of failure is fold-over, let's penalize it and give it a second chance
-                edges[e_collapsed].error += error_penalty_factor;
-                heap.push(e_collapsed);
+                heap.penalize(e_collapsed);
             }
         }
         else {
