@@ -33,7 +33,7 @@ inline vec3d midpoint(const std::vector<double>& a, const std::vector<double>& b
 inline double magnitude(const vec3d& x) { return sqrt(x[0]*x[0]+x[1]*x[1]+x[2]*x[2]); }
 
 template<typename PositionSrc, typename PositionDest>
-inline void copy_vertex_position(const PositionSrc& src, PositionDest& dest)
+inline void copy_vec3(const PositionSrc& src, PositionDest& dest)
 {
     std::copy(src.begin(), src.begin()+3, dest.begin());
 }

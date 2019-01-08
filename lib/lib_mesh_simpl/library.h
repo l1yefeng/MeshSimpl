@@ -18,6 +18,7 @@ namespace Internal
 {
 
 static const size_t MIN_NR_VERTICES = 4;
+static const double FOLD_OVER_COS_ANGLE = std::cos(160);
 
 // Compute quadrics Q for every vertex. If not weighted by area then it's uniform
 std::vector<Quadric>
@@ -152,21 +153,18 @@ void ecol_vertex_placement(const V& vertices, Edge& edge)
         for (const idx v : edge.vertices) {
             const double err = q_error(edge.q, vertices[v]);
             if (err < edge.error) {
-                copy_vertex_position(vertices[v], edge.center);
+                copy_vec3(vertices[v], edge.center);
                 edge.error = err;
             }
         }
     }
 }
 
-// Compute quadric error for every edge at initialization.
-// Returns the range of error, can be used to decide fold-over penalty factor
-double init_edge_errors(const V& vertices,
-                        const std::vector<Quadric>& quadrics,
-                        std::vector<Edge>& edges)
+// Compute quadric error for every edge at initialization
+void init_edge_errors(const V& vertices,
+                      const std::vector<Quadric>& quadrics,
+                      std::vector<Edge>& edges)
 {
-    double min_error = std::numeric_limits<double>::max();
-    double max_error = std::numeric_limits<double>::lowest();
     for (auto& edge : edges) {
         // boundary edges will not be touched during simplification
         if (edge.boundary_v == BOUNDARY_V::BOTH)
@@ -179,15 +177,10 @@ double init_edge_errors(const V& vertices,
         if (edge.boundary_v == BOUNDARY_V::NONE)
             ecol_vertex_placement(vertices, edge);
         else {
-            copy_vertex_position(vertices[edge.boundary_v == BOUNDARY_V::V0 ? v0 : v1],
-                                 edge.center);
+            copy_vec3(vertices[edge.boundary_v == BOUNDARY_V::V0 ? v0 : v1], edge.center);
             edge.error = q_error(edge.q, edge.center);
         }
-        min_error = std::min(min_error, edge.error);
-        max_error = std::max(max_error, edge.error);
     }
-
-    return max_error-min_error;
 }
 
 bool face_fold_over(const V& vertices, const idx v0, const idx v1, const idx v2_prev,
@@ -205,7 +198,7 @@ bool face_fold_over(const V& vertices, const idx v0, const idx v1, const idx v2_
     if (normal_new_mag == 0)
         return true;
     double cos = dot(normal_prev /= normal_prev_mag, normal_new /= normal_new_mag);
-    return cos < -0.97562931279;
+    return cos < FOLD_OVER_COS_ANGLE;
 }
 
 // Replace a vertex in edge, and update other members then fix priority in heap
@@ -365,7 +358,7 @@ bool collapse_interior_edge(V& vertices, F& indices,
     deleted_vertex[v_del] = true;
     heap.pop();
     // update vertex position and quadric
-    copy_vertex_position(edge.center, vertices[v_kept]);
+    copy_vec3(edge.center, vertices[v_kept]);
     quadrics[v_kept] = edge.q;
 
     fve = fve_queue_v_del.front();
@@ -430,7 +423,7 @@ std::pair<V, F> simplify(const V& vertices, const F& indices, float strength)
     std::vector<Internal::Edge>& edges = edge_topo.first;
     std::vector<vec3i>& face2edge = edge_topo.second;
 
-    const double error_penalty_factor = Internal::init_edge_errors(vertices, quadrics, edges)/100;
+    Internal::init_edge_errors(vertices, quadrics, edges);
 
     // create priority queue on quadric error
     Internal::QEMHeap heap(edges);
@@ -459,6 +452,8 @@ std::pair<V, F> simplify(const V& vertices, const F& indices, float strength)
         const idx e_collapsed = heap.top();
 
         const auto& edge = edges[e_collapsed];
+        if (edge.error == std::numeric_limits<double>::max())
+            break;
         assert(edge.vertices[0] != edge.vertices[1]);
         assert(edge.faces[0] != edge.faces[1]);
 
