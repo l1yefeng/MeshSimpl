@@ -213,8 +213,9 @@ void update_error_and_center(const V& vertices, const std::vector<Quadric>& quad
                              QEMHeap& heap, Edge* const edge_ptr)
 {
     edge_ptr->q = quadrics[edge_ptr->vertices[0]]+quadrics[edge_ptr->vertices[1]];
+    const double error_prev = edge_ptr->error;
     ecol_vertex_placement(vertices, *edge_ptr);
-    heap.fix(edge_ptr);
+    heap.fix(edge_ptr, edge_ptr->error > error_prev);
 }
 
 // Remove the vertices and indices that are marked deleted, and reduce the vector size

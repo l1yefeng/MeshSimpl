@@ -85,6 +85,7 @@ TEST_CASE("QEM heap should behave normally", "[QEMHeap]")
             REQUIRE(heap.top() == e_results[i]);
             heap.pop();
         }
+        REQUIRE(heap.empty());
     }
 
     SECTION("size()") {
@@ -93,8 +94,10 @@ TEST_CASE("QEM heap should behave normally", "[QEMHeap]")
 
     SECTION("fix()") {
         edges[0].error = -1.0;
-        heap.fix(0);
-        vector<unsigned int> e_results{0, 5, 6, 7, 8, 9, 1, 2, 3, 4};
+        heap.fix(&edges[0], false);
+        edges[7].error = 8.0;
+        heap.fix(&edges[7], true);
+        vector<unsigned int> e_results{0, 5, 6, 8, 9, 1, 2, 7, 3, 4};
         for (int i = 0; i < 10; ++i) {
             REQUIRE(heap.top() == e_results[i]);
             heap.pop();
@@ -103,18 +106,21 @@ TEST_CASE("QEM heap should behave normally", "[QEMHeap]")
 
     SECTION("penalize()") {
         heap.penalize(0);
-        vector<unsigned int> e_results{5, 6, 7, 8, 9, 1, 2, 3, 4, 0};
-        for (int i = 0; i < 10; ++i) {
+        heap.penalize(7);
+        vector<unsigned int> e_results{5, 6, 8, 9, 1, 2, 3, 4};
+        for (int i = 0; i < 8; ++i) {
             REQUIRE(heap.top() == e_results[i]);
             heap.pop();
         }
     }
 
     SECTION("erase()") {
+        heap.erase(2);
         heap.erase(0);
-        REQUIRE(heap.size() == 9);
-        vector<unsigned int> e_results{5, 6, 7, 8, 9, 1, 2, 3, 4};
-        for (int i = 0; i < 9; ++i) {
+        heap.erase(7);
+        REQUIRE(heap.size() == 7);
+        vector<unsigned int> e_results{5, 6, 8, 9, 1, 3, 4};
+        for (int i = 0; i < 7; ++i) {
             REQUIRE(heap.top() == e_results[i]);
             heap.pop();
         }
