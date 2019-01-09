@@ -1,12 +1,11 @@
 #include "measure.h"
 #include "write_obj.h"
-#include <simplify.h>
 #include <readOBJ.h>
+#include <simplify.h>
 
 using namespace std;
 
-int main(int argc, char* argv[])
-{
+int main(int argc, char* argv[]) {
     if (argc != 4) {
         cout << "Usage: " << argv[0] << " OBJFILE OUTPUT [STRENGTH]" << endl
              << endl
@@ -21,8 +20,7 @@ int main(int argc, char* argv[])
     float strength;
     try {
         strength = stof(argv[3]);
-    }
-    catch (const std::invalid_argument& e) {
+    } catch (const std::invalid_argument& e) {
         cerr << "Error: STRENGTH cannot be recognized" << endl;
         return 1;
     }
@@ -48,8 +46,7 @@ int main(int argc, char* argv[])
         std::cout << "[INFO] Simplification completed (" << duration << " milliseconds)"
                   << std::endl;
         write_obj(argv[2], res.first, res.second);
-    }
-    catch (char const* exception) {
+    } catch (char const* exception) {
         cerr << exception << endl;
         return 1;
     }

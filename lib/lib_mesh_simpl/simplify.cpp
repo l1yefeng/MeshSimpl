@@ -4,15 +4,13 @@
 
 #include "simplify.h"
 #include "ecol.h"
-#include "pre_proc.h"
 #include "post_proc.h"
+#include "pre_proc.h"
 #include <limits>
 
-namespace MeshSimpl
-{
+namespace MeshSimpl {
 
-void options_validation(const SimplifyOptions& options)
-{
+void options_validation(const SimplifyOptions& options) {
     if (options.strength > 1)
         throw "ERROR::INVALID_OPTION: strength > 1";
     if (options.strength < 0)
@@ -24,12 +22,12 @@ void options_validation(const SimplifyOptions& options)
 // Mesh simplification main method. Simplify given mesh until remaining number of vertices/faces
 // is (1-strength) of the original. Returns output vertices and indices as in inputs.
 // TODO: Ignoring the 4th and the following values (if exist) in vertices.
-std::pair<V, F> simplify(const V& vertices, const F& indices, const SimplifyOptions& options)
-{
+std::pair<V, F> simplify(const V& vertices, const F& indices, const SimplifyOptions& options) {
     options_validation(options);
     const size_t NV = vertices.size();
-    const size_t nv_to_decimate = NV-std::max(
-        static_cast<size_t>(std::lround((1-options.strength)*NV)), Internal::MIN_NR_VERTICES);
+    const size_t nv_to_decimate =
+        NV - std::max(static_cast<size_t>(std::lround((1 - options.strength) * NV)),
+                      Internal::MIN_NR_VERTICES);
     auto out_vertices = vertices;
     auto out_indices = indices;
 
@@ -52,7 +50,7 @@ std::pair<V, F> simplify(const V& vertices, const F& indices, const SimplifyOpti
 
     // one run of a series of edge collapse that is supposed to decimate nv_decimate vertices and
     // returns true if it ends because this target is achieved instead of because of other reason
-    const auto run = [&](size_t nv_run)->bool {
+    const auto run = [&](size_t nv_run) -> bool {
         size_t i = 0;
         while (!heap.empty() && i < nv_run) {
             // collapse an edge to remove 1 vertex and 2 faces in each iteration
@@ -69,8 +67,7 @@ std::pair<V, F> simplify(const V& vertices, const F& indices, const SimplifyOpti
                                            deleted_vertex, deleted_face, heap, e_collapsed)) {
                     ++i;
                 }
-            }
-            else {
+            } else {
                 // TODO: handle boundary cases
                 assert(false);
             }
@@ -82,7 +79,7 @@ std::pair<V, F> simplify(const V& vertices, const F& indices, const SimplifyOpti
         run(nv_to_decimate);
     else {
         for (size_t nv = nv_to_decimate; true;) {
-            bool run_completed = run(nv-(nv >> options.run_size));
+            bool run_completed = run(nv - (nv >> options.run_size));
             if (!run_completed)
                 break;
             nv >>= options.run_size;
@@ -100,5 +97,4 @@ std::pair<V, F> simplify(const V& vertices, const F& indices, const SimplifyOpti
     return {out_vertices, out_indices};
 }
 
-}
-
+} // namespace MeshSimpl

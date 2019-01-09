@@ -7,14 +7,12 @@
 
 #include "types.h"
 
-namespace MeshSimpl
-{
-namespace Internal
-{
+namespace MeshSimpl {
+
+namespace Internal {
 
 // Reference: https://algs4.cs.princeton.edu/24pq/MinPQ.java
-class QEMHeap
-{
+class QEMHeap {
 public:
     // Construct a min-binary-heap with edge ecol errors as keys;
     // store a reference of the list of edges and store all handles
@@ -35,7 +33,7 @@ public:
     // Returns the size of the heap, which should be the number of edges with boundary_v != BOTH
     size_t size() const { return n; };
     // Returns the keys iterator at the begin / end of active edges
-    std::vector<idx>::const_iterator begin() const { return keys.begin()+1; }
+    std::vector<idx>::const_iterator begin() const { return keys.begin() + 1; }
     std::vector<idx>::const_iterator end() const { return keys.end(); }
 
 private:
@@ -59,7 +57,8 @@ private:
     void prioritize_all();
 };
 
-}
-}
+} // namespace Internal
+
+} // namespace MeshSimpl
 
 #endif // LIB_MESH_SIMPL_QEM_HEAP_H

@@ -6,17 +6,15 @@
 #include "util.h"
 #include <set>
 
-namespace MeshSimpl
-{
-namespace Internal
-{
+namespace MeshSimpl {
+
+namespace Internal {
 
 void compute_quadrics_per_face(const V& vertices, const std::vector<idx>& face,
-                               const bool weight_by_area, std::vector<Quadric>& quadrics)
-{
+                               const bool weight_by_area, std::vector<Quadric>& quadrics) {
     // calculate the plane of this face (n and d: n'v+d=0 defines the plane)
-    const vec3d edge1 = vertices[face[1]]-vertices[face[0]];
-    const vec3d edge2 = vertices[face[2]]-vertices[face[0]];
+    const vec3d edge1 = vertices[face[1]] - vertices[face[0]];
+    const vec3d edge2 = vertices[face[2]] - vertices[face[0]];
     vec3d normal = cross(edge1, edge2);
     // |normal| = area, used for normalization and weighting quadrics
     double area = magnitude(normal);
@@ -34,8 +32,7 @@ void compute_quadrics_per_face(const V& vertices, const std::vector<idx>& face,
         quadrics[v] += q;
 }
 
-std::vector<Quadric> compute_quadrics(const V& vertices, const F& indices, bool weight_by_area)
-{
+std::vector<Quadric> compute_quadrics(const V& vertices, const F& indices, bool weight_by_area) {
     // quadrics are initialized with all zeros
     std::vector<Quadric> quadrics(vertices.size());
     for (const auto& face : indices)
@@ -43,10 +40,9 @@ std::vector<Quadric> compute_quadrics(const V& vertices, const F& indices, bool 
     return quadrics;
 }
 
-std::vector<Quadric>
-recompute_quadrics(const V& vertices, const F& indices, const std::vector<bool>& deleted_face,
-                   bool weight_by_area)
-{
+std::vector<Quadric> recompute_quadrics(const V& vertices, const F& indices,
+                                        const std::vector<bool>& deleted_face,
+                                        bool weight_by_area) {
     // quadrics are initialized with all zeros
     std::vector<Quadric> quadrics(vertices.size());
     for (idx f = 0; f < indices.size(); ++f)
@@ -55,10 +51,9 @@ recompute_quadrics(const V& vertices, const F& indices, const std::vector<bool>&
     return quadrics;
 }
 
-std::pair<std::vector<Edge>, std::vector<vec3i>>
-construct_edges(const F& indices, const size_t vertex_cnt)
-{
-    const auto edge_cmp = [](const Edge& a, const Edge& b)->bool {
+std::pair<std::vector<Edge>, std::vector<vec3i>> construct_edges(const F& indices,
+                                                                 const size_t vertex_cnt) {
+    const auto edge_cmp = [](const Edge& a, const Edge& b) -> bool {
         if (a.vertices[0] < b.vertices[0])
             return true;
         if (a.vertices[0] > b.vertices[0])
@@ -71,8 +66,8 @@ construct_edges(const F& indices, const size_t vertex_cnt)
     for (idx f = 0; f < indices.size(); ++f) {
         const auto& face = indices[f];
         for (idx i = 0; i < 3; ++i) {
-            const idx j = (i+1)%3; // face[i] and face[j] forms this edge
-            const idx k = (i+2)%3; // k is index of the other vertex and of this edge local to face
+            const idx j = (i + 1) % 3; // face[i] and face[j] form this edge
+            const idx k = (i + 2) % 3; // k is the local idx of this edge to this face
             idx v0 = face[i], v1 = face[j];
             if (v0 > v1)
                 std::swap(v0, v1);
@@ -122,5 +117,6 @@ construct_edges(const F& indices, const size_t vertex_cnt)
     return {edges, face2edge};
 }
 
-}
-}
+} // namespace Internal
+
+} // namespace MeshSimpl

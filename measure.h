@@ -15,20 +15,19 @@
 
 #include <chrono>
 
-class Measure
-{
+class Measure {
 public:
-	Measure() :before(std::chrono::steady_clock::now()) { }
-	void start() { before = std::chrono::steady_clock::now(); }
-	long stop()
-	{
-		const auto after = std::chrono::steady_clock::now();
-		const auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(after-before);
-		before = after;
-		return ms.count();
-	}
+    Measure() : before(std::chrono::steady_clock::now()) {}
+    void start() { before = std::chrono::steady_clock::now(); }
+    long stop() {
+        const auto after = std::chrono::steady_clock::now();
+        const auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(after - before);
+        before = after;
+        return ms.count();
+    }
+
 private:
-	std::chrono::steady_clock::time_point before;
+    std::chrono::steady_clock::time_point before;
 };
 
 #endif // MESH_SIMPL_MEASURE_H

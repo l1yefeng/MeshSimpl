@@ -4,18 +4,16 @@
 
 #include "post_proc.h"
 
-namespace MeshSimpl
-{
-namespace Internal
-{
+namespace MeshSimpl {
+
+namespace Internal {
 
 void compact_data(const std::vector<bool>& deleted_vertex, const std::vector<bool>& deleted_face,
-                  V& vertices, F& indices)
-{
+                  V& vertices, F& indices) {
     std::vector<std::array<std::vector<idx>, 3>> vertex2face(vertices.size());
 
     // get rid of all deleted faces
-    for (size_t lo = 0, hi = indices.size()-1;; ++lo, --hi) {
+    for (size_t lo = 0, hi = indices.size() - 1;; ++lo, --hi) {
         while (!deleted_face[lo] && lo <= hi)
             ++lo;
         while (deleted_face[hi] && lo < hi)
@@ -33,7 +31,7 @@ void compact_data(const std::vector<bool>& deleted_vertex, const std::vector<boo
             vertex2face[indices[f][i]][i].push_back(static_cast<idx>(f));
 
     // get rid of deleted vertices and keep the mapping valid
-    for (size_t lo = 0, hi = vertices.size()-1;; ++lo, --hi) {
+    for (size_t lo = 0, hi = vertices.size() - 1;; ++lo, --hi) {
         while (!deleted_vertex[lo] && lo <= hi)
             ++lo;
         while (deleted_vertex[hi] && lo < hi)
@@ -53,5 +51,6 @@ void compact_data(const std::vector<bool>& deleted_vertex, const std::vector<boo
                 indices[f][i] = static_cast<idx>(v);
 }
 
-}
-}
+} // namespace Internal
+
+} // namespace MeshSimpl
