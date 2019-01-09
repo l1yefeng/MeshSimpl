@@ -5,8 +5,9 @@
 #define CATCH_CONFIG_MAIN
 
 #include "util.h"
-#include "library.h"
+#include "ecol.h"
 #include "qem_heap.h"
+#include "post_proc.h"
 #include <catch2/catch.hpp>
 
 using namespace std;
@@ -80,9 +81,9 @@ TEST_CASE("QEM heap should behave normally", "[QEMHeap]")
     REQUIRE(heap.size() == 10);
 
     SECTION("constructor") {
-        vector<unsigned int> e_results{5, 6, 7, 8, 9, 0, 1, 2, 3, 4};
-        for (int i = 0; i < 10; ++i) {
-            REQUIRE(heap.top() == e_results[i]);
+        array<unsigned int, 10> e_results{5, 6, 7, 8, 9, 0, 1, 2, 3, 4};
+        for (auto e : e_results) {
+            REQUIRE(heap.top() == e);
             heap.pop();
         }
         REQUIRE(heap.empty());
@@ -97,9 +98,9 @@ TEST_CASE("QEM heap should behave normally", "[QEMHeap]")
         heap.fix(&edges[0], false);
         edges[7].error = 8.0;
         heap.fix(&edges[7], true);
-        vector<unsigned int> e_results{0, 5, 6, 8, 9, 1, 2, 7, 3, 4};
-        for (int i = 0; i < 10; ++i) {
-            REQUIRE(heap.top() == e_results[i]);
+        array<unsigned int, 10> e_results{0, 5, 6, 8, 9, 1, 2, 7, 3, 4};
+        for (auto e : e_results) {
+            REQUIRE(heap.top() == e);
             heap.pop();
         }
     }
@@ -107,9 +108,9 @@ TEST_CASE("QEM heap should behave normally", "[QEMHeap]")
     SECTION("penalize()") {
         heap.penalize(0);
         heap.penalize(7);
-        vector<unsigned int> e_results{5, 6, 8, 9, 1, 2, 3, 4};
-        for (int i = 0; i < 8; ++i) {
-            REQUIRE(heap.top() == e_results[i]);
+        array<unsigned int, 8> e_results{5, 6, 8, 9, 1, 2, 3, 4};
+        for (auto e : e_results) {
+            REQUIRE(heap.top() == e);
             heap.pop();
         }
     }
@@ -119,9 +120,9 @@ TEST_CASE("QEM heap should behave normally", "[QEMHeap]")
         heap.erase(0);
         heap.erase(7);
         REQUIRE(heap.size() == 7);
-        vector<unsigned int> e_results{5, 6, 8, 9, 1, 3, 4};
-        for (int i = 0; i < 7; ++i) {
-            REQUIRE(heap.top() == e_results[i]);
+        array<unsigned int, 7> e_results{5, 6, 8, 9, 1, 3, 4};
+        for (auto e : e_results) {
+            REQUIRE(heap.top() == e);
             heap.pop();
         }
     }

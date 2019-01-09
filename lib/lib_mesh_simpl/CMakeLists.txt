@@ -5,10 +5,18 @@ project(lib_mesh_simpl
 set(CMAKE_CXX_STANDARD 11)
 
 add_library(lib_mesh_simpl SHARED
-            library.h
-            library.cpp
+            ecol.h
+            ecol.cpp
             util.h
-            qem_heap.h)
+            util.cpp
+            qem_heap.h
+            qem_heap.cpp
+            simplify.h
+            simplify.cpp
+            pre_proc.h
+            pre_proc.cpp
+            post_proc.h
+            post_proc.cpp)
 
 # Force c++11
 target_compile_features(lib_mesh_simpl PUBLIC cxx_std_11)
@@ -21,7 +29,8 @@ if(Catch2_FOUND)
     add_executable(tests
                    test.cpp
                    util.h
-                   library.h)
+                   post_proc.h
+                   ecol.h)
     target_link_libraries(tests Catch2::Catch2)
 else()
     message(WARNING "Library Catch2 was not found -- Skipping building of tests")

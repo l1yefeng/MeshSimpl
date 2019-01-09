@@ -1,6 +1,6 @@
 #include "measure.h"
 #include "write_obj.h"
-#include <library.h>
+#include <simplify.h>
 #include <readOBJ.h>
 
 using namespace std;

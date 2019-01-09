@@ -2,18 +2,15 @@
 // Created by nickl on 12/27/18.
 //
 
-#ifndef MESH_SIMPL_UTIL_H
-#define MESH_SIMPL_UTIL_H
+#ifndef LIB_MESH_SIMPL_UTIL_H
+#define LIB_MESH_SIMPL_UTIL_H
 
 #include "types.h"
-#include <array>
-#include <vector>
 #include <cassert>
 #include <cmath>
 
 namespace MeshSimpl
 {
-
 namespace Internal
 {
 
@@ -60,51 +57,18 @@ inline double q_error(const Quadric& q, const Position& v)
 
 } // namespace MeshSimpl::Internal
 
+Internal::Quadric& operator+=(Internal::Quadric& lfs, const Internal::Quadric& rhs);
+
+Internal::Quadric& operator*=(Internal::Quadric& lfs, double rhs);
+
+Internal::Quadric operator+(const Internal::Quadric& a, const Internal::Quadric& b);
+
+vec3d& operator/=(vec3d& lfs, double rhs);
+
+vec3d operator-(const std::vector<double>& a, const std::vector<double>& b);
+
+vec3d operator-(const vec3d& a, const std::vector<double>& b);
+
 } // namespace MeshSimpl
 
-MeshSimpl::Internal::Quadric&
-operator+=(MeshSimpl::Internal::Quadric& lfs, const MeshSimpl::Internal::Quadric& rhs)
-{
-    for (unsigned int i = 0; i < 10; ++i)
-        lfs[i] += rhs[i];
-    return lfs;
-}
-
-MeshSimpl::Internal::Quadric&
-operator*=(MeshSimpl::Internal::Quadric& lfs, double rhs)
-{
-    for (auto& x : lfs)
-        x *= rhs;
-    return lfs;
-}
-
-MeshSimpl::Internal::Quadric
-operator+(const MeshSimpl::Internal::Quadric& a, const MeshSimpl::Internal::Quadric& b)
-{
-    MeshSimpl::Internal::Quadric q;
-    for (unsigned int i = 0; i < 10; ++i)
-        q[i] = a[i]+b[i];
-    return q;
-}
-
-MeshSimpl::vec3d&
-operator/=(MeshSimpl::vec3d& lfs, double rhs)
-{
-    for (auto& x : lfs)
-        x /= rhs;
-    return lfs;
-}
-
-MeshSimpl::vec3d
-operator-(const std::vector<double>& a, const std::vector<double>& b)
-{
-    return {a[0]-b[0], a[1]-b[1], a[2]-b[2]};
-}
-
-MeshSimpl::vec3d
-operator-(const MeshSimpl::vec3d& a, const std::vector<double>& b)
-{
-    return {a[0]-b[0], a[1]-b[1], a[2]-b[2]};
-}
-
-#endif // MESH_SIMPL_UTIL_H
+#endif // LIB_MESH_SIMPL_UTIL_H

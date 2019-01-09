@@ -2,8 +2,8 @@
 // Created by nickl on 01/08/19.
 //
 
-#ifndef MESH_SIMPL_TYPEDEF_H
-#define MESH_SIMPL_TYPEDEF_H
+#ifndef LIB_MESH_SIMPL_TYPES_H
+#define LIB_MESH_SIMPL_TYPES_H
 
 #include <array>
 #include <vector>
@@ -42,4 +42,4 @@ struct Edge
 
 }
 
-#endif // MESH_SIMPL_TYPEDEF_H
+#endif // LIB_MESH_SIMPL_TYPES_H
