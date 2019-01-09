@@ -38,11 +38,19 @@ int main(int argc, char* argv[])
     vector<vector<unsigned int>> indices;
     igl::readOBJ(argv[1], vertices, indices);
 
+    MeshSimpl::SimplifyOptions options;
+    options.strength = strength;
+    options.run_size = -1;
     Measure measure;
-    const auto res = MeshSimpl::simplify(vertices, indices, strength);
-    long duration = measure.stop();
-    std::cout << "[INFO] Simplification completed (" << duration << " milliseconds)" << std::endl;
-    write_obj(argv[2], res.first, res.second);
-
-    return 0;
+    try {
+        const auto res = MeshSimpl::simplify(vertices, indices, options);
+        long duration = measure.stop();
+        std::cout << "[INFO] Simplification completed (" << duration << " milliseconds)"
+                  << std::endl;
+        write_obj(argv[2], res.first, res.second);
+    }
+    catch (char const* exception) {
+        cerr << exception << endl;
+        return 1;
+    }
 }

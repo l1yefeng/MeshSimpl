@@ -11,22 +11,34 @@
 namespace MeshSimpl
 {
 
+void options_validation(const SimplifyOptions& options)
+{
+    if (options.strength > 1)
+        throw "ERROR::INVALID_OPTION: strength > 1";
+    if (options.strength < 0)
+        throw "ERROR::INVALID_OPTION: strength < 0";
+    if (options.run_size == 0)
+        throw "ERROR::INVALID_OPTION: run_size is 0 -- set to negative to turn off runs";
+}
+
 // Mesh simplification main method. Simplify given mesh until remaining number of vertices/faces
 // is (1-strength) of the original. Returns output vertices and indices as in inputs.
 // TODO: Ignoring the 4th and the following values (if exist) in vertices.
-std::pair<V, F> simplify(const V& vertices, const F& indices, float strength)
+std::pair<V, F> simplify(const V& vertices, const F& indices, const SimplifyOptions& options)
 {
-    const auto nv_target = std::max(static_cast<size_t>(std::lround((1-strength)*vertices.size())),
-                                    Internal::MIN_NR_VERTICES);
+    options_validation(options);
+    const size_t NV = vertices.size();
+    const size_t nv_to_decimate = NV-std::max(
+        static_cast<size_t>(std::lround((1-options.strength)*NV)), Internal::MIN_NR_VERTICES);
     auto out_vertices = vertices;
     auto out_indices = indices;
 
-    if (nv_target == vertices.size())
+    if (nv_to_decimate == 0)
         return {out_vertices, out_indices};
 
-    auto quadrics = Internal::compute_quadrics(vertices, indices, true);
+    auto quadrics = Internal::compute_quadrics(vertices, indices, options.weight_by_face);
 
-    auto edge_topo = Internal::construct_edges(indices, vertices.size());
+    auto edge_topo = Internal::construct_edges(indices, NV);
     std::vector<Internal::Edge>& edges = edge_topo.first;
     std::vector<vec3i>& face2edge = edge_topo.second;
 
@@ -35,14 +47,14 @@ std::pair<V, F> simplify(const V& vertices, const F& indices, float strength)
     // create priority queue on quadric error
     Internal::QEMHeap heap(edges);
 
-    std::vector<bool> deleted_vertex(vertices.size(), false);
+    std::vector<bool> deleted_vertex(NV, false);
     std::vector<bool> deleted_face(indices.size(), false);
 
     // one run of a series of edge collapse that is supposed to decimate nv_decimate vertices and
     // returns true if it ends because this target is achieved instead of because of other reason
-    const auto run = [&](size_t nv_decimate)->bool {
+    const auto run = [&](size_t nv_run)->bool {
         size_t i = 0;
-        while (!heap.empty() && i < nv_decimate) {
+        while (!heap.empty() && i < nv_run) {
             // collapse an edge to remove 1 vertex and 2 faces in each iteration
             const idx e_collapsed = heap.top();
 
@@ -63,22 +75,24 @@ std::pair<V, F> simplify(const V& vertices, const F& indices, float strength)
                 assert(false);
             }
         }
-        return i == nv_decimate;
+        return i == nv_run;
     };
 
-    size_t nv_second_run = (vertices.size()-nv_target) >> 8;
-    if (false) {
-        bool first_run_complete = run(vertices.size()-nv_target-nv_second_run);
-        if (first_run_complete) {
-            quadrics = Internal::recompute_quadrics(out_vertices, out_indices, deleted_face, true);
-            Internal::recompute_errors(out_vertices, quadrics, edges,
-                                       heap.begin(), heap.end());
-            heap.fix_all();
-            run(nv_second_run);
-        }
-    }
+    if (options.run_size < 0)
+        run(nv_to_decimate);
     else {
-        run(vertices.size()-nv_target);
+        for (size_t nv = nv_to_decimate; true;) {
+            bool run_completed = run(nv-(nv >> options.run_size));
+            if (!run_completed)
+                break;
+            nv >>= options.run_size;
+            if (nv == 0)
+                break;
+            quadrics = Internal::recompute_quadrics(out_vertices, out_indices, deleted_face,
+                                                    options.weight_by_face);
+            Internal::recompute_errors(out_vertices, quadrics, edges, heap.begin(), heap.end());
+            heap.fix_all();
+        }
     }
 
     // edges are pointless from this point on, but need to fix vertices and indices
