@@ -44,8 +44,8 @@ std::vector<Quadric> compute_quadrics(const V& vertices, const F& indices, bool 
 }
 
 std::vector<Quadric>
-compute_quadrics(const V& vertices, const F& indices, const std::vector<bool>& deleted_face,
-                 bool weight_by_area)
+recompute_quadrics(const V& vertices, const F& indices, const std::vector<bool>& deleted_face,
+                   bool weight_by_area)
 {
     // quadrics are initialized with all zeros
     std::vector<Quadric> quadrics(vertices.size());

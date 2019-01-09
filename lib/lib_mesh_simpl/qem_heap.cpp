@@ -5,6 +5,7 @@
 #include "qem_heap.h"
 #include "ecol.h"
 #include <cassert>
+#include <limits>
 
 namespace MeshSimpl
 {
@@ -19,10 +20,8 @@ QEMHeap::QEMHeap(std::vector<Edge>& edges) :keys(edges.size()+1), edges(edges),
         if (edges[i].boundary_v != BOUNDARY_V::BOTH)
             keys[handles[i] = ++n] = i;
 
-    keys.resize(n);
-    for (size_t k = n/2; k >= 1; --k)
-        sink(k);
-    assert(is_min_heap());
+    keys.resize(n+1);
+    prioritize_all();
 }
 
 void QEMHeap::pop()
@@ -58,20 +57,7 @@ void QEMHeap::erase(idx e)
         sink(k);
     else
         swim(k);
-}
-
-void QEMHeap::reset_edge_errors(const V& vertices, const std::vector<Quadric>& quadrics)
-{
-    assert(keys.size() == n+1);
-    // re-compute error and collapse center for living edges
-    for (size_t k = 1; k < keys.size(); ++k) {
-        auto& edge = edges[keys[k]];
-        set_edge_error(vertices, quadrics, edge);
-    }
-
-    // fix priority queue
-    for (size_t k = n/2; k >= 1; --k)
-        sink(k);
+    keys.resize(n+1);
     assert(is_min_heap());
 }
 
@@ -113,6 +99,12 @@ void QEMHeap::sink(size_t k)
         exchange(k, j);
         k = j;
     }
+}
+void QEMHeap::prioritize_all()
+{
+    for (size_t k = n/2; k >= 1; --k)
+        sink(k);
+    assert(is_min_heap());
 }
 
 }

@@ -6,6 +6,7 @@
 #include "ecol.h"
 #include "pre_proc.h"
 #include "post_proc.h"
+#include <limits>
 
 namespace MeshSimpl
 {
@@ -29,29 +30,13 @@ std::pair<V, F> simplify(const V& vertices, const F& indices, float strength)
     std::vector<Internal::Edge>& edges = edge_topo.first;
     std::vector<vec3i>& face2edge = edge_topo.second;
 
-    Internal::init_edge_errors(vertices, quadrics, edges);
+    Internal::compute_errors(vertices, quadrics, edges);
 
     // create priority queue on quadric error
     Internal::QEMHeap heap(edges);
 
     std::vector<bool> deleted_vertex(vertices.size(), false);
     std::vector<bool> deleted_face(indices.size(), false);
-
-    // returns f,v,e of next neighbor face centered around v_center;
-    // indexes v and e are local in face (0,1,2) in both input and output.
-    const auto iter_next = [&](vec3i& fve)->void {
-        const idx f = fve[0], v = fve[1], e = fve[2];
-        assert(v != e);
-        const auto& edge = edges[face2edge[f][v]];
-        const idx f_idx_to_edge = fi_in_edge(edge, f);
-        const idx of = edge.faces[1-f_idx_to_edge];
-        assert(f != of);
-        const idx ov_global = out_indices[f][e];
-        const idx ov = Internal::vi_in_face(out_indices, of, ov_global);
-        assert(face2edge[of][ov] != face2edge[f][e]);
-        const idx oe = edge.idx_in_face[1-f_idx_to_edge];
-        fve = {of, ov, oe};
-    };
 
     // one run of a series of edge collapse that is supposed to decimate nv_decimate vertices and
     // returns true if it ends because this target is achieved instead of because of other reason
@@ -69,12 +54,8 @@ std::pair<V, F> simplify(const V& vertices, const F& indices, float strength)
 
             if (edge.boundary_v == Internal::BOUNDARY_V::NONE) {
                 if (collapse_interior_edge(out_vertices, out_indices, edges, face2edge, quadrics,
-                                           deleted_vertex, deleted_face,
-                                           iter_next, heap, e_collapsed)) {
+                                           deleted_vertex, deleted_face, heap, e_collapsed)) {
                     ++i;
-                }
-                else {
-                    heap.penalize(e_collapsed);
                 }
             }
             else {
@@ -86,11 +67,13 @@ std::pair<V, F> simplify(const V& vertices, const F& indices, float strength)
     };
 
     size_t nv_second_run = (vertices.size()-nv_target) >> 8;
-    if (nv_second_run >> 4 > 0) {
+    if (false) {
         bool first_run_complete = run(vertices.size()-nv_target-nv_second_run);
         if (first_run_complete) {
-            quadrics = Internal::compute_quadrics(out_vertices, out_indices, deleted_face, true);
-            heap.reset_edge_errors(out_vertices, quadrics);
+            quadrics = Internal::recompute_quadrics(out_vertices, out_indices, deleted_face, true);
+            Internal::recompute_errors(out_vertices, quadrics, edges,
+                                       heap.begin(), heap.end());
+            heap.fix_all();
             run(nv_second_run);
         }
     }

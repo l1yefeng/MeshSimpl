@@ -6,7 +6,6 @@
 #define LIB_MESH_SIMPL_QEM_HEAP_H
 
 #include "types.h"
-#include <limits>
 
 namespace MeshSimpl
 {
@@ -27,6 +26,7 @@ public:
     // Fix the priority of an edge after the error value is modified;
     // Param sinking should be true if the node will have lower priority after fix-up
     void fix(Edge* ptr, bool sinking);
+    void fix_all() { prioritize_all(); }
     // Suppress this edge until it is, if ever, updated next time
     void penalize(idx e);
     void erase(idx e);
@@ -34,8 +34,9 @@ public:
     bool empty() const { return n == 0; };
     // Returns the size of the heap, which should be the number of edges with boundary_v != BOTH
     size_t size() const { return n; };
-
-    void reset_edge_errors(const V& vertices, const std::vector<Quadric>& quadrics);
+    // Returns the keys iterator at the begin / end of active edges
+    std::vector<idx>::const_iterator begin() const { return keys.begin()+1; }
+    std::vector<idx>::const_iterator end() const { return keys.end(); }
 
 private:
     std::vector<idx> keys;
@@ -54,6 +55,8 @@ private:
     void swim(size_t k);
     // Adjust the priority of node k: direction is towards lower priority
     void sink(size_t k);
+    // Prioritize keys
+    void prioritize_all();
 };
 
 }

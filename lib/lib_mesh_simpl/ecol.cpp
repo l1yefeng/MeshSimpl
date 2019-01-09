@@ -64,13 +64,23 @@ void set_edge_error(const V& vertices, const std::vector<Quadric>& quadrics, Edg
 }
 
 void
-init_edge_errors(const V& vertices, const std::vector<Quadric>& quadrics, std::vector<Edge>& edges)
+compute_errors(const V& vertices, const std::vector<Quadric>& quadrics, std::vector<Edge>& edges)
 {
     // boundary edges will not be touched during simplification
     for (auto& edge : edges)
         if (edge.boundary_v != BOUNDARY_V::BOTH)
             set_edge_error(vertices, quadrics, edge);
 
+}
+
+void recompute_errors(const V& vertices,
+                      const std::vector<Quadric>& quadrics,
+                      std::vector<Edge>& edges,
+                      std::vector<idx>::const_iterator edge_idx_begin,
+                      std::vector<idx>::const_iterator edge_idx_end)
+{
+    for (auto it = edge_idx_begin; it != edge_idx_end; ++it)
+        set_edge_error(vertices, quadrics, edges[*it]);
 }
 
 bool face_fold_over(const V& vertices, const idx v0, const idx v1, const idx v2_prev,
@@ -100,118 +110,157 @@ void update_error_and_center(const V& vertices, const std::vector<Quadric>& quad
     heap.fix(edge_ptr, edge_ptr->error > error_prev);
 }
 
-bool topology_preservation_check(const std::vector<vec3i>& face2edge,
-                                 const std::queue<vec3i>& fve_queue_v_del,
-                                 const std::queue<vec3i>& fve_queue_v_kept)
+bool scan_neighbors(const V& vertices,
+                    const F& indices,
+                    const std::vector<Edge>& edges,
+                    const std::vector<vec3i>& face2edge,
+                    const Edge& edge,
+                    const idx v_del,
+                    const idx v_kept,
+                    std::queue<vec3i>& fve_queue_v_del,
+                    std::queue<vec3i>& fve_queue_v_kept)
+{
+    const vec2i& ff = edge.faces;
+
+    idx f = ff[0];
+    idx v = vi_in_face(indices, ff[0], v_kept);
+    idx e = edge.idx_in_face[0];
+    std::queue<vec3i>* queue_ptr = &fve_queue_v_del;
+    idx v_moved_idx = v_del;
+    while (true) {
+        assert(v != e);
+        const auto& curr_edge = edges[face2edge[f][v]];
+        const idx f_idx_to_edge = fi_in_edge(curr_edge, f);
+        const idx of = curr_edge.faces[1-f_idx_to_edge];
+        assert(f != of);
+        const idx ov_global = indices[f][e];
+        const idx ov = Internal::vi_in_face(indices, of, ov_global);
+        assert(face2edge[of][ov] != face2edge[f][e]);
+        const idx oe = curr_edge.idx_in_face[1-f_idx_to_edge];
+        f = of;
+        v = ov;
+        e = oe;
+
+        if (f == ff[1]) {
+            f = ff[1];
+            v = vi_in_face(indices, ff[1], v_del);
+            e = edge.idx_in_face[1];
+            queue_ptr = &fve_queue_v_kept;
+            v_moved_idx = v_kept;
+            continue;
+        }
+        else if (f == ff[0]) {
+            return true;
+        }
+        if (face_fold_over(vertices, indices[f][e], indices[f][v], v_moved_idx, edge.center))
+            return false;
+        queue_ptr->push({f, v, e});
+    }
+}
+
+bool topology_preserved(const std::vector<vec3i>& face2edge,
+                        const std::queue<vec3i>& fve_queue_v_del,
+                        const std::queue<vec3i>& fve_queue_v_kept)
 {
     vec3i fve;
     const idx& f = fve[0];
     const idx& v = fve[1];
     const idx& e = fve[2];
     fve = fve_queue_v_del.back();
-    idx e_of_interest = face2edge[f][3-e-v];
+    idx e_of_interest = face2edge[f][fve_center(fve)];
     fve = fve_queue_v_kept.front();
-    if (e_of_interest == face2edge[f][3-e-v])
+    if (e_of_interest == face2edge[f][fve_center(fve)])
         return false;
     fve = fve_queue_v_kept.back();
-    e_of_interest = face2edge[f][3-e-v];
+    e_of_interest = face2edge[f][fve_center(fve)];
     fve = fve_queue_v_del.front();
-    if (e_of_interest == face2edge[f][3-e-v])
+    if (e_of_interest == face2edge[f][fve_center(fve)])
         return false;
     return true;
 }
 
-bool collapse_interior_edge(V& vertices, F& indices, std::vector<Edge>& edges,
-                            std::vector<vec3i>& face2edge, std::vector<Quadric>& quadrics,
-                            std::vector<bool>& deleted_vertex, std::vector<bool>& deleted_face,
-                            const std::function<void(vec3i&)>& iter_next, QEMHeap& heap,
+bool collapse_interior_edge(V& vertices,
+                            F& indices,
+                            std::vector<Edge>& edges,
+                            std::vector<vec3i>& face2edge,
+                            std::vector<Quadric>& quadrics,
+                            std::vector<bool>& deleted_vertex,
+                            std::vector<bool>& deleted_face,
+                            QEMHeap& heap,
                             const idx ecol_target)
 {
     const auto& edge = edges[ecol_target];
     const vec2i& ff = edge.faces;
     // the choice of deletion does not matter
-    idx v_kept = edge.vertices[0];
-    idx v_del = edge.vertices[1];
+    const idx v_kept = edge.vertices[0];
+    const idx v_del = edge.vertices[1];
 
-    // local indexes of v_kept/v_del in two deleted faces
-    vec2i v_kept_in_ff{vi_in_face(indices, ff[0], v_kept), vi_in_face(indices, ff[1], v_kept)};
-    vec2i v_del_in_ff{vi_in_face(indices, ff[0], v_del), vi_in_face(indices, ff[1], v_del)};
-
-    // global index of kept edge in two deleted faces
-    vec2i e_kept{face2edge[ff[0]][v_del_in_ff[0]], face2edge[ff[1]][v_del_in_ff[1]]};
-    vec3i fve;
-    const idx& f = fve[0];
-    const idx& v = fve[1];
-    const idx& e = fve[2]; // they always refer to fve; updated on each `fve = ...'
-
-    // starting point of fve iterations at two deleted faces
-    const vec3i fve_begin_v_del{ff[0], v_kept_in_ff[0], edge.idx_in_face[0]};
-    const vec3i fve_begin_v_kept{ff[1], v_del_in_ff[1], edge.idx_in_face[1]};
-
-    // test run iterating faces: need to increase error and abort if fold-over is identified
+    // collect neighboring faces into fifo queues and meanwhile detect possible fold-over problems
     std::queue<vec3i> fve_queue_v_del, fve_queue_v_kept;
-    for (iter_next(fve = fve_begin_v_del); f != ff[1]; iter_next(fve)) {
-        fve_queue_v_del.push(fve);
-        if (Internal::face_fold_over(vertices, indices[f][e], indices[f][v], v_del, edge.center))
-            return false;
-    }
-    for (iter_next(fve = fve_begin_v_kept); f != ff[0]; iter_next(fve)) {
-        fve_queue_v_kept.push(fve);
-        if (Internal::face_fold_over(vertices, indices[f][e], indices[f][v], v_kept, edge.center))
-            return false;
-    }
+    bool no_fold_over = scan_neighbors(vertices, indices, edges, face2edge, edge,
+                                       v_del, v_kept, fve_queue_v_del, fve_queue_v_kept);
 
     // check if this operation will damage topology (create 3-manifold)
-    if (!topology_preservation_check(face2edge, fve_queue_v_del, fve_queue_v_kept))
+    if (!no_fold_over || !topology_preserved(face2edge, fve_queue_v_del, fve_queue_v_kept)) {
+        heap.penalize(ecol_target);
         return false;
+    }
 
-    // mark 2 faces, 1 vertex, and 1 edge as deleted;
-    // 2 more edges will be marked in the loop later
+    // mark 2 faces and 1 vertex as deleted
     deleted_face[ff[0]] = true;
     deleted_face[ff[1]] = true;
     deleted_vertex[v_del] = true;
+    // now that we are certain this edge is to be collapsed, remove it from heap
     heap.pop();
     // update vertex position and quadric
     copy_vec3(edge.center, vertices[v_kept]);
     quadrics[v_kept] = edge.q;
 
+    vec2i e_kept; // global index of kept edge in two deleted faces
+    for (auto i : {0, 1})
+        e_kept[i] = face2edge[ff[i]][vi_in_face(indices, ff[i], v_del)];
+    vec3i fve;
+    const idx& f = fve[0];
+    const idx& v = fve[1];
+    const idx& e = fve[2]; // they always refer to fve; updated on each `fve = ...'
+
     fve = fve_queue_v_del.front();
-    Edge* tgt_edge = &edges[e_kept[0]];
+    Edge* dirty_edge_ptr = &edges[e_kept[0]];
     // first face to process: deleted face 0
-    indices[f][3-v-e] = v_kept;
+    indices[f][fve_center(fve)] = v_kept;
     heap.erase(face2edge[f][e]);
     face2edge[f][e] = e_kept[0];
-    const idx ff0_in_edge = fi_in_edge(*tgt_edge, ff[0]);
+    const idx ff0_in_edge = fi_in_edge(*dirty_edge_ptr, ff[0]);
     assert(ff[0] != f);
-    tgt_edge->faces[ff0_in_edge] = f;
-    tgt_edge->idx_in_face[ff0_in_edge] = e;
+    dirty_edge_ptr->faces[ff0_in_edge] = f;
+    dirty_edge_ptr->idx_in_face[ff0_in_edge] = e;
     // every face centered around deleted vertex
     fve_queue_v_del.pop();
     for (; !fve_queue_v_del.empty(); fve_queue_v_del.pop()) {
         fve = fve_queue_v_del.front();
-        indices[f][3-v-e] = v_kept;
-        tgt_edge = &edges[face2edge[f][e]];
-        tgt_edge->vertices = {indices[f][v], v_kept};
-        update_error_and_center(vertices, quadrics, heap, tgt_edge);
+        indices[f][fve_center(fve)] = v_kept;
+        dirty_edge_ptr = &edges[face2edge[f][e]];
+        dirty_edge_ptr->vertices = {indices[f][v], v_kept};
+        update_error_and_center(vertices, quadrics, heap, dirty_edge_ptr);
     }
     // the deleted face 1
     heap.erase(face2edge[f][v]);
     face2edge[f][v] = e_kept[1];
-    tgt_edge = &edges[e_kept[1]];
-    const idx ff1_in_edge = fi_in_edge(*tgt_edge, ff[1]);
+    dirty_edge_ptr = &edges[e_kept[1]];
+    const idx ff1_in_edge = fi_in_edge(*dirty_edge_ptr, ff[1]);
     assert(ff[1] != f);
-    tgt_edge->faces[ff1_in_edge] = f;
-    tgt_edge->idx_in_face[ff1_in_edge] = v;
+    dirty_edge_ptr->faces[ff1_in_edge] = f;
+    dirty_edge_ptr->idx_in_face[ff1_in_edge] = v;
 
     // every face centered around the kept vertex
     for (; !fve_queue_v_kept.empty(); fve_queue_v_kept.pop()) {
         fve = fve_queue_v_kept.front();
-        tgt_edge = &edges[face2edge[f][e]];
-        update_error_and_center(vertices, quadrics, heap, tgt_edge);
+        dirty_edge_ptr = &edges[face2edge[f][e]];
+        update_error_and_center(vertices, quadrics, heap, dirty_edge_ptr);
     }
     assert(face2edge[f][v] == e_kept[0]);
-    tgt_edge = &edges[face2edge[f][v]];
-    update_error_and_center(vertices, quadrics, heap, tgt_edge);
+    dirty_edge_ptr = &edges[face2edge[f][v]];
+    update_error_and_center(vertices, quadrics, heap, dirty_edge_ptr);
 
     return true;
 }
