@@ -77,8 +77,7 @@ bool face_fold_over(const V& vertices, const idx v0, const idx v1, const idx v2_
     vec3d normal_prev = cross(e0, e1_prev);
     vec3d normal_new = cross(e0, e1_new);
     double normal_prev_mag = magnitude(normal_prev);
-    if (normal_prev_mag == 0)
-        return true;
+    assert(normal_prev_mag != 0);
     double normal_new_mag = magnitude(normal_new);
     if (normal_new_mag == 0)
         return true;
