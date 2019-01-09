@@ -35,6 +35,10 @@ struct Edge {
     Quadric q;             // sum of quadrics of two vertices
 };
 
+typedef std::vector<Edge> E;
+typedef std::vector<Quadric> Q;
+typedef std::vector<vec3i> F2E;
+
 } // namespace Internal
 
 } // namespace MeshSimpl

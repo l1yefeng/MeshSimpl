@@ -11,8 +11,7 @@ namespace MeshSimpl {
 
 namespace Internal {
 
-QEMHeap::QEMHeap(std::vector<Edge>& edges)
-    : keys(edges.size() + 1), edges(edges), handles(edges.size()), n(0) {
+QEMHeap::QEMHeap(E& edges) : keys(edges.size() + 1), edges(edges), handles(edges.size()), n(0) {
     for (idx i = 0; i < edges.size(); ++i)
         if (edges[i].boundary_v != BOUNDARY_V::BOTH)
             keys[handles[i] = ++n] = i;

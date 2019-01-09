@@ -42,7 +42,7 @@ void optimal_ecol_vertex_placement(const V& vertices, Edge& edge) {
     }
 }
 
-void set_edge_error(const V& vertices, const std::vector<Quadric>& quadrics, Edge& edge) {
+void set_edge_error(const V& vertices, const Q& quadrics, Edge& edge) {
     // error = v(Q1+Q2)v = vQv, v is new vertex position after edge-collapse
     const idx v0 = edge.vertices[0], v1 = edge.vertices[1];
     edge.q = quadrics[v0] + quadrics[v1];
@@ -55,16 +55,15 @@ void set_edge_error(const V& vertices, const std::vector<Quadric>& quadrics, Edg
     }
 }
 
-void compute_errors(const V& vertices, const std::vector<Quadric>& quadrics,
-                    std::vector<Edge>& edges) {
+void compute_errors(const V& vertices, const Q& quadrics, E& edges) {
     // boundary edges will not be touched during simplification
     for (auto& edge : edges)
         if (edge.boundary_v != BOUNDARY_V::BOTH)
             set_edge_error(vertices, quadrics, edge);
 }
 
-void recompute_errors(const V& vertices, const std::vector<Quadric>& quadrics,
-                      std::vector<Edge>& edges, std::vector<idx>::const_iterator edge_idx_begin,
+void recompute_errors(const V& vertices, const Q& quadrics, E& edges,
+                      std::vector<idx>::const_iterator edge_idx_begin,
                       std::vector<idx>::const_iterator edge_idx_end) {
     for (auto it = edge_idx_begin; it != edge_idx_end; ++it)
         set_edge_error(vertices, quadrics, edges[*it]);
@@ -87,7 +86,7 @@ bool face_fold_over(const V& vertices, const idx v0, const idx v1, const idx v2_
     return cos < FOLD_OVER_COS_ANGLE;
 }
 
-void update_error_and_center(const V& vertices, const std::vector<Quadric>& quadrics, QEMHeap& heap,
+void update_error_and_center(const V& vertices, const Q& quadrics, QEMHeap& heap,
                              Edge* const edge_ptr) {
     edge_ptr->q = quadrics[edge_ptr->vertices[0]] + quadrics[edge_ptr->vertices[1]];
     const double error_prev = edge_ptr->error;
@@ -95,10 +94,9 @@ void update_error_and_center(const V& vertices, const std::vector<Quadric>& quad
     heap.fix(edge_ptr, edge_ptr->error > error_prev);
 }
 
-bool scan_neighbors(const V& vertices, const F& indices, const std::vector<Edge>& edges,
-                    const std::vector<vec3i>& face2edge, const Edge& edge, const idx v_del,
-                    const idx v_kept, std::queue<vec3i>& fve_queue_v_del,
-                    std::queue<vec3i>& fve_queue_v_kept) {
+bool scan_neighbors(const V& vertices, const F& indices, const E& edges, const F2E& face2edge,
+                    const Edge& edge, const idx v_del, const idx v_kept,
+                    std::queue<vec3i>& fve_queue_v_del, std::queue<vec3i>& fve_queue_v_kept) {
     const vec2i& ff = edge.faces;
 
     idx f = ff[0];
@@ -136,8 +134,7 @@ bool scan_neighbors(const V& vertices, const F& indices, const std::vector<Edge>
     }
 }
 
-bool topology_preserved(const std::vector<vec3i>& face2edge,
-                        const std::queue<vec3i>& fve_queue_v_del,
+bool topology_preserved(const F2E& face2edge, const std::queue<vec3i>& fve_queue_v_del,
                         const std::queue<vec3i>& fve_queue_v_kept) {
     vec3i fve;
     const idx& f = fve[0];
@@ -156,8 +153,7 @@ bool topology_preserved(const std::vector<vec3i>& face2edge,
     return true;
 }
 
-bool collapse_interior_edge(V& vertices, F& indices, std::vector<Edge>& edges,
-                            std::vector<vec3i>& face2edge, std::vector<Quadric>& quadrics,
+bool collapse_interior_edge(V& vertices, F& indices, E& edges, F2E& face2edge, Q& quadrics,
                             std::vector<bool>& deleted_vertex, std::vector<bool>& deleted_face,
                             QEMHeap& heap, const idx ecol_target) {
     const auto& edge = edges[ecol_target];

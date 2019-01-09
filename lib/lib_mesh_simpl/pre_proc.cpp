@@ -11,7 +11,7 @@ namespace MeshSimpl {
 namespace Internal {
 
 void compute_quadrics_per_face(const V& vertices, const std::vector<idx>& face,
-                               const bool weight_by_area, std::vector<Quadric>& quadrics) {
+                               const bool weight_by_area, Q& quadrics) {
     // calculate the plane of this face (n and d: n'v+d=0 defines the plane)
     const vec3d edge1 = vertices[face[1]] - vertices[face[0]];
     const vec3d edge2 = vertices[face[2]] - vertices[face[0]];
@@ -32,27 +32,25 @@ void compute_quadrics_per_face(const V& vertices, const std::vector<idx>& face,
         quadrics[v] += q;
 }
 
-std::vector<Quadric> compute_quadrics(const V& vertices, const F& indices, bool weight_by_area) {
+Q compute_quadrics(const V& vertices, const F& indices, bool weight_by_area) {
     // quadrics are initialized with all zeros
-    std::vector<Quadric> quadrics(vertices.size());
+    Q quadrics(vertices.size());
     for (const auto& face : indices)
         compute_quadrics_per_face(vertices, face, weight_by_area, quadrics);
     return quadrics;
 }
 
-std::vector<Quadric> recompute_quadrics(const V& vertices, const F& indices,
-                                        const std::vector<bool>& deleted_face,
-                                        bool weight_by_area) {
+Q recompute_quadrics(const V& vertices, const F& indices, const std::vector<bool>& deleted_face,
+                     bool weight_by_area) {
     // quadrics are initialized with all zeros
-    std::vector<Quadric> quadrics(vertices.size());
+    Q quadrics(vertices.size());
     for (idx f = 0; f < indices.size(); ++f)
         if (!deleted_face[f])
             compute_quadrics_per_face(vertices, indices[f], weight_by_area, quadrics);
     return quadrics;
 }
 
-std::pair<std::vector<Edge>, std::vector<vec3i>> construct_edges(const F& indices,
-                                                                 const size_t vertex_cnt) {
+std::pair<E, std::vector<vec3i>> construct_edges(const F& indices, const size_t vertex_cnt) {
     const auto edge_cmp = [](const Edge& a, const Edge& b) -> bool {
         if (a.vertices[0] < b.vertices[0])
             return true;
@@ -84,9 +82,9 @@ std::pair<std::vector<Edge>, std::vector<vec3i>> construct_edges(const F& indice
     }
 
     // convert edges from set to vector
-    std::vector<Edge> edges(edge_set.begin(), edge_set.end());
+    E edges(edge_set.begin(), edge_set.end());
     std::vector<bool> vertex_on_boundary(vertex_cnt, false);
-    std::vector<vec3i> face2edge(indices.size());
+    F2E face2edge(indices.size());
 
     for (idx i = 0; i < edges.size(); ++i) {
         const auto& edge = edges[i];

@@ -16,7 +16,7 @@ class QEMHeap {
 public:
     // Construct a min-binary-heap with edge ecol errors as keys;
     // store a reference of the list of edges and store all handles
-    explicit QEMHeap(std::vector<Edge>& edges);
+    explicit QEMHeap(E& edges);
     // Returns the edge id with minimum ecol error
     idx top() const { return keys[1]; };
     // Remove the top edge from heap
@@ -38,7 +38,7 @@ public:
 
 private:
     std::vector<idx> keys;
-    std::vector<Edge>& edges;
+    E& edges;
     std::vector<size_t> handles;
     size_t n;
 
