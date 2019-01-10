@@ -12,7 +12,6 @@ namespace MeshSimpl {
 struct SimplifyOptions {
     float strength = 0.5f;      // simplifies until vertex count is 1-strength of the original
     bool weight_by_face = true; // weight quadrics by triangle area
-    int run_size = 10;          // recompute quadrics before processing the last 2^(-run_size)
 };
 
 void options_validation(const SimplifyOptions& options);

@@ -47,17 +47,17 @@ bool scan_neighbors(const V& vertices, const F& indices, const E& edges, const F
                     const Edge& edge, std::vector<vec3i>& fve_star_v_del,
                     std::vector<idx>& e_star_v_kept);
 
-inline idx vi_in_face(const F& indices, const idx f, const idx v) {
+inline idx vi_in_face(const F& indices, idx f, idx v) {
     assert(indices[f][0] == v || indices[f][1] == v || indices[f][2] == v);
     return indices[f][0] == v ? 0 : (indices[f][1] == v ? 1 : 2);
 }
 
-inline idx fi_in_edge(const Edge& edge, const idx f) {
+inline idx fi_in_edge(const Edge& edge, idx f) {
     assert(edge.faces[0] == f || edge.faces[1] == f);
     return edge.faces[0] == f ? 0 : 1;
 };
 
-inline idx vi_in_edge(const Edge& edge, const idx v) {
+inline idx vi_in_edge(const Edge& edge, idx v) {
     assert(edge.vertices[0] == v || edge.vertices[1] == v);
     return edge.vertices[0] == v ? 0 : 1;
 }
