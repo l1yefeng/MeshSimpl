@@ -64,7 +64,10 @@ std::pair<V, F> simplify(const V& vertices, const F& indices, const SimplifyOpti
 
             if (edge.boundary_v == Internal::BOUNDARY_V::NONE) {
                 if (collapse_interior_edge(out_vertices, out_indices, edges, face2edge, quadrics,
-                                           deleted_vertex, deleted_face, heap, e_collapsed)) {
+                                           heap, e_collapsed)) {
+                    for (const idx f : edge.faces)
+                        deleted_face[f] = true;
+                    deleted_vertex[edge.vertices[Internal::choose_v_del(edge)]] = true;
                     ++i;
                 }
             } else {

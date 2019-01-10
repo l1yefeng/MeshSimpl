@@ -18,7 +18,7 @@ public:
     // store a reference of the list of edges and store all handles
     explicit QEMHeap(E& edges);
     // Returns the edge id with minimum ecol error
-    idx top() const { return keys[1]; };
+    idx top() const { return keys[1]; }
     // Remove the top edge from heap
     void pop();
     // Fix the priority of an edge after the error value is modified;
@@ -28,8 +28,9 @@ public:
     // Suppress this edge until it is, if ever, updated next time
     void penalize(idx e);
     void erase(idx e);
+    void erase_by_ptr(const Edge* ptr) { erase(static_cast<idx>(ptr - edges.data())); }
     // Returns true if heap is empty
-    bool empty() const { return n == 0; };
+    bool empty() const { return n == 0; }
     // Returns the size of the heap, which should be the number of edges with boundary_v != BOTH
     size_t size() const { return n; };
     // Returns the keys iterator at the begin / end of active edges

@@ -22,7 +22,7 @@ namespace Internal {
 // A quadric Q consists of a symmetric 3x3 matrix A, a vec3 b, and a scalar c
 typedef std::array<double, 10> Quadric;
 
-enum BOUNDARY_V { NONE, BOTH, V0, V1 };
+enum BOUNDARY_V { V0 = 0, V1 = 1, BOTH, NONE };
 
 // Edge defines the struct of an edge
 struct Edge {

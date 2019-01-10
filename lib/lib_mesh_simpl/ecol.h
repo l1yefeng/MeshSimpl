@@ -4,7 +4,6 @@
 #include "qem_heap.h"
 #include "types.h"
 #include "util.h"
-#include <queue>
 
 namespace MeshSimpl {
 
@@ -28,10 +27,13 @@ void recompute_errors(const V& vertices, const Q& quadrics, E& edges,
                       std::vector<idx>::const_iterator edge_idx_end);
 
 // Returns true if the movement of vertex will cause this face to flip too much to accept
-bool face_fold_over(const V& vertices, idx v0, idx v1, idx v2_prev, const vec3d& v2_new_pos);
+bool face_fold_over(const V& vertices, const idx v0, const idx v1, const idx v2,
+                    const vec3d& v2_new_pos);
 
 // Replace a vertex in edge, and update other members then fix priority in heap
 void update_error_and_center(const V& vertices, const Q& quadrics, QEMHeap& heap, Edge* edge_ptr);
+
+void iter_next(const F& indices, const E& edges, const F2E& face2edge, idx& f, idx& v, idx& e);
 
 // Find relevant faces one by one around the collapsed edge.
 // For each face around v_del/v_kept, a 3-tuple called `fve' is stored:
@@ -43,30 +45,28 @@ void update_error_and_center(const V& vertices, const Q& quadrics, QEMHeap& heap
 // Outputs: star_v_del and star_v_kept are filled with `fve' of faces found.
 // Returns: true if no problem is found -- this edge collapse operation is acceptable
 bool scan_neighbors(const V& vertices, const F& indices, const E& edges, const F2E& face2edge,
-                    const Edge& edge, const idx v_del, const idx v_kept,
-                    std::vector<vec3i>& star_v_del, std::vector<vec3i>& star_v_kept);
+                    const Edge& edge, std::vector<vec3i>& fve_star_v_del,
+                    std::vector<idx>& e_star_v_kept);
 
 inline idx vi_in_face(const F& indices, const idx f, const idx v) {
-    if (indices[f][0] == v)
-        return 0;
-    if (indices[f][1] == v)
-        return 1;
-    assert(indices[f][2] == v);
-    return 2;
+    assert(indices[f][0] == v || indices[f][1] == v || indices[f][2] == v);
+    return indices[f][0] == v ? 0 : (indices[f][1] == v ? 1 : 2);
 }
 
 inline idx fi_in_edge(const Edge& edge, const idx f) {
-    if (edge.faces[0] == f)
-        return 0;
-    assert(edge.faces[1] == f);
-    return 1;
+    assert(edge.faces[0] == f || edge.faces[1] == f);
+    return edge.faces[0] == f ? 0 : 1;
 };
 
 inline idx fve_center(const vec3i& fve) { return 3 - fve[1] - fve[2]; }
 
+inline idx choose_v_del(const Edge& edge) {
+    assert(edge.boundary_v != BOUNDARY_V::BOTH);
+    return edge.boundary_v == BOUNDARY_V::NONE ? 0 : static_cast<idx>(1 - edge.boundary_v);
+}
+
 // Returns true if edge is collapsed
 bool collapse_interior_edge(V& vertices, F& indices, E& edges, F2E& face2edge, Q& quadrics,
-                            std::vector<bool>& deleted_vertex, std::vector<bool>& deleted_face,
                             QEMHeap& heap, idx ecol_target);
 
 } // namespace Internal
