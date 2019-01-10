@@ -50,7 +50,7 @@ Q recompute_quadrics(const V& vertices, const F& indices, const std::vector<bool
     return quadrics;
 }
 
-std::pair<E, std::vector<vec3i>> construct_edges(const F& indices, const size_t vertex_cnt) {
+std::pair<E, F2E> construct_edges(const F& indices, const size_t vertex_cnt) {
     const auto edge_cmp = [](const Edge& a, const Edge& b) -> bool {
         if (a.vertices[0] < b.vertices[0])
             return true;
@@ -66,7 +66,8 @@ std::pair<E, std::vector<vec3i>> construct_edges(const F& indices, const size_t 
         for (idx i = 0; i < 3; ++i) {
             const idx j = (i + 1) % 3; // face[i] and face[j] form this edge
             const idx k = (i + 2) % 3; // k is the local idx of this edge to this face
-            idx v0 = face[i], v1 = face[j];
+            idx v0 = face[i];
+            idx v1 = face[j];
             if (v0 > v1)
                 std::swap(v0, v1);
             auto it_and_inserted = edge_set.insert({{v0, v1}, {f}, {k}, BOUNDARY_V::BOTH});

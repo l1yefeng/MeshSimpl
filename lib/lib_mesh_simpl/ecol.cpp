@@ -83,7 +83,9 @@ bool face_fold_over(const V& vertices, const idx v0, const idx v1, const idx v2,
     double normal_new_mag = magnitude(normal_new);
     if (normal_new_mag == 0)
         return true;
-    double cos = dot(normal_prev /= normal_prev_mag, normal_new /= normal_new_mag);
+    normal_prev /= normal_prev_mag;
+    normal_new /= normal_new_mag;
+    double cos = dot(normal_prev, normal_new);
     return cos < FOLD_OVER_COS_ANGLE;
 }
 
@@ -173,13 +175,13 @@ bool scan_neighbors(const V& vertices, const F& indices, const E& edges, const F
 
     // check geometry
     for (const auto& fve : fve_star_v_del) {
-        if (face_fold_over(vertices, indices[fve[0]][fve[2]], indices[fve[0]][fve[1]], v_del,
-                           edge.center))
+        const idx f = fve[0];
+        if (face_fold_over(vertices, indices[f][fve[2]], indices[f][fve[1]], v_del, edge.center))
             return false;
     }
     for (const auto& fve : fve_star_v_kept) {
-        if (face_fold_over(vertices, indices[fve[0]][fve[2]], indices[fve[0]][fve[1]], v_kept,
-                           edge.center))
+        const idx f = fve[0];
+        if (face_fold_over(vertices, indices[f][fve[2]], indices[f][fve[1]], v_kept, edge.center))
             return false;
     }
 
@@ -230,11 +232,13 @@ bool edge_collapse(V& vertices, F& indices, E& edges, F2E& face2edge, Q& quadric
         fve = *it;
         indices[f][fve_center(fve)] = v_kept;
         dirty_edge_ptr = &edges[face2edge[f][e]];
-        dirty_edge_ptr->vertices = {v_kept, indices[f][v]};
+        const idx v_del_in_edge = vi_in_edge(*dirty_edge_ptr, v_del);
+        dirty_edge_ptr->vertices[v_del_in_edge] = v_kept;
         if (edge.boundary_v != BOUNDARY_V::NONE) {
-            dirty_edge_ptr->boundary_v = dirty_edge_ptr->boundary_v != BOUNDARY_V::NONE
-                                             ? dirty_edge_ptr->boundary_v = BOUNDARY_V::BOTH
-                                             : dirty_edge_ptr->boundary_v = BOUNDARY_V::V0;
+            if (dirty_edge_ptr->boundary_v == BOUNDARY_V::NONE)
+                dirty_edge_ptr->boundary_v = static_cast<BOUNDARY_V>(v_del_in_edge);
+            else
+                dirty_edge_ptr->boundary_v = BOUNDARY_V::BOTH;
         }
         update_error_and_center(vertices, quadrics, heap, dirty_edge_ptr);
     }

@@ -62,7 +62,9 @@ std::pair<V, F> simplify(const V& vertices, const F& indices, const SimplifyOpti
             assert(edge.vertices[0] != edge.vertices[1]);
             assert(edge.faces[0] != edge.faces[1]);
 
-            if (edge_collapse(out_vertices, out_indices, edges, face2edge, quadrics, heap, target)) {
+            assert(edge.boundary_v != Internal::BOUNDARY_V::BOTH);
+            if (edge_collapse(out_vertices, out_indices, edges, face2edge, quadrics, heap,
+                              target)) {
                 for (const idx f : edge.faces)
                     deleted_face[f] = true;
                 deleted_vertex[edge.vertices[Internal::choose_v_del(edge)]] = true;

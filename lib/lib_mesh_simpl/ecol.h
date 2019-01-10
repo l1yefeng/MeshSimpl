@@ -27,8 +27,7 @@ void recompute_errors(const V& vertices, const Q& quadrics, E& edges,
                       std::vector<idx>::const_iterator edge_idx_end);
 
 // Returns true if the movement of vertex will cause this face to flip too much to accept
-bool face_fold_over(const V& vertices, const idx v0, const idx v1, const idx v2,
-                    const vec3d& v2_new_pos);
+bool face_fold_over(const V& vertices, idx v0, idx v1, idx v2, const vec3d& v2_new_pos);
 
 // Replace a vertex in edge, and update other members then fix priority in heap
 void update_error_and_center(const V& vertices, const Q& quadrics, QEMHeap& heap, Edge* edge_ptr);
@@ -58,6 +57,11 @@ inline idx fi_in_edge(const Edge& edge, const idx f) {
     return edge.faces[0] == f ? 0 : 1;
 };
 
+inline idx vi_in_edge(const Edge& edge, const idx v) {
+    assert(edge.vertices[0] == v || edge.vertices[1] == v);
+    return edge.vertices[0] == v ? 0 : 1;
+}
+
 inline idx fve_center(const vec3i& fve) { return 3 - fve[1] - fve[2]; }
 
 inline idx choose_v_del(const Edge& edge) {
@@ -67,7 +71,7 @@ inline idx choose_v_del(const Edge& edge) {
 
 // Returns true if edge is collapsed
 bool edge_collapse(V& vertices, F& indices, E& edges, F2E& face2edge, Q& quadrics, QEMHeap& heap,
-                   const idx ecol_target);
+                   idx ecol_target);
 
 } // namespace Internal
 

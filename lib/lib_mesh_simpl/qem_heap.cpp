@@ -24,7 +24,6 @@ void QEMHeap::pop() {
     exchange(1, n--);
     sink(1);
     keys.resize(n + 1);
-    assert(is_min_heap());
 }
 
 void QEMHeap::fix(Edge* const ptr, bool sinking) {
@@ -50,7 +49,6 @@ void QEMHeap::erase(idx e) {
     else
         swim(k);
     keys.resize(n + 1);
-    assert(is_min_heap());
 }
 
 void QEMHeap::exchange(size_t i, size_t j) {
