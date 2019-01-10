@@ -3,6 +3,7 @@
 //
 
 #include "ecol.h"
+#include <algorithm>
 
 namespace MeshSimpl {
 
@@ -75,9 +76,9 @@ bool face_fold_over(const V& vertices, const idx v0, const idx v1, const idx v2_
     const vec3d e1_prev = vertices[v2_prev] - vertices[v1];
     const vec3d e1_new = v2_new_pos - vertices[v1];
     vec3d normal_prev = cross(e0, e1_prev);
-    vec3d normal_new = cross(e0, e1_new);
     double normal_prev_mag = magnitude(normal_prev);
     assert(normal_prev_mag != 0);
+    vec3d normal_new = cross(e0, e1_new);
     double normal_new_mag = magnitude(normal_new);
     if (normal_new_mag == 0)
         return true;
@@ -95,14 +96,14 @@ void update_error_and_center(const V& vertices, const Q& quadrics, QEMHeap& heap
 
 bool scan_neighbors(const V& vertices, const F& indices, const E& edges, const F2E& face2edge,
                     const Edge& edge, const idx v_del, const idx v_kept,
-                    std::queue<vec3i>& fve_queue_v_del, std::queue<vec3i>& fve_queue_v_kept) {
+                    std::vector<vec3i>& star_v_del, std::vector<vec3i>& star_v_kept) {
     const vec2i& ff = edge.faces;
+    std::vector<idx> v0_twins, v1_twins;
 
     idx f = ff[0];
     idx v = vi_in_face(indices, ff[0], v_kept);
     idx e = edge.idx_in_face[0];
-    std::queue<vec3i>* queue_ptr = &fve_queue_v_del;
-    idx v_moved_idx = v_del;
+    std::vector<vec3i>* star_ptr = &star_v_del;
     while (true) {
         assert(v != e);
         const auto& curr_edge = edges[face2edge[f][v]];
@@ -121,34 +122,40 @@ bool scan_neighbors(const V& vertices, const F& indices, const E& edges, const F
             f = ff[1];
             v = vi_in_face(indices, ff[1], v_del);
             e = edge.idx_in_face[1];
-            queue_ptr = &fve_queue_v_kept;
-            v_moved_idx = v_kept;
+            star_ptr = &star_v_kept;
+            std::swap(v0_twins, v1_twins);
             continue;
         } else if (f == ff[0]) {
-            return true;
+            break;
         }
-        if (face_fold_over(vertices, indices[f][e], indices[f][v], v_moved_idx, edge.center))
-            return false;
-        queue_ptr->push({f, v, e});
+        star_ptr->push_back({f, v, e});
+        v0_twins.push_back(ov_global);
     }
-}
 
-bool topology_preserved(const F2E& face2edge, const std::queue<vec3i>& fve_queue_v_del,
-                        const std::queue<vec3i>& fve_queue_v_kept) {
-    vec3i fve;
-    const idx& f = fve[0];
-    const idx& v = fve[1];
-    const idx& e = fve[2];
-    fve = fve_queue_v_del.back();
-    idx e_of_interest = face2edge[f][fve_center(fve)];
-    fve = fve_queue_v_kept.front();
-    if (e_of_interest == face2edge[f][fve_center(fve)])
-        return false;
-    fve = fve_queue_v_kept.back();
-    e_of_interest = face2edge[f][fve_center(fve)];
-    fve = fve_queue_v_del.front();
-    if (e_of_interest == face2edge[f][fve_center(fve)])
-        return false;
+    // check connectivity
+    std::sort(v0_twins.begin(), v0_twins.end());
+    std::sort(v1_twins.begin(), v1_twins.end());
+    for (auto i0 = v0_twins.begin(), i1 = v1_twins.begin();
+         i0 != v0_twins.end() && i1 != v1_twins.end();) {
+        if (*i0 < *i1)
+            ++i0;
+        else if (*i0 > *i1)
+            ++i1;
+        else
+            return false;
+    }
+
+    // check geometry
+    for (const auto& fve : star_v_del) {
+        if (face_fold_over(vertices, indices[f][fve[2]], indices[f][fve[1]], v_del, edge.center))
+            return false;
+    }
+    for (const auto& fve : star_v_kept) {
+        if (face_fold_over(vertices, indices[f][fve[2]], indices[f][fve[1]], v_kept, edge.center))
+            return false;
+    }
+
+    // good to go
     return true;
 }
 
@@ -162,12 +169,9 @@ bool collapse_interior_edge(V& vertices, F& indices, E& edges, F2E& face2edge, Q
     const idx v_del = edge.vertices[1];
 
     // collect neighboring faces into fifo queues and meanwhile detect possible fold-over problems
-    std::queue<vec3i> fve_queue_v_del, fve_queue_v_kept;
-    bool no_fold_over = scan_neighbors(vertices, indices, edges, face2edge, edge, v_del, v_kept,
-                                       fve_queue_v_del, fve_queue_v_kept);
-
-    // check if this operation will damage topology (create 3-manifold)
-    if (!no_fold_over || !topology_preserved(face2edge, fve_queue_v_del, fve_queue_v_kept)) {
+    std::vector<vec3i> star_v_del, star_v_kept;
+    if (!scan_neighbors(vertices, indices, edges, face2edge, edge, v_del, v_kept, star_v_del,
+                        star_v_kept)) {
         heap.penalize(ecol_target);
         return false;
     }
@@ -190,7 +194,7 @@ bool collapse_interior_edge(V& vertices, F& indices, E& edges, F2E& face2edge, Q
     const idx& v = fve[1];
     const idx& e = fve[2]; // they always refer to fve; updated on each `fve = ...'
 
-    fve = fve_queue_v_del.front();
+    fve = star_v_del[0];
     Edge* dirty_edge_ptr = &edges[e_kept[0]];
     // first face to process: deleted face 0
     indices[f][fve_center(fve)] = v_kept;
@@ -201,9 +205,8 @@ bool collapse_interior_edge(V& vertices, F& indices, E& edges, F2E& face2edge, Q
     dirty_edge_ptr->faces[ff0_in_edge] = f;
     dirty_edge_ptr->idx_in_face[ff0_in_edge] = e;
     // every face centered around deleted vertex
-    fve_queue_v_del.pop();
-    for (; !fve_queue_v_del.empty(); fve_queue_v_del.pop()) {
-        fve = fve_queue_v_del.front();
+    for (auto it = star_v_del.begin() + 1; it != star_v_del.end(); ++it) {
+        fve = *it;
         indices[f][fve_center(fve)] = v_kept;
         dirty_edge_ptr = &edges[face2edge[f][e]];
         dirty_edge_ptr->vertices = {indices[f][v], v_kept};
@@ -219,8 +222,8 @@ bool collapse_interior_edge(V& vertices, F& indices, E& edges, F2E& face2edge, Q
     dirty_edge_ptr->idx_in_face[ff1_in_edge] = v;
 
     // every face centered around the kept vertex
-    for (; !fve_queue_v_kept.empty(); fve_queue_v_kept.pop()) {
-        fve = fve_queue_v_kept.front();
+    for (auto& _fve : star_v_kept) {
+        fve = _fve;
         dirty_edge_ptr = &edges[face2edge[f][e]];
         update_error_and_center(vertices, quadrics, heap, dirty_edge_ptr);
     }

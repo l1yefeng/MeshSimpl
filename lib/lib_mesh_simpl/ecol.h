@@ -33,18 +33,18 @@ bool face_fold_over(const V& vertices, idx v0, idx v1, idx v2_prev, const vec3d&
 // Replace a vertex in edge, and update other members then fix priority in heap
 void update_error_and_center(const V& vertices, const Q& quadrics, QEMHeap& heap, Edge* edge_ptr);
 
-// Find relevant faces one by one around the collapsed edge and push them into two queues.
-// For each face around v_del/v_kept, a 3-tuple called `fve' is stored in the corresponding queue;
+// Find relevant faces one by one around the collapsed edge.
+// For each face around v_del/v_kept, a 3-tuple called `fve' is stored:
 //      `f' - idx of face;
 //      `e' - local idx (0/1/2) of the edge to this face, shared by this face and previous face';
 //      `v' - local idx (0/1/2) of the vertex to this face, on edge `e' and not centered vertex;
+// Meanwhile this function does geometry and connectivity check to avoid fold-over faces and
+// non-manifold edges.
+// Outputs: star_v_del and star_v_kept are filled with `fve' of faces found.
+// Returns: true if no problem is found -- this edge collapse operation is acceptable
 bool scan_neighbors(const V& vertices, const F& indices, const E& edges, const F2E& face2edge,
-                    const Edge& edge, idx v_del, idx v_kept, std::queue<vec3i>& fve_queue_v_del,
-                    std::queue<vec3i>& fve_queue_v_kept);
-
-// Returns true if topology will be preserved
-bool topology_preserved(const F2E& face2edge, const std::queue<vec3i>& fve_queue_v_del,
-                        const std::queue<vec3i>& fve_queue_v_kept);
+                    const Edge& edge, const idx v_del, const idx v_kept,
+                    std::vector<vec3i>& star_v_del, std::vector<vec3i>& star_v_kept);
 
 inline idx vi_in_face(const F& indices, const idx f, const idx v) {
     if (indices[f][0] == v)
