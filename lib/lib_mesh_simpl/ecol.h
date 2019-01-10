@@ -66,8 +66,8 @@ inline idx choose_v_del(const Edge& edge) {
 }
 
 // Returns true if edge is collapsed
-bool collapse_interior_edge(V& vertices, F& indices, E& edges, F2E& face2edge, Q& quadrics,
-                            QEMHeap& heap, idx ecol_target);
+bool edge_collapse(V& vertices, F& indices, E& edges, F2E& face2edge, Q& quadrics, QEMHeap& heap,
+                   const idx ecol_target);
 
 } // namespace Internal
 

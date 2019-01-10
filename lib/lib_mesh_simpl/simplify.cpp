@@ -54,25 +54,19 @@ std::pair<V, F> simplify(const V& vertices, const F& indices, const SimplifyOpti
         size_t i = 0;
         while (!heap.empty() && i < nv_run) {
             // collapse an edge to remove 1 vertex and 2 faces in each iteration
-            const idx e_collapsed = heap.top();
+            const idx target = heap.top();
 
-            const auto& edge = edges[e_collapsed];
+            const auto& edge = edges[target];
             if (edge.error == std::numeric_limits<double>::max())
                 break;
             assert(edge.vertices[0] != edge.vertices[1]);
             assert(edge.faces[0] != edge.faces[1]);
 
-            if (edge.boundary_v == Internal::BOUNDARY_V::NONE) {
-                if (collapse_interior_edge(out_vertices, out_indices, edges, face2edge, quadrics,
-                                           heap, e_collapsed)) {
-                    for (const idx f : edge.faces)
-                        deleted_face[f] = true;
-                    deleted_vertex[edge.vertices[Internal::choose_v_del(edge)]] = true;
-                    ++i;
-                }
-            } else {
-                // TODO: handle boundary cases
-                assert(false);
+            if (edge_collapse(out_vertices, out_indices, edges, face2edge, quadrics, heap, target)) {
+                for (const idx f : edge.faces)
+                    deleted_face[f] = true;
+                deleted_vertex[edge.vertices[Internal::choose_v_del(edge)]] = true;
+                ++i;
             }
         }
         return i == nv_run;

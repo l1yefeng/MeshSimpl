@@ -187,8 +187,8 @@ bool scan_neighbors(const V& vertices, const F& indices, const E& edges, const F
     return true;
 }
 
-bool collapse_interior_edge(V& vertices, F& indices, E& edges, F2E& face2edge, Q& quadrics,
-                            QEMHeap& heap, const idx ecol_target) {
+bool edge_collapse(V& vertices, F& indices, E& edges, F2E& face2edge, Q& quadrics, QEMHeap& heap,
+                   const idx ecol_target) {
     const auto& edge = edges[ecol_target];
     const vec2i& ff = edge.faces;
     const idx v_del = edge.vertices[choose_v_del(edge)];
@@ -205,7 +205,8 @@ bool collapse_interior_edge(V& vertices, F& indices, E& edges, F2E& face2edge, Q
     // now that we are certain this edge is to be collapsed, remove it from heap
     heap.pop();
     // update vertex position and quadric
-    copy_vec3(edge.center, vertices[v_kept]);
+    if (edge.boundary_v == BOUNDARY_V::NONE)
+        copy_vec3(edge.center, vertices[v_kept]);
     quadrics[v_kept] = edge.q;
 
     vec2i e_kept; // global index of kept edge in two deleted faces
@@ -229,73 +230,12 @@ bool collapse_interior_edge(V& vertices, F& indices, E& edges, F2E& face2edge, Q
         fve = *it;
         indices[f][fve_center(fve)] = v_kept;
         dirty_edge_ptr = &edges[face2edge[f][e]];
-        dirty_edge_ptr->vertices = {indices[f][v], v_kept};
-        update_error_and_center(vertices, quadrics, heap, dirty_edge_ptr);
-    }
-    // the deleted face 1
-    heap.erase(face2edge[f][v]);
-    face2edge[f][v] = e_kept[1];
-    dirty_edge_ptr = &edges[e_kept[1]];
-    const idx ff1_in_edge = fi_in_edge(*dirty_edge_ptr, ff[1]);
-    dirty_edge_ptr->faces[ff1_in_edge] = f;
-    dirty_edge_ptr->idx_in_face[ff1_in_edge] = v;
-
-    // every edge centered around the kept vertex
-    for (const idx e_dirty : e_star_v_kept)
-        update_error_and_center(vertices, quadrics, heap, &edges[e_dirty]);
-
-    return true;
-}
-
-bool collapse_near_boundary_edge(V& vertices, F& indices, E& edges, F2E& face2edge, Q& quadrics,
-                                 std::vector<bool>& deleted_vertex, std::vector<bool>& deleted_face,
-                                 QEMHeap& heap, const idx ecol_target) {
-    const auto& edge = edges[ecol_target];
-    const vec2i& ff = edge.faces;
-    const idx v_kept = edge.vertices[edge.boundary_v];
-    const idx v_del = edge.vertices[1 - edge.boundary_v];
-
-    // collect neighboring faces around v_del
-    std::vector<vec3i> fve_star_v_del;
-    std::vector<idx> e_star_v_kept;
-    if (!scan_neighbors(vertices, indices, edges, face2edge, edge, fve_star_v_del, e_star_v_kept)) {
-        heap.penalize(ecol_target);
-        return false;
-    }
-
-    // now that we are certain this edge is to be collapsed, remove it from heap
-    heap.pop();
-    // update vertex quadric, position is the same (on boundary)
-    quadrics[v_kept] = edge.q;
-
-    vec2i e_kept; // global index of kept edge in two deleted faces
-    for (auto i : {0, 1})
-        e_kept[i] = face2edge[ff[i]][vi_in_face(indices, ff[i], v_del)];
-
-    vec3i fve = fve_star_v_del[0];
-    const idx& f = fve[0];
-    const idx& v = fve[1];
-    const idx& e = fve[2]; // they always refer to fve; updated on each `fve = ...'
-    Edge* dirty_edge_ptr = &edges[e_kept[0]];
-    // first face to process: deleted face 0
-    indices[f][fve_center(fve)] = v_kept;
-    heap.erase(face2edge[f][e]);
-    face2edge[f][e] = e_kept[0];
-    const idx ff0_in_edge = fi_in_edge(*dirty_edge_ptr, ff[0]);
-    dirty_edge_ptr->faces[ff0_in_edge] = f;
-    dirty_edge_ptr->idx_in_face[ff0_in_edge] = e;
-    // every face centered around deleted vertex
-    for (auto it = fve_star_v_del.begin() + 1; it != fve_star_v_del.end(); ++it) {
-        fve = *it;
-        indices[f][fve_center(fve)] = v_kept;
-        dirty_edge_ptr = &edges[face2edge[f][e]];
-        //        const idx v_in_dirty_edge = vi_in_edge(*dirty_edge_ptr, indices[f][v]);
-        //        dirty_edge_ptr->vertices[1-v_in_dirty_edge] = v_kept;
         dirty_edge_ptr->vertices = {v_kept, indices[f][v]};
-        if (dirty_edge_ptr->boundary_v != BOUNDARY_V::NONE)
-            dirty_edge_ptr->boundary_v = BOUNDARY_V::BOTH;
-        else
-            dirty_edge_ptr->boundary_v = BOUNDARY_V::V0;
+        if (edge.boundary_v != BOUNDARY_V::NONE) {
+            dirty_edge_ptr->boundary_v = dirty_edge_ptr->boundary_v != BOUNDARY_V::NONE
+                                             ? dirty_edge_ptr->boundary_v = BOUNDARY_V::BOTH
+                                             : dirty_edge_ptr->boundary_v = BOUNDARY_V::V0;
+        }
         update_error_and_center(vertices, quadrics, heap, dirty_edge_ptr);
     }
     // the deleted face 1
