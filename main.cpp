@@ -38,12 +38,13 @@ int main(int argc, char* argv[]) {
 
     MeshSimpl::SimplifyOptions options;
     options.strength = strength;
-    Measure measure;
+    options.debug = true;
+//    Measure measure;
     try {
         const auto res = MeshSimpl::simplify(vertices, indices, options);
-        long duration = measure.stop();
-        std::cout << "[INFO] Simplification completed (" << duration << " milliseconds)"
-                  << std::endl;
+//        long duration = measure.stop();
+//        std::cout << "[INFO] Simplification completed (" << duration << " milliseconds)"
+//                  << std::endl;
         write_obj(argv[2], res.first, res.second);
     } catch (char const* exception) {
         cerr << exception << endl;
