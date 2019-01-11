@@ -96,7 +96,7 @@ void update_error_and_center(const V& vertices, const Q& quadrics, QEMHeap& heap
     } else {
         const double error_prev = edge_ptr->error;
         set_edge_error(vertices, quadrics, *edge_ptr);
-        heap.fix(edge_ptr, edge_ptr->error > error_prev);
+        heap.fix(edge_ptr, error_prev);
     }
 }
 

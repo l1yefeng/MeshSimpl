@@ -26,10 +26,10 @@ void QEMHeap::pop() {
     keys.resize(n + 1);
 }
 
-void QEMHeap::fix(Edge* const ptr, bool sinking) {
+void QEMHeap::fix(const Edge* ptr, double error_prev) {
     auto e = static_cast<idx>(ptr - edges.data());
     size_t k = handles[e];
-    if (sinking)
+    if (ptr->error > error_prev)
         sink(k);
     else
         swim(k);
