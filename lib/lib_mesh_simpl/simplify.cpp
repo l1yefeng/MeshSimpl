@@ -43,6 +43,7 @@ std::pair<V, F> simplify(const V& vertices, const F& indices, const SimplifyOpti
     if (nv_to_decimate == 0)
         return {out_vertices, out_indices};
 
+    // 1. compute quadrics of vertices
     measure.start("compute_quadrics");
     auto quadrics = Internal::compute_quadrics(vertices, indices, options.weight_by_face);
     auto ms = measure.stop("compute_quadrics");
@@ -50,6 +51,7 @@ std::pair<V, F> simplify(const V& vertices, const F& indices, const SimplifyOpti
         std::cout << "INFO::PROCESSING::PRE_PROCESS: computing vertex quadrics completed (" << ms
                   << " ms)" << std::endl;
 
+    // 2. find out information of edges (endpoints, incident faces) and face2edge
     measure.start("construct_edges");
     auto edge_topo = Internal::construct_edges(indices, NV);
     ms = measure.stop("construct_edges");
@@ -59,9 +61,10 @@ std::pair<V, F> simplify(const V& vertices, const F& indices, const SimplifyOpti
     std::vector<Internal::Edge>& edges = edge_topo.first;
     std::vector<vec3i>& face2edge = edge_topo.second;
 
+    // 3. assigning edge errors using quadrics
     measure.start("heap");
     Internal::compute_errors(vertices, quadrics, edges);
-    // create priority queue on quadric error
+    // 4. create priority queue on quadric error
     Internal::QEMHeap heap(edges);
     ms = measure.stop("heap");
     if (options.debug)
@@ -94,6 +97,7 @@ std::pair<V, F> simplify(const V& vertices, const F& indices, const SimplifyOpti
         assert(edge.faces[0] != edge.faces[1]);
 
         assert(edge.boundary_v != Internal::BOUNDARY_V::BOTH);
+        // 5. collapse the least-error edge until mesh is simplified enough
         if (edge_collapse(out_vertices, out_indices, edges, face2edge, quadrics, heap, target)) {
             for (const idx f : edge.faces)
                 deleted_face[f] = true;

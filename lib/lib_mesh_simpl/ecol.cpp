@@ -160,7 +160,7 @@ bool scan_neighbors(const V& vertices, const F& indices, const E& edges, const F
 
     // check connectivity
     // Intersection check reference: en.cppreference.com/w/cpp/algorithm/set_intersection.html
-    assert(v_del_twins.size() >= 1);
+    assert(!v_del_twins.empty());
     std::sort(v_del_twins.begin() + 1, v_del_twins.end());
     std::sort(v_kept_twins.begin(), v_kept_twins.end());
     for (auto i0 = v_del_twins.begin() + 1, i1 = v_kept_twins.begin();
