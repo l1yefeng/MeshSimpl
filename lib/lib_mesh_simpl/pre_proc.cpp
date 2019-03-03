@@ -5,6 +5,7 @@
 #include "pre_proc.h"
 #include "util.h"
 #include <set>
+#include <sstream>
 
 namespace MeshSimpl {
 
@@ -73,6 +74,12 @@ std::pair<E, F2E> construct_edges(const F& indices, const size_t vertex_cnt) {
             auto it_and_inserted = edge_set.insert({{v0, v1}, {f}, {k}, BOUNDARY_V::BOTH});
             auto it = it_and_inserted.first;
             if (!it_and_inserted.second) {
+                if (it->boundary_v == BOUNDARY_V::NONE) {
+                    std::ostringstream ss;
+                    ss << "ERROR::NON_MANIFOLD_EDGE: please check face #" << f << ", #"
+                       << it->faces[0] << ", and #" << it->faces[1];
+                    throw std::runtime_error(ss.str());
+                }
                 // edge was not inserted because it is already there
                 // modifying through immutable iterator only if do not affect order
                 *const_cast<BOUNDARY_V*>(&it->boundary_v) = BOUNDARY_V::NONE;

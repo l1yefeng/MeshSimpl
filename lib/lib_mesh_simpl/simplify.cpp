@@ -72,8 +72,13 @@ std::pair<V, F> simplify(const V& vertices, const F& indices, const SimplifyOpti
                      "error completed ("
                   << ms << " ms)" << std::endl;
 
-    std::vector<bool> deleted_vertex(NV, false);
     std::vector<bool> deleted_face(indices.size(), false);
+    std::vector<bool> deleted_vertex(NV, true);
+    for (const auto& face : indices) {
+        for (idx v : face) {
+            deleted_vertex[v] = false;
+        }
+    }
 
     // one run of a series of edge collapse that is supposed to decimate nv_decimate vertices and
     // returns true if it ends because this target is achieved instead of because of other reason
@@ -97,6 +102,8 @@ std::pair<V, F> simplify(const V& vertices, const F& indices, const SimplifyOpti
         assert(edge.faces[0] != edge.faces[1]);
 
         assert(edge.boundary_v != Internal::BOUNDARY_V::BOTH);
+        assert(!deleted_face[edge.faces[0]] && !deleted_face[edge.faces[1]]);
+        assert(!deleted_vertex[edge.vertices[0]] && !deleted_vertex[edge.vertices[1]]);
         // 5. collapse the least-error edge until mesh is simplified enough
         if (edge_collapse(out_vertices, out_indices, edges, face2edge, quadrics, heap, target)) {
             for (const idx f : edge.faces)
