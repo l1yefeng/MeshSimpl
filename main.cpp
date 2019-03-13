@@ -38,7 +38,6 @@ int main(int argc, char* argv[]) {
 
     MeshSimpl::SimplifyOptions options;
     options.strength = strength;
-    options.debug = true;
 //    Measure measure;
     try {
         const auto res = MeshSimpl::simplify(vertices, indices, options);
