@@ -64,7 +64,7 @@ std::pair<V, F> simplify(const V& vertices, const F& indices, const SimplifyOpti
         assert(edge.vertices[0] != edge.vertices[1]);
         assert(edge.faces[0] != edge.faces[1]);
 
-        assert(edge.boundary_v != Internal::BOUNDARY_V::BOTH);
+        assert(edge.boundary_v != Internal::Edge::BOTH);
         assert(!deleted_face[edge.faces[0]] && !deleted_face[edge.faces[1]]);
         assert(!deleted_vertex[edge.vertices[0]] && !deleted_vertex[edge.vertices[1]]);
         // 5. collapse the least-error edge until mesh is simplified enough

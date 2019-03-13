@@ -65,8 +65,8 @@ inline idx vi_in_edge(const Edge& edge, idx v) {
 inline idx fve_center(const vec3i& fve) { return 3 - fve[1] - fve[2]; }
 
 inline idx choose_v_del(const Edge& edge) {
-    assert(edge.boundary_v != BOUNDARY_V::BOTH);
-    return edge.boundary_v == BOUNDARY_V::NONE ? 0 : static_cast<idx>(1 - edge.boundary_v);
+    assert(edge.boundary_v != Edge::BOTH);
+    return edge.boundary_v == Edge::NONE ? 0 : static_cast<idx>(1 - edge.boundary_v);
 }
 
 // Returns true if edge is collapsed

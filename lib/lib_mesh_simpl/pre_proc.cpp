@@ -92,10 +92,10 @@ std::pair<E, F2E> construct_edges(const F& indices, const size_t vertex_cnt) {
             idx v1 = face[j];
             if (v0 > v1)
                 std::swap(v0, v1);
-            auto it_and_inserted = edge_set.insert({{v0, v1}, {f}, {k}, BOUNDARY_V::BOTH});
+            auto it_and_inserted = edge_set.insert({{v0, v1}, {f}, {k}, Edge::BOTH});
             auto it = it_and_inserted.first;
             if (!it_and_inserted.second) {
-                if (it->boundary_v == BOUNDARY_V::NONE) {
+                if (it->boundary_v == Edge::NONE) {
                     std::ostringstream ss;
                     ss << "ERROR::NON_MANIFOLD_EDGE: please check face #" << f << ", #"
                        << it->faces[0] << ", and #" << it->faces[1];
@@ -103,7 +103,7 @@ std::pair<E, F2E> construct_edges(const F& indices, const size_t vertex_cnt) {
                 }
                 // edge was not inserted because it is already there
                 // modifying through immutable iterator only if do not affect order
-                *const_cast<BOUNDARY_V*>(&it->boundary_v) = BOUNDARY_V::NONE;
+                *const_cast<Edge::BOUNDARY_V*>(&it->boundary_v) = Edge::NONE;
                 *const_cast<idx*>(&it->faces[1]) = f;
                 *const_cast<idx*>(&it->idx_in_face[1]) = k;
             }
@@ -118,27 +118,27 @@ std::pair<E, F2E> construct_edges(const F& indices, const size_t vertex_cnt) {
     for (idx i = 0; i < edges.size(); ++i) {
         const auto& edge = edges[i];
         // identify boundary vertices
-        if (edge.boundary_v == BOUNDARY_V::BOTH) {
+        if (edge.boundary_v == Edge::BOTH) {
             vertex_on_boundary[edge.vertices[0]] = true;
             vertex_on_boundary[edge.vertices[1]] = true;
         }
 
         // populate face2edge references
         face2edge[edge.faces[0]][edge.idx_in_face[0]] = i;
-        if (edge.boundary_v != BOUNDARY_V::BOTH)
+        if (edge.boundary_v != Edge::BOTH)
             face2edge[edge.faces[1]][edge.idx_in_face[1]] = i;
     }
 
     // non-boundary edges may have one vertex on boundary, find them in this loop
     for (auto& edge : edges) {
-        if (edge.boundary_v == BOUNDARY_V::BOTH)
+        if (edge.boundary_v == Edge::BOTH)
             continue;
         if (vertex_on_boundary[edge.vertices[0]] && vertex_on_boundary[edge.vertices[1]])
-            edge.boundary_v = BOUNDARY_V::BOTH;
+            edge.boundary_v = Edge::BOTH;
         else if (vertex_on_boundary[edge.vertices[0]])
-            edge.boundary_v = BOUNDARY_V::V0;
+            edge.boundary_v = Edge::V0;
         else if (vertex_on_boundary[edge.vertices[1]])
-            edge.boundary_v = BOUNDARY_V::V1;
+            edge.boundary_v = Edge::V1;
         // else totally within the boundary
     }
 

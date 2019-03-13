@@ -52,10 +52,10 @@ TEST_CASE("QEM heap should behave normally", "[QEMHeap]") {
     vector<Edge> edges(10);
     for (int i = 0; i < 10; ++i) {
         edges[i].error = 1.1 * ((i + 5) % 10);
-        edges[i].boundary_v = BOUNDARY_V::NONE;
+        edges[i].boundary_v = Edge::NONE;
     }
     Edge edge_should_ignore{};
-    edge_should_ignore.boundary_v = BOUNDARY_V::BOTH;
+    edge_should_ignore.boundary_v = Edge::BOTH;
     edges.push_back(edge_should_ignore);
 
     QEMHeap heap(edges);

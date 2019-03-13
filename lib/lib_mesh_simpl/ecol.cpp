@@ -44,12 +44,12 @@ void optimal_ecol_vertex_placement(const V& vertices, Edge& edge) {
 }
 
 void set_edge_error(const V& vertices, const Q& quadrics, Edge& edge) {
-    assert(edge.boundary_v != BOUNDARY_V::BOTH);
+    assert(edge.boundary_v != Edge::BOTH);
     // error = v(Q1+Q2)v = vQv, v is new vertex position after edge-collapse
     const auto& vv = edge.vertices;
     edge.q = quadrics[vv[0]] + quadrics[vv[1]];
 
-    if (edge.boundary_v == BOUNDARY_V::NONE)
+    if (edge.boundary_v == Edge::NONE)
         optimal_ecol_vertex_placement(vertices, edge);
     else {
         copy_vec3(vertices[vv[edge.boundary_v]], edge.center);
@@ -60,7 +60,7 @@ void set_edge_error(const V& vertices, const Q& quadrics, Edge& edge) {
 void compute_errors(const V& vertices, const Q& quadrics, E& edges) {
     // boundary edges will not be touched during simplification
     for (auto& edge : edges)
-        if (edge.boundary_v != BOUNDARY_V::BOTH)
+        if (edge.boundary_v != Edge::BOTH)
             set_edge_error(vertices, quadrics, edge);
 }
 
@@ -91,7 +91,7 @@ bool face_fold_over(const V& vertices, const idx v0, const idx v1, const idx v2,
 
 void update_error_and_center(const V& vertices, const Q& quadrics, QEMHeap& heap,
                              Edge* const edge_ptr) {
-    if (edge_ptr->boundary_v == BOUNDARY_V::BOTH) {
+    if (edge_ptr->boundary_v == Edge::BOTH) {
         heap.erase_by_ptr(edge_ptr);
     } else {
         const double error_prev = edge_ptr->error;
@@ -137,7 +137,7 @@ bool scan_neighbors(const V& vertices, const F& indices, const E& edges, const F
         assert(v != e);
         const auto& next_edge = edges[face2edge[f][v]];
 
-        if (next_edge.boundary_v == BOUNDARY_V::BOTH) {
+        if (next_edge.boundary_v == Edge::BOTH) {
             v_kept_twins.push_back(indices[f][e]);
             if (boundary_hit)
                 break; // while-loop breaks here if one v_kept is on boundary
@@ -207,7 +207,7 @@ bool edge_collapse(V& vertices, F& indices, E& edges, F2E& face2edge, Q& quadric
     // now that we are certain this edge is to be collapsed, remove it from heap
     heap.pop();
     // update vertex position and quadric
-    if (edge.boundary_v == BOUNDARY_V::NONE)
+    if (edge.boundary_v == Edge::NONE)
         copy_vec3(edge.center, vertices[v_kept]);
     quadrics[v_kept] = edge.q;
 
@@ -234,11 +234,11 @@ bool edge_collapse(V& vertices, F& indices, E& edges, F2E& face2edge, Q& quadric
         dirty_edge_ptr = &edges[face2edge[f][e]];
         const idx v_del_in_edge = vi_in_edge(*dirty_edge_ptr, v_del);
         dirty_edge_ptr->vertices[v_del_in_edge] = v_kept;
-        if (edge.boundary_v != BOUNDARY_V::NONE) {
-            if (dirty_edge_ptr->boundary_v == BOUNDARY_V::NONE)
-                dirty_edge_ptr->boundary_v = static_cast<BOUNDARY_V>(v_del_in_edge);
+        if (edge.boundary_v != Edge::NONE) {
+            if (dirty_edge_ptr->boundary_v == Edge::NONE)
+                dirty_edge_ptr->boundary_v = static_cast<Edge::BOUNDARY_V>(v_del_in_edge);
             else
-                dirty_edge_ptr->boundary_v = BOUNDARY_V::BOTH;
+                dirty_edge_ptr->boundary_v = Edge::BOTH;
         }
         update_error_and_center(vertices, quadrics, heap, dirty_edge_ptr);
     }
