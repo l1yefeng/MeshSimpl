@@ -9,6 +9,8 @@ namespace MeshSimpl {
 
 namespace Internal {
 
+static const size_t ESTIMATE_VALENCE = 8;
+
 void optimal_ecol_vertex_placement(const V& vertices, Edge& edge) {
     const Quadric& q = edge.q;
     const vec3d b{q[6], q[7], q[8]};
@@ -123,6 +125,11 @@ bool scan_neighbors(const V& vertices, const F& indices, const E& edges, const F
     std::vector<vec3i> fve_star_v_kept;
     const vec2i& ff = edge.faces;
     std::vector<idx> v_del_twins, v_kept_twins;
+
+    fve_star_v_del.reserve(ESTIMATE_VALENCE);
+    fve_star_v_kept.reserve(ESTIMATE_VALENCE);
+    v_del_twins.reserve(ESTIMATE_VALENCE);
+    v_kept_twins.reserve(ESTIMATE_VALENCE);
 
     for (idx f = ff[0], v = vi_in_face(indices, ff[0], v_kept), e = edge.idx_in_face[0]; true;) {
         iter_next(indices, edges, face2edge, f, v, e);
