@@ -51,6 +51,26 @@ Q recompute_quadrics(const V& vertices, const F& indices, const std::vector<bool
     return quadrics;
 }
 
+bool edge_topo_correctness(const E& edges, const F2E& face2edge, const F& indices) {
+    for (idx f = 0; f < indices.size(); ++f) {
+        const auto& f2e = face2edge[f];
+        for (idx i = 0; i < 3; ++i) {
+            auto vv = edges[f2e[i]].vertices;
+            assert(vv[0] < vv[1]);
+            idx v_smaller = indices[f][(i + 1) % 3];
+            idx v_larger = indices[f][(i + 2) % 3];
+            if (v_smaller > v_larger)
+                std::swap(v_smaller, v_larger);
+
+            // edge vertices should match face corners
+            assert(vv[0] == v_smaller);
+            assert(vv[1] == v_larger);
+        }
+    }
+
+    return true;
+}
+
 std::pair<E, F2E> construct_edges(const F& indices, const size_t vertex_cnt) {
     const auto edge_cmp = [](const Edge& a, const Edge& b) -> bool {
         if (a.vertices[0] < b.vertices[0])
@@ -64,9 +84,10 @@ std::pair<E, F2E> construct_edges(const F& indices, const size_t vertex_cnt) {
     // insert all edges into edge_set and find out if it is on boundary
     for (idx f = 0; f < indices.size(); ++f) {
         const auto& face = indices[f];
-        for (idx i = 0; i < 3; ++i) {
-            const idx j = (i + 1) % 3; // face[i] and face[j] form this edge
-            const idx k = (i + 2) % 3; // k is the local idx of this edge to this face
+        for (idx k = 0; k < 3; ++k) {
+            // construct edge (v[i], v[j]); edge local index will be k (= that of the 3rd vertex)
+            const idx i = (k + 1) % 3;
+            const idx j = (k + 2) % 3;
             idx v0 = face[i];
             idx v1 = face[j];
             if (v0 > v1)
@@ -103,8 +124,9 @@ std::pair<E, F2E> construct_edges(const F& indices, const size_t vertex_cnt) {
         }
 
         // populate face2edge references
-        for (auto j : {0, 1})
-            face2edge[edge.faces[j]][edge.idx_in_face[j]] = i;
+        face2edge[edge.faces[0]][edge.idx_in_face[0]] = i;
+        if (edge.boundary_v != BOUNDARY_V::BOTH)
+            face2edge[edge.faces[1]][edge.idx_in_face[1]] = i;
     }
 
     // non-boundary edges may have one vertex on boundary, find them in this loop
@@ -119,6 +141,8 @@ std::pair<E, F2E> construct_edges(const F& indices, const size_t vertex_cnt) {
             edge.boundary_v = BOUNDARY_V::V1;
         // else totally within the boundary
     }
+
+    assert(edge_topo_correctness(edges, face2edge, indices));
 
     return {edges, face2edge};
 }
