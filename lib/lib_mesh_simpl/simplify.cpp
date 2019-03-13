@@ -4,7 +4,6 @@
 
 #include "simplify.h"
 #include "ecol.h"
-#include "measure.h"
 #include "post_proc.h"
 #include "pre_proc.h"
 #include <limits>

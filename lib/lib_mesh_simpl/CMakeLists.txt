@@ -16,8 +16,7 @@ set(SOURCES
     pre_proc.h
     pre_proc.cpp
     post_proc.h
-    post_proc.cpp
-    measure.h)
+    post_proc.cpp)
 
 add_library(lib_mesh_simpl SHARED ${SOURCES})
 
