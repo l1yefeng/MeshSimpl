@@ -17,16 +17,19 @@ void optimal_ecol_vertex_placement(const V& vertices, Edge& edge) {
     const double c = q[9];
 
     // computes the inverse of matrix A in quadric
-    const double a_det = q[0] * (q[3] * q[5] - q[4] * q[4]) - q[1] * (q[1] * q[5] - q[4] * q[2]) +
+    const double a_det = q[0] * (q[3] * q[5] - q[4] * q[4]) -
+                         q[1] * (q[1] * q[5] - q[4] * q[2]) +
                          q[2] * (q[1] * q[4] - q[3] * q[2]);
 
     if (a_det != 0) {
         // invertible, find position yielding minimal error
         const double a_det_inv = 1.0 / a_det;
-        const std::array<double, 6> a_inv{
-            (q[3] * q[5] - q[4] * q[4]) * a_det_inv, (q[2] * q[4] - q[1] * q[5]) * a_det_inv,
-            (q[1] * q[4] - q[2] * q[3]) * a_det_inv, (q[0] * q[5] - q[2] * q[2]) * a_det_inv,
-            (q[1] * q[2] - q[0] * q[4]) * a_det_inv, (q[0] * q[3] - q[1] * q[1]) * a_det_inv};
+        const std::array<double, 6> a_inv{(q[3] * q[5] - q[4] * q[4]) * a_det_inv,
+                                          (q[2] * q[4] - q[1] * q[5]) * a_det_inv,
+                                          (q[1] * q[4] - q[2] * q[3]) * a_det_inv,
+                                          (q[0] * q[5] - q[2] * q[2]) * a_det_inv,
+                                          (q[1] * q[2] - q[0] * q[4]) * a_det_inv,
+                                          (q[0] * q[3] - q[1] * q[1]) * a_det_inv};
         edge.center = {-dot({a_inv[0], a_inv[1], a_inv[2]}, b),
                        -dot({a_inv[1], a_inv[3], a_inv[4]}, b),
                        -dot({a_inv[2], a_inv[4], a_inv[5]}, b)};
@@ -66,8 +69,8 @@ void compute_errors(const V& vertices, const Q& quadrics, E& edges) {
             set_edge_error(vertices, quadrics, edge);
 }
 
-bool face_fold_over(const V& vertices, const F& indices, const Neighbor& nb, const idx v_move,
-                    const vec3d& move_to) {
+bool face_fold_over(const V& vertices, const F& indices, const Neighbor& nb,
+                    const idx v_move, const vec3d& move_to) {
     assert(v_move == indices[nb.f()][nb.center()]);
     const idx vi = indices[nb.f()][nb.i()];
     const idx vj = indices[nb.f()][nb.j()];
@@ -98,8 +101,9 @@ void update_error_and_center(const V& vertices, const Q& quadrics, QEMHeap& heap
     }
 }
 
-bool scan_neighbors(const V& vertices, const F& indices, const E& edges, const F2E& face2edge,
-                    const Edge& edge, std::vector<Neighbor>& v_del_neighbors,
+bool scan_neighbors(const V& vertices, const F& indices, const E& edges,
+                    const F2E& face2edge, const Edge& edge,
+                    std::vector<Neighbor>& v_del_neighbors,
                     std::vector<idx>& v_kept_neighbor_edges) {
     const idx v_del = edge.vertices[choose_v_del(edge)];
     const idx v_kept = edge.vertices[1 - choose_v_del(edge)];
@@ -174,8 +178,8 @@ bool scan_neighbors(const V& vertices, const F& indices, const E& edges, const F
     return true;
 }
 
-bool edge_collapse(V& vertices, F& indices, E& edges, F2E& face2edge, Q& quadrics, QEMHeap& heap,
-                   const idx ecol_target) {
+bool edge_collapse(V& vertices, F& indices, E& edges, F2E& face2edge, Q& quadrics,
+                   QEMHeap& heap, const idx ecol_target) {
     auto& edge = edges[ecol_target];
     const vec2i& ff = edge.faces;
     const idx v_del = edge.vertices[choose_v_del(edge)];

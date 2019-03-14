@@ -31,7 +31,8 @@ public:
     void erase_by_ptr(const Edge* ptr) { erase(static_cast<idx>(ptr - edges.data())); }
     // Returns true if heap is empty
     bool empty() const { return n == 0; }
-    // Returns the size of the heap, which should be the number of edges with boundary_v != BOTH
+    // Returns the size of the heap, which should be
+    // the number of edges with boundary_v != BOTH
     size_t size() const { return n; };
     // Returns the keys iterator at the begin / end of active edges
     std::vector<idx>::const_iterator begin() const { return keys.begin() + 1; }
@@ -44,7 +45,9 @@ private:
     size_t n;
 
     // Compare function: larger error --> lower priority
-    bool greater(size_t i, size_t j) const { return edges[keys[i]].error > edges[keys[j]].error; }
+    bool greater(size_t i, size_t j) const {
+        return edges[keys[i]].error > edges[keys[j]].error;
+    }
     // Helper function: the sole function that modifies handles and keys data
     void exchange(size_t i, size_t j);
     // For assertion purposes

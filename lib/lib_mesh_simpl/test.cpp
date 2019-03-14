@@ -41,9 +41,10 @@ TEST_CASE("Deleted values should be gone", "[compact_data]") {
 
     SECTION("Indices") {
         REQUIRE(F.size() == 7);
-        auto it = find_if(F.begin(), F.end(), [&](const vector<unsigned int>& face) -> bool {
-            return !(face[0] < V.size() && face[1] < V.size() && face[2] < V.size());
-        });
+        auto it =
+            find_if(F.begin(), F.end(), [&](const vector<unsigned int>& face) -> bool {
+                return !(face[0] < V.size() && face[1] < V.size() && face[2] < V.size());
+            });
         REQUIRE(it == F.end());
     }
 }

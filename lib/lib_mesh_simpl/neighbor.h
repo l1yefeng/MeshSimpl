@@ -12,10 +12,12 @@ namespace MeshSimpl {
 namespace Internal {
 
 // This is a compact structure to represent an incident face around a center vertex.
-// It is created for the traverse in the neighborhood of a vertex during edge-collapse op.
+// It is created for the traverse of the incident faces of a vertex (center)
+// during edge-collapse operation.
 //
-// It contains a face index and two vertex (the third is the center) order local to the face: i and j.
-// Typically j is the next vertex to i in clockwise orientation.
+// It contains a face index and two vertex (the third is the center) order: i and j.
+// i, j, and center are local orders of three vertices.
+// In typical (clockwise) cases, the orientation is center -> i -> j -> center
 //
 // Mind that in a face, any edge and the vertex across from it have the same order
 class Neighbor {

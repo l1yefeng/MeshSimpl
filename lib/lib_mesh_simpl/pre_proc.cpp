@@ -41,16 +41,6 @@ Q compute_quadrics(const V& vertices, const F& indices, bool weight_by_area) {
     return quadrics;
 }
 
-Q recompute_quadrics(const V& vertices, const F& indices, const std::vector<bool>& deleted_face,
-                     bool weight_by_area) {
-    // quadrics are initialized with all zeros
-    Q quadrics(vertices.size());
-    for (idx f = 0; f < indices.size(); ++f)
-        if (!deleted_face[f])
-            compute_quadrics_per_face(vertices, indices[f], weight_by_area, quadrics);
-    return quadrics;
-}
-
 bool edge_topo_correctness(const E& edges, const F2E& face2edge, const F& indices) {
     for (idx f = 0; f < indices.size(); ++f) {
         const auto& f2e = face2edge[f];
@@ -86,7 +76,8 @@ std::pair<E, F2E> construct_edges(const F& indices, const size_t vertex_cnt) {
     for (idx f = 0; f < indices.size(); ++f) {
         const auto& face = indices[f];
         for (order k = 0; k < 3; ++k) {
-            // construct edge (v[i], v[j]); edge local index will be k (= that of the 3rd vertex)
+            // construct edge (v[i], v[j]);
+            // edge local index will be k (= that of the 3rd vertex)
             const order i = (k + 1) % 3;
             const order j = (k + 2) % 3;
             idx v0 = face[i];

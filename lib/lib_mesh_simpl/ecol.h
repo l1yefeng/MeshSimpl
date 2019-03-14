@@ -26,21 +26,23 @@ bool face_fold_over(const V& vertices, const F& indices, const Neighbor& nb, idx
                     const vec3d& move_to);
 
 // Replace a vertex in edge, and update other members then fix priority in heap
-void update_error_and_center(const V& vertices, const Q& quadrics, QEMHeap& heap, Edge* edge_ptr);
+void update_error_and_center(const V& vertices, const Q& quadrics, QEMHeap& heap,
+                             Edge* edge_ptr);
 
-// Find relevant faces (neighbor faces of two endpoints) one by one around the collapsed edge.
-// Meanwhile this function does geometry and connectivity check to avoid fold-over faces and
-// non-manifold edges.
+// Find relevant faces (neighbor faces of two endpoints) one by one around the
+// collapsed edge. Meanwhile this function does geometry and connectivity check to
+// avoid fold-over faces and non-manifold edges.
 //
-// Traverse neighbors around deleted vertex first, then around kept vertex, clockwise in both.
-// One exception is when traversing neighbors of boundary kept vertex.
+// Traverse neighbors around deleted vertex first, then around kept vertex,
+// both clockwise. One exception is when traversing neighbors of boundary kept vertex.
 // Also refer to data structure "Neighbor" in neighbor.h
 //
 // Outputs: v_del_neighbors -- neighbors of deleted vertex
 //          c_kept_neighbor_edges -- index of edges incident to kept vertex
 // Returns: true if no problem is found -- this edge collapse operation is acceptable
-bool scan_neighbors(const V& vertices, const F& indices, const E& edges, const F2E& face2edge,
-                    const Edge& edge, std::vector<Neighbor>& v_del_neighbors,
+bool scan_neighbors(const V& vertices, const F& indices, const E& edges,
+                    const F2E& face2edge, const Edge& edge,
+                    std::vector<Neighbor>& v_del_neighbors,
                     std::vector<idx>& v_kept_neighbor_edges);
 ;
 
@@ -50,8 +52,8 @@ inline idx choose_v_del(const Edge& edge) {
 }
 
 // Returns true if edge is collapsed
-bool edge_collapse(V& vertices, F& indices, E& edges, F2E& face2edge, Q& quadrics, QEMHeap& heap,
-                   idx ecol_target);
+bool edge_collapse(V& vertices, F& indices, E& edges, F2E& face2edge, Q& quadrics,
+                   QEMHeap& heap, idx ecol_target);
 
 } // namespace Internal
 
