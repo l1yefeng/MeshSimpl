@@ -1,6 +1,6 @@
 #include "measure.h"
 #include "write_obj.h"
-#include <readOBJ.h>
+#include <igl/readOBJ.h>
 #include <simplify.h>
 
 using namespace std;
@@ -12,7 +12,8 @@ int main(int argc, char* argv[]) {
              << "  OBJFILE   Path of input .obj file" << endl
              << "  OUTPUT    Path of output data" << endl
              << "  STRENGTH  Simplification strength; The default is 0.5;" << endl
-             << "            A strength of 0.8 will keep 20% vertices in the output" << endl
+             << "            A strength of 0.8 will keep 20% vertices in the output"
+             << endl
              << endl;
         return argc == 1 ? 0 : 1;
     }
@@ -38,12 +39,12 @@ int main(int argc, char* argv[]) {
 
     MeshSimpl::SimplifyOptions options;
     options.strength = strength;
-//    Measure measure;
+    Measure measure;
     try {
         const auto res = MeshSimpl::simplify(vertices, indices, options);
-//        long duration = measure.stop();
-//        std::cout << "[INFO] Simplification completed (" << duration << " milliseconds)"
-//                  << std::endl;
+        long duration = measure.stop();
+        std::cout << "[INFO] Simplification completed (" << duration << " milliseconds)"
+                  << std::endl;
         write_obj(argv[2], res.first, res.second);
     } catch (char const* exception) {
         cerr << exception << endl;

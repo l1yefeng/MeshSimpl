@@ -9,7 +9,7 @@ add_subdirectory(lib/lib_mesh_simpl)
 # find eigen library (required by libigl)
 find_package(Eigen3 3.3 REQUIRED NO_MODULE)
 # include igl headers
-include_directories(lib/libigl/include/igl
+include_directories(lib/libigl/include
                     lib/lib_mesh_simpl)
 
 add_executable(mesh_simpl
