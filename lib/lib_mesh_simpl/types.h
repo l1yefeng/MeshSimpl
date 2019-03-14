@@ -10,7 +10,8 @@
 
 namespace MeshSimpl {
 
-typedef unsigned int idx;
+typedef unsigned int idx;                   // edge, vertex, face index
+typedef unsigned char order;                // edge/vertex local order to face; [0, 3)
 typedef std::array<double, 3> vec3d;        // double
 typedef std::array<idx, 3> vec3i;           // idx
 typedef std::array<idx, 2> vec2i;           // idx
@@ -26,13 +27,28 @@ typedef std::array<double, 10> Quadric;
 struct Edge {
     enum BOUNDARY_V { V0 = 0, V1 = 1, BOTH, NONE };
 
-    vec2i vertices;        // index of two end vertices, unique, v0 < v1
-    vec2i faces;           // index of two incident faces
-    vec2i idx_in_face;     // index of this (0, 1, 2) in faces
-    BOUNDARY_V boundary_v; // vertices on boundary
-    vec3d center;          // where this edge collapse into
-    double error;          // quadric error value, undefined if on boundary
-    Quadric q;             // sum of quadrics of two vertices
+    // sum of quadrics of two endpoints
+    Quadric q;
+    // where this edge collapse into
+    vec3d center;
+
+    // index of two endpoints,
+    // when constructing a set of edges, this is used as key by forcing v0 < v1,
+    // the increasing order is unnecessary if not in a set, but mind "boundary_v"
+    vec2i vertices;
+
+    // index of two incident faces,
+    // the order of two faces is insignificant in this program (swappable)
+    vec2i faces;
+    // order of this edge in two incident faces,
+    // match the order to member "faces"
+    std::array<order, 2> idx_in_face;
+
+    // quadric error value, insignificant if edge on boundary (boundary_v = BOTH)
+    double error;
+
+    // vertices on boundary
+    BOUNDARY_V boundary_v;
 };
 
 typedef std::vector<Edge> E;

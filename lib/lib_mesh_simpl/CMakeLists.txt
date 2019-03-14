@@ -4,25 +4,26 @@ project(lib_mesh_simpl
 
 set(CMAKE_CXX_STANDARD 11)
 
-set(SOURCES
-    ecol.h
-    ecol.cpp
-    util.h
-    util.cpp
-    qem_heap.h
-    qem_heap.cpp
-    simplify.h
-    simplify.cpp
-    pre_proc.h
-    pre_proc.cpp
-    post_proc.h
-    post_proc.cpp)
-
-add_library(lib_mesh_simpl SHARED ${SOURCES})
+add_library(${PROJECT_NAME}
+            ecol.h
+            ecol.cpp
+            util.h
+            util.cpp
+            qem_heap.h
+            qem_heap.cpp
+            simplify.h
+            simplify.cpp
+            pre_proc.h
+            pre_proc.cpp
+            post_proc.h
+            post_proc.cpp
+            neighbor.cpp
+            neighbor.h)
 
 # Force c++11
-target_compile_features(lib_mesh_simpl PUBLIC cxx_std_11)
-set_target_properties(lib_mesh_simpl PROPERTIES CXX_EXTENSIONS OFF)
+target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_11)
+target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wextra -pedantic -Werror)
+set_target_properties(${PROJECT_NAME} PROPERTIES CXX_EXTENSIONS OFF)
 
 # Related to tests. No panic if Catch2 cannot be found
 find_package(Catch2 QUIET)

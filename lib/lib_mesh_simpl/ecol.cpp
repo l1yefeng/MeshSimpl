@@ -9,7 +9,7 @@ namespace MeshSimpl {
 
 namespace Internal {
 
-static const size_t ESTIMATE_VALENCE = 8;
+static const size_t ESTIMATE_VALENCE = 8; // should cover more than 99.9% vertices
 
 void optimal_ecol_vertex_placement(const V& vertices, Edge& edge) {
     const Quadric& q = edge.q;
@@ -66,18 +66,14 @@ void compute_errors(const V& vertices, const Q& quadrics, E& edges) {
             set_edge_error(vertices, quadrics, edge);
 }
 
-void recompute_errors(const V& vertices, const Q& quadrics, E& edges,
-                      std::vector<idx>::const_iterator edge_idx_begin,
-                      std::vector<idx>::const_iterator edge_idx_end) {
-    for (auto it = edge_idx_begin; it != edge_idx_end; ++it)
-        set_edge_error(vertices, quadrics, edges[*it]);
-}
-
-bool face_fold_over(const V& vertices, const idx v0, const idx v1, const idx v2,
-                    const vec3d& v2_new_pos) {
-    const vec3d e0 = vertices[v1] - vertices[v0];
-    const vec3d e1_prev = vertices[v2] - vertices[v1];
-    const vec3d e1_new = v2_new_pos - vertices[v1];
+bool face_fold_over(const V& vertices, const F& indices, const Neighbor& nb, const idx v_move,
+                    const vec3d& move_to) {
+    assert(v_move == indices[nb.f()][nb.center()]);
+    const idx vi = indices[nb.f()][nb.i()];
+    const idx vj = indices[nb.f()][nb.j()];
+    const vec3d e0 = vertices[vj] - vertices[vi];
+    const vec3d e1_prev = vertices[v_move] - vertices[vj];
+    const vec3d e1_new = move_to - vertices[vj];
     vec3d normal_prev = cross(e0, e1_prev);
     double normal_prev_mag = magnitude(normal_prev);
     assert(normal_prev_mag != 0);
@@ -102,67 +98,51 @@ void update_error_and_center(const V& vertices, const Q& quadrics, QEMHeap& heap
     }
 }
 
-void iter_next(const F& indices, const E& edges, const F2E& face2edge, idx& f, idx& v, idx& e) {
-    assert(v != e);
-    const auto& curr_edge = edges[face2edge[f][v]];
-    const idx f_idx_to_edge = fi_in_edge(curr_edge, f);
-    const idx of = curr_edge.faces[1 - f_idx_to_edge];
-    assert(f != of);
-    const idx ov_global = indices[f][e];
-    const idx ov = Internal::vi_in_face(indices, of, ov_global);
-    assert(face2edge[of][ov] != face2edge[f][e]);
-    const idx oe = curr_edge.idx_in_face[1 - f_idx_to_edge];
-    f = of;
-    v = ov;
-    e = oe;
-}
-
 bool scan_neighbors(const V& vertices, const F& indices, const E& edges, const F2E& face2edge,
-                    const Edge& edge, std::vector<vec3i>& fve_star_v_del,
-                    std::vector<idx>& e_star_v_kept) {
+                    const Edge& edge, std::vector<Neighbor>& v_del_neighbors,
+                    std::vector<idx>& v_kept_neighbor_edges) {
     const idx v_del = edge.vertices[choose_v_del(edge)];
     const idx v_kept = edge.vertices[1 - choose_v_del(edge)];
-    std::vector<vec3i> fve_star_v_kept;
+    std::vector<Neighbor> v_kept_neighbors;
     const vec2i& ff = edge.faces;
     std::vector<idx> v_del_twins, v_kept_twins;
 
-    fve_star_v_del.reserve(ESTIMATE_VALENCE);
-    fve_star_v_kept.reserve(ESTIMATE_VALENCE);
+    v_del_neighbors.reserve(ESTIMATE_VALENCE);
+    v_kept_neighbors.reserve(ESTIMATE_VALENCE);
     v_del_twins.reserve(ESTIMATE_VALENCE);
     v_kept_twins.reserve(ESTIMATE_VALENCE);
 
-    for (idx f = ff[0], v = vi_in_face(indices, ff[0], v_kept), e = edge.idx_in_face[0]; true;) {
-        iter_next(indices, edges, face2edge, f, v, e);
-        if (f == ff[1])
+    Neighbor nb{ff[0], edge.idx_in_face[0]};
+    while (true) {
+        nb.rotate(edges, face2edge);
+        if (nb.f() == ff[1])
             break;
-        fve_star_v_del.push_back({f, v, e});
-        v_del_twins.push_back(indices[f][v]);
+        v_del_neighbors.emplace_back(nb);
+        v_del_twins.emplace_back(indices[nb.f()][nb.i()]);
     }
 
     bool boundary_hit = false; // useful in case v_kept is on boundary
-    for (idx f = ff[1], v = vi_in_face(indices, ff[1], v_del), e = edge.idx_in_face[1]; true;) {
-        assert(v != e);
-        const auto& next_edge = edges[face2edge[f][v]];
+    nb = {ff[1], edge.idx_in_face[1]};
+    while (true) {
+        const auto& next_edge = edges[face2edge[nb.f()][nb.i()]];
 
         if (next_edge.boundary_v == Edge::BOTH) {
-            v_kept_twins.push_back(indices[f][e]);
+            v_kept_twins.emplace_back(indices[nb.f()][nb.j()]);
             if (boundary_hit)
                 break; // while-loop breaks here if one v_kept is on boundary
             boundary_hit = true;
-            f = ff[0];
-            v = vi_in_face(indices, ff[0], v_del);
-            e = edge.idx_in_face[0];
+            nb.counter_clockwise();
+            nb = {ff[0], edge.idx_in_face[0]};
             continue;
         }
 
-        iter_next(indices, edges, face2edge, f, v, e);
-
-        e_star_v_kept.push_back(face2edge[f][e]);
-        v_kept_twins.push_back(indices[f][v]);
-        if (f == ff[0])
+        nb.rotate(edges, face2edge);
+        v_kept_neighbor_edges.emplace_back(face2edge[nb.f()][nb.j()]);
+        v_kept_twins.emplace_back(indices[nb.f()][nb.i()]);
+        if (nb.f() == ff[0])
             break; // while-loop breaks here if there is no business of boundary
         // this face is deleted thus unnecessary to check fold-over if f == ff[0]
-        fve_star_v_kept.push_back({f, v, e});
+        v_kept_neighbors.emplace_back(nb);
     }
 
     // check connectivity
@@ -181,14 +161,12 @@ bool scan_neighbors(const V& vertices, const F& indices, const E& edges, const F
     }
 
     // check geometry
-    for (const auto& fve : fve_star_v_del) {
-        const idx f = fve[0];
-        if (face_fold_over(vertices, indices[f][fve[2]], indices[f][fve[1]], v_del, edge.center))
+    for (const auto& nb_del : v_del_neighbors) {
+        if (face_fold_over(vertices, indices, nb_del, v_del, edge.center))
             return false;
     }
-    for (const auto& fve : fve_star_v_kept) {
-        const idx f = fve[0];
-        if (face_fold_over(vertices, indices[f][fve[2]], indices[f][fve[1]], v_kept, edge.center))
+    for (const auto& nb_kept : v_kept_neighbors) {
+        if (face_fold_over(vertices, indices, nb_kept, v_kept, edge.center))
             return false;
     }
 
@@ -198,15 +176,24 @@ bool scan_neighbors(const V& vertices, const F& indices, const E& edges, const F
 
 bool edge_collapse(V& vertices, F& indices, E& edges, F2E& face2edge, Q& quadrics, QEMHeap& heap,
                    const idx ecol_target) {
-    const auto& edge = edges[ecol_target];
+    auto& edge = edges[ecol_target];
     const vec2i& ff = edge.faces;
     const idx v_del = edge.vertices[choose_v_del(edge)];
     const idx v_kept = edge.vertices[1 - choose_v_del(edge)];
 
+    // to guarantee neighbors are traversed in clock-wise orientation,
+    // swap faces (and idx_in_face) if necessary
+    idx v_del_in_f0 = vi_in_face(indices, ff[0], v_del);
+    if (edge.idx_in_face[0] != (v_del_in_f0 + 1) % 3) {
+        std::swap(edge.idx_in_face[0], edge.idx_in_face[1]);
+        std::swap(edge.faces[0], edge.faces[1]);
+    }
+
     // collect neighboring faces into two containers
-    std::vector<vec3i> fve_star_v_del;
-    std::vector<idx> e_star_v_kept;
-    if (!scan_neighbors(vertices, indices, edges, face2edge, edge, fve_star_v_del, e_star_v_kept)) {
+    std::vector<Neighbor> v_del_neighbors;
+    std::vector<idx> v_kept_neighbor_edges;
+    if (!scan_neighbors(vertices, indices, edges, face2edge, edge, v_del_neighbors,
+                        v_kept_neighbor_edges)) {
         heap.penalize(ecol_target);
         return false;
     }
@@ -222,23 +209,21 @@ bool edge_collapse(V& vertices, F& indices, E& edges, F2E& face2edge, Q& quadric
     for (auto i : {0, 1})
         e_kept[i] = face2edge[ff[i]][vi_in_face(indices, ff[i], v_del)];
 
-    vec3i fve = fve_star_v_del[0];
-    const idx& f = fve[0];
-    const idx& v = fve[1];
-    const idx& e = fve[2]; // they always refer to fve; updated on each `fve = ...'
+    auto it = v_del_neighbors.begin();
     Edge* dirty_edge_ptr = &edges[e_kept[0]];
+
     // first face to process: deleted face 0
-    indices[f][fve_center(fve)] = v_kept;
-    heap.erase(face2edge[f][e]);
-    face2edge[f][e] = e_kept[0];
+    indices[it->f()][it->center()] = v_kept;
+    heap.erase(face2edge[it->f()][it->j()]);
+    face2edge[it->f()][it->j()] = e_kept[0];
     const idx ff0_in_edge = fi_in_edge(*dirty_edge_ptr, ff[0]);
-    dirty_edge_ptr->faces[ff0_in_edge] = f;
-    dirty_edge_ptr->idx_in_face[ff0_in_edge] = e;
+    dirty_edge_ptr->faces[ff0_in_edge] = it->f();
+    dirty_edge_ptr->idx_in_face[ff0_in_edge] = it->j();
+
     // every face centered around deleted vertex
-    for (auto it = fve_star_v_del.begin() + 1; it != fve_star_v_del.end(); ++it) {
-        fve = *it;
-        indices[f][fve_center(fve)] = v_kept;
-        dirty_edge_ptr = &edges[face2edge[f][e]];
+    for (++it; it != v_del_neighbors.end(); ++it) {
+        indices[it->f()][it->center()] = v_kept;
+        dirty_edge_ptr = &edges[face2edge[it->f()][it->j()]];
         const idx v_del_in_edge = vi_in_edge(*dirty_edge_ptr, v_del);
         dirty_edge_ptr->vertices[v_del_in_edge] = v_kept;
         if (edge.boundary_v != Edge::NONE) {
@@ -249,16 +234,18 @@ bool edge_collapse(V& vertices, F& indices, E& edges, F2E& face2edge, Q& quadric
         }
         update_error_and_center(vertices, quadrics, heap, dirty_edge_ptr);
     }
+
     // the deleted face 1
-    heap.erase(face2edge[f][v]);
-    face2edge[f][v] = e_kept[1];
+    --it;
+    heap.erase(face2edge[it->f()][it->i()]);
+    face2edge[it->f()][it->i()] = e_kept[1];
     dirty_edge_ptr = &edges[e_kept[1]];
     const idx ff1_in_edge = fi_in_edge(*dirty_edge_ptr, ff[1]);
-    dirty_edge_ptr->faces[ff1_in_edge] = f;
-    dirty_edge_ptr->idx_in_face[ff1_in_edge] = v;
+    dirty_edge_ptr->faces[ff1_in_edge] = it->f();
+    dirty_edge_ptr->idx_in_face[ff1_in_edge] = it->i();
 
     // every edge centered around the kept vertex
-    for (const idx e_dirty : e_star_v_kept)
+    for (const idx e_dirty : v_kept_neighbor_edges)
         update_error_and_center(vertices, quadrics, heap, &edges[e_dirty]);
 
     return true;

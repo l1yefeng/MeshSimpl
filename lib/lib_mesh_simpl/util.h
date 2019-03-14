@@ -5,6 +5,7 @@
 #ifndef LIB_MESH_SIMPL_UTIL_H
 #define LIB_MESH_SIMPL_UTIL_H
 
+#include "neighbor.h"
 #include "types.h"
 #include <cassert>
 #include <cmath>
@@ -46,6 +47,21 @@ template <typename Position> inline double q_error(const Quadric& q, const Posit
     return dot({dot({q[0], q[1], q[2]}, v), dot({q[1], q[3], q[4]}, v), dot({q[2], q[4], q[5]}, v)},
                v) +
            dot({q[6], q[7], q[8]}, v) * 2 + q[9];
+}
+
+inline order vi_in_face(const F& indices, idx f, idx v) {
+    assert(indices[f][0] == v || indices[f][1] == v || indices[f][2] == v);
+    return indices[f][0] == v ? 0 : (indices[f][1] == v ? 1 : 2);
+}
+
+inline order fi_in_edge(const Edge& edge, idx f) {
+    assert(edge.faces[0] == f || edge.faces[1] == f);
+    return edge.faces[0] == f ? 0 : 1;
+}
+
+inline order vi_in_edge(const Edge& edge, idx v) {
+    assert(edge.vertices[0] == v || edge.vertices[1] == v);
+    return edge.vertices[0] == v ? 0 : 1;
 }
 
 } // namespace Internal

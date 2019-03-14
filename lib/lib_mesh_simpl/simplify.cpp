@@ -6,7 +6,6 @@
 #include "ecol.h"
 #include "post_proc.h"
 #include "pre_proc.h"
-#include <limits>
 
 namespace MeshSimpl {
 
@@ -22,8 +21,7 @@ std::pair<V, F> simplify(const V& vertices, const F& indices, const SimplifyOpti
 
     const size_t NV = vertices.size();
     const size_t nv_to_decimate =
-        NV - std::max(static_cast<size_t>(std::lround((1 - options.strength) * NV)),
-                      Internal::MIN_NR_VERTICES);
+        NV - std::max(static_cast<int>(std::lround((1 - options.strength) * NV)), 4);
     auto out_vertices = vertices;
     auto out_indices = indices;
 
@@ -54,13 +52,15 @@ std::pair<V, F> simplify(const V& vertices, const F& indices, const SimplifyOpti
     // one run of a series of edge collapse that is supposed to decimate nv_decimate vertices and
     // returns true if it ends because this target is achieved instead of because of other reason
     size_t nv = nv_to_decimate;
+    idx prev_target = static_cast<idx>(edges.size());
     while (!heap.empty() && nv > 0) {
         // collapse an edge to remove 1 vertex and 2 faces in each iteration
         const idx target = heap.top();
+        if (prev_target == target)
+            break;
+        prev_target = target;
 
         const auto& edge = edges[target];
-        if (edge.error == std::numeric_limits<double>::max())
-            break;
         assert(edge.vertices[0] != edge.vertices[1]);
         assert(edge.faces[0] != edge.faces[1]);
 
