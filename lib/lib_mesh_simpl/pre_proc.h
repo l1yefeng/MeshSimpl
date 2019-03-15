@@ -11,13 +11,8 @@ namespace MeshSimpl {
 
 namespace Internal {
 
-// Compute quadrics Q of vertices on `face' and add to `quadrics'.
-// If not weighted by area then it's uniform
-void compute_quadrics_per_face(const V& vertices, const std::vector<idx>& face,
-                               bool weight_by_area, Q& quadrics);
-
 // Compute quadrics Q for every vertex
-Q compute_quadrics(const V& vertices, const F& indices, bool weight_by_area);
+Q compute_quadrics(const V& vertices, const F& indices, WEIGHTING weighting);
 
 // Returns face2edge and edges.
 // face2edge is |F|x3 with each value indexing a unique edge in edges.

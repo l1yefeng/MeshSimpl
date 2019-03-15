@@ -18,6 +18,8 @@ typedef std::array<idx, 2> vec2i;           // idx
 typedef std::vector<std::vector<double>> V; // input/output vertex positions
 typedef std::vector<std::vector<idx>> F;    // input/output face indices
 
+enum WEIGHTING { UNIFORM, BY_AREA };
+
 namespace Internal {
 
 // A quadric Q consists of a symmetric 3x3 matrix A, a vec3 b, and a scalar c

@@ -4,6 +4,7 @@
 
 #include "pre_proc.h"
 #include "util.h"
+#include <limits>
 #include <set>
 #include <sstream>
 
@@ -11,33 +12,34 @@ namespace MeshSimpl {
 
 namespace Internal {
 
-void compute_quadrics_per_face(const V& vertices, const std::vector<idx>& face,
-                               const bool weight_by_area, Q& quadrics) {
-    // calculate the plane of this face (n and d: n'v+d=0 defines the plane)
-    const vec3d edge1 = vertices[face[1]] - vertices[face[0]];
-    const vec3d edge2 = vertices[face[2]] - vertices[face[0]];
-    vec3d normal = cross(edge1, edge2);
-    // |normal| = area, used for normalization and weighting quadrics
-    double area = magnitude(normal);
-    normal /= area;
-    // d = -n*v0
-    double d = -dot(normal, vertices[face[0]]);
-
-    // calculate quadric Q = (A, b, c) = (nn', dn, d*d)
-    Quadric q = make_quadric(normal, d);
-
-    if (weight_by_area)
-        q *= area;
-
-    for (const auto& v : face)
-        quadrics[v] += q;
-}
-
-Q compute_quadrics(const V& vertices, const F& indices, bool weight_by_area) {
+Q compute_quadrics(const V& vertices, const F& indices, WEIGHTING weighting) {
     // quadrics are initialized with all zeros
     Q quadrics(vertices.size());
-    for (const auto& face : indices)
-        compute_quadrics_per_face(vertices, face, weight_by_area, quadrics);
+
+    for (const auto& face : indices) {
+        // calculate the plane of this face (n and d: n'v+d=0 defines the plane)
+        const vec3d edge01 = vertices[face[1]] - vertices[face[0]];
+        const vec3d edge02 = vertices[face[2]] - vertices[face[0]];
+        vec3d normal = cross(edge01, edge02);
+        // |normal| = area, used for normalization and weighting quadrics
+        const double area = magnitude(normal);
+        normal /= area;
+        // d = -n*v0
+        const double d = -dot(normal, vertices[face[0]]);
+
+        // calculate quadric Q = (A, b, c) = (nn', dn, d*d)
+        Quadric q = make_quadric(normal, d);
+
+        if (weighting == BY_AREA)
+            q *= area;
+        if (weighting == UNIFORM)
+            if (area <= std::numeric_limits<double>::epsilon())
+                q *= 0.0;
+
+        for (const auto& v : face)
+            quadrics[v] += q;
+    }
+
     return quadrics;
 }
 

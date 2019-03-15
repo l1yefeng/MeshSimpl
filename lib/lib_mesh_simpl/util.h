@@ -14,21 +14,25 @@ namespace MeshSimpl {
 
 namespace Internal {
 
+// Dot product of two vectors
 template <typename Position> inline double dot(const vec3d& a, const Position& b) {
     return a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
 }
 
+// Cross product of two vectors
 inline vec3d cross(const vec3d& a, const vec3d& b) {
     return {a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2],
             a[0] * b[1] - a[1] * b[0]};
 }
 
+// Geometry midpoint of two positions
 inline vec3d midpoint(const std::vector<double>& a, const std::vector<double>& b) {
     return {(a[0] + b[0]) / 2, (a[1] + b[1]) / 2, (a[2] + b[2]) / 2};
 }
 
+// |X|
 inline double magnitude(const vec3d& x) {
-    return sqrt(x[0] * x[0] + x[1] * x[1] + x[2] * x[2]);
+    return std::sqrt(x[0] * x[0] + x[1] * x[1] + x[2] * x[2]);
 }
 
 template <typename PositionSrc, typename PositionDest>
@@ -53,17 +57,17 @@ template <typename Position> inline double q_error(const Quadric& q, const Posit
            dot({q[6], q[7], q[8]}, v) * 2 + q[9];
 }
 
-inline order vi_in_face(const F& indices, idx f, idx v) {
+inline order v_in_face(const F& indices, idx f, idx v) {
     assert(indices[f][0] == v || indices[f][1] == v || indices[f][2] == v);
     return indices[f][0] == v ? 0 : (indices[f][1] == v ? 1 : 2);
 }
 
-inline order fi_in_edge(const Edge& edge, idx f) {
+inline order f_in_edge(const Edge& edge, idx f) {
     assert(edge.faces[0] == f || edge.faces[1] == f);
     return edge.faces[0] == f ? 0 : 1;
 }
 
-inline order vi_in_edge(const Edge& edge, idx v) {
+inline order v_in_edge(const Edge& edge, idx v) {
     assert(edge.vertices[0] == v || edge.vertices[1] == v);
     return edge.vertices[0] == v ? 0 : 1;
 }

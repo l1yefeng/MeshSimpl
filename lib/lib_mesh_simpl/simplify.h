@@ -11,9 +11,11 @@ namespace MeshSimpl {
 
 struct SimplifyOptions {
     // simplifies until vertex count is 1-strength of the original
-    float strength = 0.5f;
+    float strength = 0;
     // weight quadrics by triangle area
-    bool weight_by_face = true;
+    WEIGHTING weighting = BY_AREA;
+    // force boundary to be fixed
+    bool fix_boundary = false;
 };
 
 void options_validation(const SimplifyOptions& options);

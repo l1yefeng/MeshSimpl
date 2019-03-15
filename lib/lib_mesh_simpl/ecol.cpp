@@ -187,7 +187,7 @@ bool edge_collapse(V& vertices, F& indices, E& edges, F2E& face2edge, Q& quadric
 
     // to guarantee neighbors are traversed in clock-wise orientation,
     // swap faces (and idx_in_face) if necessary
-    idx v_del_in_f0 = vi_in_face(indices, ff[0], v_del);
+    idx v_del_in_f0 = v_in_face(indices, ff[0], v_del);
     if (edge.idx_in_face[0] != (v_del_in_f0 + 1) % 3) {
         std::swap(edge.idx_in_face[0], edge.idx_in_face[1]);
         std::swap(edge.faces[0], edge.faces[1]);
@@ -211,7 +211,7 @@ bool edge_collapse(V& vertices, F& indices, E& edges, F2E& face2edge, Q& quadric
 
     vec2i e_kept; // global index of kept edge in two deleted faces
     for (auto i : {0, 1})
-        e_kept[i] = face2edge[ff[i]][vi_in_face(indices, ff[i], v_del)];
+        e_kept[i] = face2edge[ff[i]][v_in_face(indices, ff[i], v_del)];
 
     auto it = v_del_neighbors.begin();
     Edge* dirty_edge_ptr = &edges[e_kept[0]];
@@ -220,7 +220,7 @@ bool edge_collapse(V& vertices, F& indices, E& edges, F2E& face2edge, Q& quadric
     indices[it->f()][it->center()] = v_kept;
     heap.erase(face2edge[it->f()][it->j()]);
     face2edge[it->f()][it->j()] = e_kept[0];
-    const idx ff0_in_edge = fi_in_edge(*dirty_edge_ptr, ff[0]);
+    const idx ff0_in_edge = f_in_edge(*dirty_edge_ptr, ff[0]);
     dirty_edge_ptr->faces[ff0_in_edge] = it->f();
     dirty_edge_ptr->idx_in_face[ff0_in_edge] = it->j();
 
@@ -228,7 +228,7 @@ bool edge_collapse(V& vertices, F& indices, E& edges, F2E& face2edge, Q& quadric
     for (++it; it != v_del_neighbors.end(); ++it) {
         indices[it->f()][it->center()] = v_kept;
         dirty_edge_ptr = &edges[face2edge[it->f()][it->j()]];
-        const idx v_del_in_edge = vi_in_edge(*dirty_edge_ptr, v_del);
+        const idx v_del_in_edge = v_in_edge(*dirty_edge_ptr, v_del);
         dirty_edge_ptr->vertices[v_del_in_edge] = v_kept;
         if (edge.boundary_v != Edge::NONE) {
             if (dirty_edge_ptr->boundary_v == Edge::NONE)
@@ -244,7 +244,7 @@ bool edge_collapse(V& vertices, F& indices, E& edges, F2E& face2edge, Q& quadric
     heap.erase(face2edge[it->f()][it->i()]);
     face2edge[it->f()][it->i()] = e_kept[1];
     dirty_edge_ptr = &edges[e_kept[1]];
-    const idx ff1_in_edge = fi_in_edge(*dirty_edge_ptr, ff[1]);
+    const idx ff1_in_edge = f_in_edge(*dirty_edge_ptr, ff[1]);
     dirty_edge_ptr->faces[ff1_in_edge] = it->f();
     dirty_edge_ptr->idx_in_face[ff1_in_edge] = it->i();
 

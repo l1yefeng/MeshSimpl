@@ -44,7 +44,6 @@ bool scan_neighbors(const V& vertices, const F& indices, const E& edges,
                     const F2E& face2edge, const Edge& edge,
                     std::vector<Neighbor>& v_del_neighbors,
                     std::vector<idx>& v_kept_neighbor_edges);
-;
 
 inline idx choose_v_del(const Edge& edge) {
     assert(edge.boundary_v != Edge::BOTH);

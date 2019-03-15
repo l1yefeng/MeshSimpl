@@ -30,7 +30,7 @@ std::pair<V, F> simplify(const V& vertices, const F& indices,
         return {out_vertices, out_indices};
 
     // [1] compute quadrics of vertices
-    auto quadrics = Internal::compute_quadrics(vertices, indices, options.weight_by_face);
+    auto quadrics = Internal::compute_quadrics(vertices, indices, options.weighting);
 
     // [2] find out information of edges (endpoints, incident faces) and face2edge
     auto edge_topo = Internal::construct_edges(indices, NV);
