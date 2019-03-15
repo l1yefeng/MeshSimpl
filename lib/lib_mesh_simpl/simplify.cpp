@@ -39,6 +39,7 @@ std::pair<V, F> simplify(const V& vertices, const F& indices,
 
     // [3] assigning edge errors using quadrics
     Internal::compute_errors(vertices, quadrics, edges);
+
     // [4] create priority queue on quadric error
     Internal::QEMHeap heap(edges);
 
@@ -66,14 +67,17 @@ std::pair<V, F> simplify(const V& vertices, const F& indices,
         assert(edge.boundary_v != Internal::Edge::BOTH);
         assert(!deleted_face[edge.faces[0]] && !deleted_face[edge.faces[1]]);
         assert(!deleted_vertex[edge.vertices[0]] && !deleted_vertex[edge.vertices[1]]);
+
         // [5] collapse the least-error edge until mesh is simplified enough
-        if (edge_collapse(out_vertices, out_indices, edges, face2edge, quadrics, heap,
-                          target)) {
-            for (const idx f : edge.faces)
-                deleted_face[f] = true;
-            deleted_vertex[edge.vertices[Internal::choose_v_del(edge)]] = true;
-            --nv;
-        }
+        bool collapsed = edge_collapse(out_vertices, out_indices, edges, face2edge,
+                                       quadrics, heap, target);
+        if (!collapsed)
+            continue;
+
+        for (const idx f : edge.faces)
+            deleted_face[f] = true;
+        deleted_vertex[edge.vertices[Internal::choose_v_del(edge)]] = true;
+        --nv;
     }
 
     // edges are pointless from this point on, but need to fix vertices and indices

@@ -4,21 +4,23 @@ project(lib_mesh_simpl
 
 set(CMAKE_CXX_STANDARD 11)
 
-add_library(${PROJECT_NAME}
-            ecol.h
-            ecol.cpp
-            util.h
-            util.cpp
-            qem_heap.h
-            qem_heap.cpp
-            simplify.h
-            simplify.cpp
-            pre_proc.h
-            pre_proc.cpp
-            post_proc.h
-            post_proc.cpp
-            neighbor.cpp
-            neighbor.h)
+set(SOURCES
+    ecol.h
+    ecol.cpp
+    util.h
+    util.cpp
+    qem_heap.h
+    qem_heap.cpp
+    simplify.h
+    simplify.cpp
+    pre_proc.h
+    pre_proc.cpp
+    post_proc.h
+    post_proc.cpp
+    neighbor.cpp
+    neighbor.h)
+
+add_library(${PROJECT_NAME} ${SOURCES})
 
 # Force c++11
 target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_11)
