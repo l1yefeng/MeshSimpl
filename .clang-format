@@ -1,11 +1,12 @@
 ---
-Language:         Cpp
-BasedOnStyle:     LLVM
-ColumnLimit:      90
-IndentWidth:      4
-PointerAlignment: Left
-ReflowComments:   false
-SortIncludes:     true
-Standard:         Cpp11
-TabWidth:         8
-UseTab:           Never
+Language:             Cpp
+BasedOnStyle:         LLVM
+ColumnLimit:          90
+IndentWidth:          4
+AccessModifierOffset: -4
+PointerAlignment:     Left
+ReflowComments:       false
+SortIncludes:         true
+Standard:             Cpp11
+TabWidth:             8
+UseTab:               Never

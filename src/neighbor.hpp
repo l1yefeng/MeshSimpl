@@ -35,7 +35,8 @@ private:
     }
 
 public:
-    Neighbor(idx face, order vj, bool ccw = false) : face(face), ccw(ccw), vi(get_i_from_j(vj)), vj(vj) {}
+    Neighbor(idx face, order vj, bool ccw = false)
+        : face(face), ccw(ccw), vi(get_i_from_j(vj)), vj(vj) {}
     idx f() const { return face; }
     order i() const { return vi; }
     order j() const { return vj; }

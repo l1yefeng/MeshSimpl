@@ -20,8 +20,8 @@ Q compute_quadrics(const V& vertices, const F& indices,
 // Returns face2edge and edges.
 // face2edge is |F|x3 with each value indexing a unique edge in edges.
 // This method does not initialize members optimal_pos and error in struct Edge.
-std::pair<E, std::vector<vec3i>>
-construct_edges(const F& indices, size_t vertex_cnt, ConstraintPlane& constraint_plane);
+std::pair<E, std::vector<vec3i>> construct_edges(const F& indices, size_t vertex_cnt,
+                                                 ConstraintPlane& constraint_plane);
 
 } // namespace Internal
 

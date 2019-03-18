@@ -12,7 +12,7 @@ namespace MeshSimpl {
 struct SimplifyOptions {
     // simplifies until vertex count is 1-strength of the original,
     // only accept value in range [0, 1)
-    float strength = 0;
+    float strength = 0.5f;
 
     // weight the quadrics by triangle area, i.e., Q becomes Q * weight
     // a larger weight makes the computed error larger thus "later" to modify
@@ -20,7 +20,7 @@ struct SimplifyOptions {
     //  - UNIFORM: no weighting
     //  - BY_AREA: larger face -> larger error
     //  - BY_INV_AREA: larger face -> smaller error
-    WEIGHTING weighting = BY_AREA;
+    WEIGHTING weighting = UNIFORM;
 
     // when "fix_boundary" is true, we completely do not collapse anything on boundary;
     // otherwise, we add a "constraint plane" that is perpendicular to boundary face

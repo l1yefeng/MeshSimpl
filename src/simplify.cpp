@@ -44,7 +44,8 @@ std::pair<V, F> simplify(const V& vertices, const F& indices,
     std::vector<vec3i>& face2edge = edge_topo.second;
 
     // [2] compute quadrics of vertices
-    auto quadrics = Internal::compute_quadrics(vertices, indices, constraint_plane, options.weighting);
+    auto quadrics = Internal::compute_quadrics(vertices, indices, constraint_plane,
+                                               options.weighting);
 
     if (constraint_plane.enabled) {
         // throw away

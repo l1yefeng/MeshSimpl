@@ -1,48 +1,46 @@
+#include "clipp.h"
+#include "simplify.hpp"
 #include <chrono>
+#include <cstdlib>
 #include <igl/readOBJ.h>
 #include <igl/writeOBJ.h>
 #include <iostream>
-#include <simplify.hpp>
 #include <vector>
 
 using namespace std;
+using namespace clipp;
 
 int main(int argc, char* argv[]) {
-    if (argc != 4) {
-        cout << "Usage: " << argv[0] << " OBJFILE OUTPUT [STRENGTH]" << endl
-             << endl
-             << "  OBJFILE   Path of input .obj file" << endl
-             << "  OUTPUT    Path of output data" << endl
-             << "  STRENGTH  Simplification strength; The default is 0.5;" << endl
-             << "            A strength of 0.8 will keep 20% vertices in the output"
-             << endl
-             << endl;
-        return argc == 1 ? 0 : 1;
+    string in, out;
+    bool fix_boundary;
+    string weighting;
+    float strength;
+
+    auto cli = (value("input", in).doc("input .obj file"),
+                value("output", out).doc("output file path"),
+                option("-f", "--fix-boundary")
+                    .set(fix_boundary)
+                    .doc("do not move vertices on boundary"),
+                option("-w", "--weighting") &
+                    word("strategy", weighting).doc("one of [area, uniform]"),
+                option("-s", "--strength") &
+                    number("ratio", strength).doc("0.8 means remove 80% vertices"));
+
+    if (!parse(argc, argv, cli)) {
+        cout << make_man_page(cli, argv[0]);
+        return 1;
     }
 
-    float strength;
-    try {
-        strength = stof(argv[3]);
-    } catch (const std::invalid_argument& e) {
-        cerr << "Error: STRENGTH cannot be recognized" << endl;
-        return 1;
-    }
-    if (!(strength > 0 && strength < 1)) {
-        cout << "Error: STRENGTH must be between 0 and 1" << endl
-             << "  Use '" << argv[0] << "' without argument to view usage" << endl
-             << endl;
-        return 1;
-    }
+    MeshSimpl::SimplifyOptions options;
+    options.strength = strength;
+    options.fix_boundary = fix_boundary;
+    if (weighting == "area")
+        options.weighting = MeshSimpl::BY_AREA;
 
     // read obj file
     vector<vector<double>> vertices;
     vector<vector<unsigned int>> indices;
-    igl::readOBJ(argv[1], vertices, indices);
-
-    MeshSimpl::SimplifyOptions options;
-    options.strength = strength;
-    options.weighting = MeshSimpl::BY_AREA;
-    options.fix_boundary = false;
+    igl::readOBJ(in, vertices, indices);
 
     const auto before = chrono::steady_clock::now();
 
@@ -61,7 +59,7 @@ int main(int argc, char* argv[]) {
         for (int i = 0; i < F.rows(); ++i)
             F.row(i) << res.second[i][0], res.second[i][1], res.second[i][2];
 
-        igl::writeOBJ(argv[2], V, F);
+        igl::writeOBJ(out, V, F);
     } catch (char const* exception) {
         cerr << exception << endl;
         return 1;

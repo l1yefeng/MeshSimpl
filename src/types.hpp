@@ -11,7 +11,7 @@
 namespace MeshSimpl {
 
 typedef unsigned int idx;                   // edge, vertex, face index
-typedef signed char order;                // edge/vertex local order to face; [0, 3)
+typedef signed char order;                  // edge/vertex local order to face; [0, 3)
 typedef std::array<double, 3> vec3d;        // double
 typedef std::array<idx, 3> vec3i;           // idx
 typedef std::array<idx, 2> vec2i;           // idx
@@ -56,8 +56,7 @@ struct Edge {
 };
 
 // Used to constraint boundary from being reshaped. Necessary if boundary is not fixed
-struct ConstraintPlane
-{
+struct ConstraintPlane {
     std::vector<bool> on_boundary;
     std::vector<order> boundary_e_order;
     bool enabled;

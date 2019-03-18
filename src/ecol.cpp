@@ -302,8 +302,7 @@ bool scan_neighbors(const V& vertices, const F& indices, const E& edges,
 }
 
 bool edge_collapse(V& vertices, F& indices, E& edges, F2E& face2edge, Q& quadrics,
-                   QEMHeap& heap, const idx ecol_target, bool fix_boundary)
-{
+                   QEMHeap& heap, const idx ecol_target, bool fix_boundary) {
     auto& edge = edges[ecol_target];
 
     // a whole other function does this job
