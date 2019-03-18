@@ -5,7 +5,7 @@
 #ifndef LIB_MESH_SIMPL_POST_PROC_H
 #define LIB_MESH_SIMPL_POST_PROC_H
 
-#include "types.h"
+#include "types.hpp"
 
 namespace MeshSimpl {
 

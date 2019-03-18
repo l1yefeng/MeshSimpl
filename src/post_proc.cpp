@@ -2,7 +2,7 @@
 // Created by nickl on 1/8/19.
 //
 
-#include "post_proc.h"
+#include "post_proc.hpp"
 
 namespace MeshSimpl {
 

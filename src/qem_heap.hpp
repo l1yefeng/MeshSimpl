@@ -5,7 +5,7 @@
 #ifndef LIB_MESH_SIMPL_QEM_HEAP_H
 #define LIB_MESH_SIMPL_QEM_HEAP_H
 
-#include "types.h"
+#include "types.hpp"
 
 namespace MeshSimpl {
 
@@ -16,7 +16,7 @@ class QEMHeap {
 public:
     // Construct a min-binary-heap with edge ecol errors as keys;
     // store a reference of the list of edges and store all handles
-    explicit QEMHeap(E& edges);
+    explicit QEMHeap(E& edges, bool include_boundary);
 
     // Returns the edge id with minimum ecol error
     idx top() const { return keys[1]; }

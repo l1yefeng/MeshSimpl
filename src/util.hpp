@@ -5,8 +5,8 @@
 #ifndef LIB_MESH_SIMPL_UTIL_H
 #define LIB_MESH_SIMPL_UTIL_H
 
-#include "neighbor.h"
-#include "types.h"
+#include "neighbor.hpp"
+#include "types.hpp"
 #include <cassert>
 #include <cmath>
 

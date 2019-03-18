@@ -2,8 +2,8 @@
 // Created by nickl on 3/13/19.
 //
 
-#include "neighbor.h"
-#include "util.h"
+#include "neighbor.hpp"
+#include "util.hpp"
 
 namespace MeshSimpl {
 

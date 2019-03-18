@@ -1,7 +1,9 @@
-#include "measure.h"
-#include "write_obj.h"
+#include <chrono>
 #include <igl/readOBJ.h>
-#include <simplify.h>
+#include <igl/writeOBJ.h>
+#include <iostream>
+#include <simplify.hpp>
+#include <vector>
 
 using namespace std;
 
@@ -39,14 +41,27 @@ int main(int argc, char* argv[]) {
 
     MeshSimpl::SimplifyOptions options;
     options.strength = strength;
-    options.weighting = MeshSimpl::UNIFORM;
-    Measure measure;
+    options.weighting = MeshSimpl::BY_AREA;
+    options.fix_boundary = false;
+
+    const auto before = chrono::steady_clock::now();
+
     try {
-        const auto res = MeshSimpl::simplify(vertices, indices, options);
-        long duration = measure.stop();
+        auto res = MeshSimpl::simplify(vertices, indices, options);
+        const auto after = chrono::steady_clock::now();
+        const long duration =
+            chrono::duration_cast<chrono::milliseconds>(after - before).count();
         std::cout << "[INFO] Simplification completed (" << duration << " milliseconds)"
                   << std::endl;
-        write_obj(argv[2], res.first, res.second);
+
+        Eigen::MatrixXd V(res.first.size(), 3);
+        for (int i = 0; i < V.rows(); ++i)
+            V.row(i) << res.first[i][0], res.first[i][1], res.first[i][2];
+        Eigen::MatrixXi F(res.second.size(), 3);
+        for (int i = 0; i < F.rows(); ++i)
+            F.row(i) << res.second[i][0], res.second[i][1], res.second[i][2];
+
+        igl::writeOBJ(argv[2], V, F);
     } catch (char const* exception) {
         cerr << exception << endl;
         return 1;

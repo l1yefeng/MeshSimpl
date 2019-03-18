@@ -2,8 +2,8 @@
 // Created by nickl on 1/8/19.
 //
 
-#include "qem_heap.h"
-#include "ecol.h"
+#include "qem_heap.hpp"
+#include "ecol.hpp"
 #include <cassert>
 #include <limits>
 
@@ -11,10 +11,10 @@ namespace MeshSimpl {
 
 namespace Internal {
 
-QEMHeap::QEMHeap(E& edges)
+QEMHeap::QEMHeap(E& edges, bool include_boundary)
     : keys(edges.size() + 1), edges(edges), handles(edges.size()), n(0) {
     for (idx i = 0; i < edges.size(); ++i)
-        if (edges[i].boundary_v != Edge::BOTH)
+        if (include_boundary || (edges[i].boundary_v != Edge::BOTH))
             keys[handles[i] = ++n] = i;
 
     keys.resize(n + 1);

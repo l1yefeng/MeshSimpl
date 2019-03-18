@@ -2,7 +2,7 @@
 // Created by nickl on 1/8/19.
 //
 
-#include "util.h"
+#include "util.hpp"
 
 namespace MeshSimpl {
 

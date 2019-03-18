@@ -11,7 +11,7 @@
 namespace MeshSimpl {
 
 typedef unsigned int idx;                   // edge, vertex, face index
-typedef unsigned char order;                // edge/vertex local order to face; [0, 3)
+typedef signed char order;                // edge/vertex local order to face; [0, 3)
 typedef std::array<double, 3> vec3d;        // double
 typedef std::array<idx, 3> vec3i;           // idx
 typedef std::array<idx, 2> vec2i;           // idx
@@ -21,6 +21,8 @@ typedef std::vector<std::vector<idx>> F;    // input/output face indices
 enum WEIGHTING { UNIFORM, BY_AREA };
 
 namespace Internal {
+
+static const order INVALID = -1;
 
 // A quadric Q consists of a symmetric 3x3 matrix A, a vec3 b, and a scalar c
 typedef std::array<double, 10> Quadric;
@@ -51,6 +53,14 @@ struct Edge {
 
     // vertices on boundary
     BOUNDARY_V boundary_v;
+};
+
+// Used to constraint boundary from being reshaped. Necessary if boundary is not fixed
+struct ConstraintPlane
+{
+    std::vector<bool> on_boundary;
+    std::vector<order> boundary_e_order;
+    bool enabled;
 };
 
 typedef std::vector<Edge> E;
