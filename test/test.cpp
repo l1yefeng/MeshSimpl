@@ -4,10 +4,10 @@
 
 #define CATCH_CONFIG_MAIN
 
-#include "ecol.h"
-#include "post_proc.h"
-#include "qem_heap.h"
-#include "util.h"
+#include "ecol.hpp"
+#include "post_proc.hpp"
+#include "qem_heap.hpp"
+#include "util.hpp"
 #include <catch2/catch.hpp>
 
 using namespace std;
@@ -59,7 +59,7 @@ TEST_CASE("QEM heap should behave normally", "[QEMHeap]") {
     edge_should_ignore.boundary_v = Edge::BOTH;
     edges.push_back(edge_should_ignore);
 
-    QEMHeap heap(edges);
+    QEMHeap heap(edges, false);
     REQUIRE(heap.size() == 10);
 
     SECTION("constructor") {

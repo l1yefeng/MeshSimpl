@@ -4,6 +4,7 @@
 #include <cstdlib>
 #include <igl/readOBJ.h>
 #include <igl/writeOBJ.h>
+#include <igl/opengl/glfw/Viewer.h>
 #include <iostream>
 #include <vector>
 
@@ -17,7 +18,7 @@ int main(int argc, char* argv[]) {
     float strength;
 
     auto cli = (value("input", in).doc("input .obj file"),
-                value("output", out).doc("output file path"),
+                option("-o", "--output") & word("path", out).doc("output file path"),
                 option("-f", "--fix-boundary")
                     .set(fix_boundary)
                     .doc("do not move vertices on boundary"),
@@ -59,7 +60,15 @@ int main(int argc, char* argv[]) {
         for (int i = 0; i < F.rows(); ++i)
             F.row(i) << res.second[i][0], res.second[i][1], res.second[i][2];
 
-        igl::writeOBJ(out, V, F);
+        if (out.empty()) {
+            // view
+            igl::opengl::glfw::Viewer viewer;
+            viewer.data().set_mesh(V, F);
+            viewer.launch();
+        } else {
+            // write
+            igl::writeOBJ(out, V, F);
+        }
     } catch (char const* exception) {
         cerr << exception << endl;
         return 1;
