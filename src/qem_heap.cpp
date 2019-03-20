@@ -44,6 +44,9 @@ void QEMHeap::penalize(idx e) {
 void QEMHeap::erase(idx e) {
     const double error_prev = edges[e].error;
     size_t k = handles[e];
+    if (k > n)
+        return; // target edge is not in the heap
+
     exchange(k, n--);
     if (edges[keys[k]].error > error_prev)
         sink(k);

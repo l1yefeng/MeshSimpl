@@ -62,16 +62,6 @@ inline order v_in_face(const F& indices, idx f, idx v) {
     return indices[f][0] == v ? 0 : (indices[f][1] == v ? 1 : 2);
 }
 
-inline order f_in_edge(const Edge& edge, idx f) {
-    assert(edge.faces[0] == f || edge.faces[1] == f);
-    return edge.faces[0] == f ? 0 : 1;
-}
-
-inline order v_in_edge(const Edge& edge, idx v) {
-    assert(edge.vertices[0] == v || edge.vertices[1] == v);
-    return edge.vertices[0] == v ? 0 : 1;
-}
-
 } // namespace Internal
 
 Internal::Quadric& operator+=(Internal::Quadric& lfs, const Internal::Quadric& rhs);

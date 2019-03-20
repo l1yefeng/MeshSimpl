@@ -29,28 +29,22 @@ std::pair<V, F> simplify(const V& vertices, const F& indices,
     if (nv_to_decimate == 0)
         return {out_vertices, out_indices};
 
-    Internal::ConstraintPlane constraint_plane;
-    if (options.fix_boundary) {
-        constraint_plane.enabled = false;
-    } else {
-        constraint_plane.enabled = true;
-        constraint_plane.on_boundary.resize(indices.size(), true);
-        constraint_plane.boundary_e_order.resize(indices.size());
-    }
+    std::vector<char> boundary_flags;
+    if (!options.fix_boundary)
+        boundary_flags = std::vector<char>(indices.size(), 0x07);
 
     // [1] find out information of edges (endpoints, incident faces) and face2edge
-    auto edge_topo = Internal::construct_edges(indices, NV, constraint_plane);
+    auto edge_topo = Internal::construct_edges(indices, NV, boundary_flags);
     std::vector<Internal::Edge>& edges = edge_topo.first;
     std::vector<vec3i>& face2edge = edge_topo.second;
 
     // [2] compute quadrics of vertices
-    auto quadrics = Internal::compute_quadrics(vertices, indices, constraint_plane,
-                                               options.weighting);
+    auto quadrics =
+        Internal::compute_quadrics(vertices, indices, boundary_flags, options.weighting);
 
-    if (constraint_plane.enabled) {
+    if (!boundary_flags.empty()) {
         // throw away
-        constraint_plane.on_boundary = std::vector<bool>();
-        constraint_plane.boundary_e_order = std::vector<order>();
+        boundary_flags = std::vector<char>();
     }
 
     // [3] assigning edge errors using quadrics
@@ -61,11 +55,9 @@ std::pair<V, F> simplify(const V& vertices, const F& indices,
 
     std::vector<bool> deleted_face(indices.size(), false);
     std::vector<bool> deleted_vertex(NV, true);
-    for (const auto& face : indices) {
-        for (idx v : face) {
+    for (const auto& face : indices)
+        for (idx v : face)
             deleted_vertex[v] = false;
-        }
-    }
 
     size_t nv = nv_to_decimate;
     idx prev_target = static_cast<idx>(edges.size());
@@ -98,7 +90,7 @@ std::pair<V, F> simplify(const V& vertices, const F& indices,
         if (edge.boundary_v != Internal::Edge::BOTH)
             deleted_face[edge.faces[1]] = true;
 
-        deleted_vertex[edge.vertices[Internal::choose_v_del(edge)]] = true;
+        deleted_vertex[edge.vertices[edge.v_del_order()]] = true;
         --nv;
     }
 

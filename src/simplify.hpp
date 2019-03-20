@@ -19,7 +19,6 @@ struct SimplifyOptions {
     // during the iterations of edge collapse operations.
     //  - UNIFORM: no weighting
     //  - BY_AREA: larger face -> larger error
-    //  - BY_INV_AREA: larger face -> smaller error
     WEIGHTING weighting = UNIFORM;
 
     // when "fix_boundary" is true, we completely do not collapse anything on boundary;

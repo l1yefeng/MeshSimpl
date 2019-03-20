@@ -5,6 +5,7 @@
 #ifndef LIB_MESH_SIMPL_NEIGHBOR_H
 #define LIB_MESH_SIMPL_NEIGHBOR_H
 
+#include "edge.hpp"
 #include "types.hpp"
 
 namespace MeshSimpl {
@@ -35,17 +36,24 @@ private:
     }
 
 public:
-    Neighbor(idx face, order vj, bool ccw = false)
+    Neighbor(idx face, order vj, bool ccw)
         : face(face), ccw(ccw), vi(get_i_from_j(vj)), vj(vj) {}
     idx f() const { return face; }
     order i() const { return vi; }
     order j() const { return vj; }
     order center() const { return 3 - vi - vj; }
 
-    // Start traversing in counter clockwise, used when encounter special case (boundary)
-    void counter_clockwise() { ccw = true; }
+    void rotate(const E& edges, const F2E& face2edge) {
+        const auto& curr_edge = edges[face2edge[face][vi]];
+        assert(!curr_edge.on_boundary());
 
-    void rotate(const E& edges, const F2E& face2edge);
+        const order ford = curr_edge.f_order(face);
+        const idx next_face = curr_edge.faces[1 - ford];
+        assert(face != next_face);
+        face = next_face;
+        vj = curr_edge.idx_in_face[1 - ford];
+        vi = get_i_from_j(vj);
+    }
 };
 
 } // namespace Internal

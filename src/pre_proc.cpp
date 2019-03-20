@@ -3,6 +3,7 @@
 //
 
 #include "pre_proc.hpp"
+#include "edge.hpp"
 #include "util.hpp"
 #include <limits>
 #include <set>
@@ -13,7 +14,7 @@ namespace MeshSimpl {
 namespace Internal {
 
 Q compute_quadrics(const V& vertices, const F& indices,
-                   const ConstraintPlane& constraint_plane, WEIGHTING weighting) {
+                   const std::vector<char>& boundary_flags, WEIGHTING weighting) {
     // quadrics are initialized with all zeros
     Q quadrics(vertices.size());
 
@@ -41,33 +42,35 @@ Q compute_quadrics(const V& vertices, const F& indices,
             quadrics[v] += q;
     }
 
-    if (constraint_plane.enabled) {
+    if (!boundary_flags.empty()) {
         for (idx f = 0; f < indices.size(); ++f) {
-            if (!constraint_plane.on_boundary[f])
+            if (boundary_flags[f] == 0x00)
                 continue;
 
-            const order k = constraint_plane.boundary_e_order[f];
-            const idx vk = indices[f][k];
-            const idx vi = indices[f][(k + 1) % 3];
-            const idx vj = indices[f][(k + 2) % 3];
+            const auto& v = indices[f];
+            const std::array<vec3d, 3> e{vertices[v[2]] - vertices[v[1]],
+                                         vertices[v[0]] - vertices[v[2]],
+                                         vertices[v[1]] - vertices[v[0]]};
+            const vec3d n_face = cross(e[0], e[1]);
 
-            const vec3d edge_ij = vertices[vj] - vertices[vi];
-            const vec3d edge_ik = vertices[vk] - vertices[vi];
-            const vec3d n_face = cross(edge_ij, edge_ik);
-            vec3d normal = cross(n_face, edge_ij);
-            const double normal_mag = magnitude(normal);
-            normal /= normal_mag;
-            const double d = -dot(normal, vertices[vi]);
+            for (order k = 0; k < 3; ++k) {
+                if (!((boundary_flags[f] >> k) & 1U))
+                    continue;
 
-            Quadric q = make_quadric(normal, d);
+                vec3d normal = cross(n_face, e[k]);
+                const double normal_mag = magnitude(normal);
+                normal /= normal_mag;
+                const double d = -dot(normal, vertices[(k + 1) % 3]);
+                Quadric q = make_quadric(normal, d);
 
-            if (weighting == BY_AREA)
-                q *= magnitude(n_face) * CONSTRAINT_PLANE_C;
-            else if (weighting == UNIFORM)
-                q *= CONSTRAINT_PLANE_C;
+                if (weighting == BY_AREA)
+                    q *= magnitude(n_face) * CONSTRAINT_PLANE_C;
+                else if (weighting == UNIFORM)
+                    q *= CONSTRAINT_PLANE_C;
 
-            quadrics[vi] += q;
-            quadrics[vj] += q;
+                quadrics[v[(k + 1) % 3]] += q;
+                quadrics[v[(k + 2) % 3]] += q;
+            }
         }
     }
 
@@ -96,15 +99,8 @@ bool edge_topo_correctness(const E& edges, const F2E& face2edge, const F& indice
 }
 
 std::pair<E, std::vector<vec3i>> construct_edges(const F& indices, size_t vertex_cnt,
-                                                 ConstraintPlane& constraint_plane) {
-    const auto edge_cmp = [](const Edge& a, const Edge& b) -> bool {
-        if (a.vertices[0] < b.vertices[0])
-            return true;
-        if (a.vertices[0] > b.vertices[0])
-            return false;
-        return a.vertices[1] < b.vertices[1];
-    };
-    std::set<Edge, decltype(edge_cmp)> edge_set(edge_cmp);
+                                                 std::vector<char>& boundary_flags) {
+    std::set<Edge> edge_set;
 
     // insert all edges into edge_set and find out if it is on boundary
     for (idx f = 0; f < indices.size(); ++f) {
@@ -123,19 +119,18 @@ std::pair<E, std::vector<vec3i>> construct_edges(const F& indices, size_t vertex
             edge.vertices[1] = v1;
             edge.faces[0] = f;
             edge.idx_in_face[0] = k;
-            edge.idx_in_face[1] = INVALID;
+            edge.idx_in_face[1] = Edge::INVALID;
             edge.boundary_v = Edge::BOTH;
-            auto it_and_inserted = edge_set.emplace(edge);
+            std::pair<std::set<Edge>::iterator, bool> it_and_inserted;
+            it_and_inserted = edge_set.emplace(edge);
             auto it = it_and_inserted.first;
-
-            if (constraint_plane.enabled)
-                constraint_plane.boundary_e_order[f] = k;
 
             if (!it_and_inserted.second) {
                 if (it->boundary_v == Edge::NONE) {
                     std::ostringstream ss;
-                    ss << "ERROR::NON_MANIFOLD_EDGE: please check face #" << f << ", #"
-                       << it->faces[0] << ", and #" << it->faces[1];
+                    ss << "ERROR::NON_MANIFOLD_EDGE: face #" << (f + 1) << ", #"
+                       << (it->faces[0] + 1) << ", and #" << (it->faces[1] + 1)
+                       << " have an edge in common";
                     throw std::runtime_error(ss.str());
                 }
                 // edge was not inserted because it is already there
@@ -143,9 +138,10 @@ std::pair<E, std::vector<vec3i>> construct_edges(const F& indices, size_t vertex
                 *const_cast<Edge::BOUNDARY_V*>(&it->boundary_v) = Edge::NONE;
                 *const_cast<idx*>(&it->faces[1]) = f;
                 *const_cast<order*>(&it->idx_in_face[1]) = k;
-
-                if (constraint_plane.enabled)
-                    constraint_plane.on_boundary[f] = false;
+                if (!boundary_flags.empty()) {
+                    boundary_flags[it->faces[0]] &= ~(1U << it->idx_in_face[0]);
+                    boundary_flags[it->faces[1]] &= ~(1U << it->idx_in_face[1]);
+                }
             }
         }
     }

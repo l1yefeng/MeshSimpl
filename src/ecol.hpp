@@ -1,6 +1,7 @@
 #ifndef LIB_MESH_SIMPL_ECOL_H
 #define LIB_MESH_SIMPL_ECOL_H
 
+#include "edge.hpp"
 #include "neighbor.hpp"
 #include "qem_heap.hpp"
 #include "types.hpp"
@@ -11,6 +12,8 @@ namespace MeshSimpl {
 namespace Internal {
 
 static const double FOLD_OVER_COS_ANGLE = std::cos(160);
+static const size_t ESTIMATE_VALENCE = 8;
+static const double ASPECT_RATIO_AT_LEAST = 0.01;
 
 // Set error and center of edge by choosing a position to collapse into
 void optimal_ecol_vertex_placement(const V& vertices, Edge& edge);
@@ -21,13 +24,26 @@ void set_edge_error(const V& vertices, const Q& quadrics, Edge& edge, bool fix_b
 // Compute quadric error for every edge at initialization
 void compute_errors(const V& vertices, const Q& quadrics, E& edges, bool fix_boundary);
 
+// Replace a vertex in edge, and update other members then fix priority in heap
+void update_error_and_center(const V& vertices, const Q& quadrics, QEMHeap& heap,
+                             Edge* const edge_ptr, bool fix_boundary);
+
 // Returns true if the movement of vertex will cause this face to flip too much to accept
 bool face_fold_over(const V& vertices, const F& indices, const Neighbor& nb, idx v_move,
                     const vec3d& move_to);
 
-// Replace a vertex in edge, and update other members then fix priority in heap
-void update_error_and_center(const V& vertices, const Q& quadrics, QEMHeap& heap,
-                             Edge* const edge_ptr, bool fix_boundary);
+// Returns true if the face is extremely elongated. It calculates inverse of
+// triangle aspect ratio and compare to a limit
+bool extremely_elongated(const V& vertices, const F& indices, const Neighbor& nb,
+                         const vec3d& center_pos);
+
+bool boundary_scan_neighbors(const V& vertices, const F& indices, const E& edges,
+                             const F2E& face2edge, const Edge& edge,
+                             std::vector<Neighbor>& v_del_neighbors,
+                             std::vector<idx>& v_kept_neighbor_edges);
+
+bool boundary_edge_collapse(V& vertices, F& indices, E& edges, F2E& face2edge,
+                            Q& quadrics, QEMHeap& heap, const idx ecol_target);
 
 // Find relevant faces (neighbor faces of two endpoints) one by one around the
 // collapsed edge. Meanwhile this function does geometry and connectivity check to
@@ -45,21 +61,9 @@ bool scan_neighbors(const V& vertices, const F& indices, const E& edges,
                     std::vector<Neighbor>& v_del_neighbors,
                     std::vector<idx>& v_kept_neighbor_edges);
 
-inline order choose_v_del(const Edge& edge) {
-    if (edge.boundary_v == Edge::V0)
-        return 1;
-    else
-        return 0;
-}
-
 // Returns true if edge is collapsed
 bool edge_collapse(V& vertices, F& indices, E& edges, F2E& face2edge, Q& quadrics,
                    QEMHeap& heap, const idx ecol_target, bool fix_boundary);
-
-inline bool edge_on_boundary(const Edge& edge) {
-    return edge.boundary_v == Edge::BOTH &&
-           ((edge.idx_in_face[0] == INVALID) || (edge.idx_in_face[1] == INVALID));
-}
 
 } // namespace Internal
 

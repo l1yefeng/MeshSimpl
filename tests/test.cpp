@@ -99,6 +99,7 @@ TEST_CASE("QEM heap should behave normally", "[QEMHeap]") {
         heap.erase(2);
         heap.erase(0);
         heap.erase(7);
+        heap.erase(2);
         REQUIRE(heap.size() == 7);
         array<unsigned int, 7> e_results{5, 6, 8, 9, 1, 3, 4};
         for (auto e : e_results) {

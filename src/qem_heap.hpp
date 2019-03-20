@@ -5,6 +5,7 @@
 #ifndef LIB_MESH_SIMPL_QEM_HEAP_H
 #define LIB_MESH_SIMPL_QEM_HEAP_H
 
+#include "edge.hpp"
 #include "types.hpp"
 
 namespace MeshSimpl {
@@ -27,19 +28,18 @@ public:
     // Fix the priority of an edge after the error value is modified;
     // Param sinking should be true if the node will have lower priority after fix-up
     void fix(const Edge* ptr, double error_prev);
-    void fix_all() { prioritize_all(); }
 
     // Suppress this edge until it is, if ever, updated next time
     void penalize(idx e);
 
+    // Erase edge with id `e`. Does nothing if edge is not in heap
     void erase(idx e);
     void erase_by_ptr(const Edge* ptr) { erase(static_cast<idx>(ptr - edges.data())); }
 
     // Returns true if heap is empty
     bool empty() const { return n == 0; }
 
-    // Returns the size of the heap, which should be
-    // the number of edges with boundary_v != BOTH
+    // Returns the size of the heap
     size_t size() const { return n; };
 
     // Returns the keys iterator at the begin / end of active edges
@@ -47,10 +47,10 @@ public:
     std::vector<idx>::const_iterator end() const { return keys.end(); }
 
 private:
-    std::vector<idx> keys;
-    E& edges;
-    std::vector<size_t> handles;
-    size_t n;
+    std::vector<idx> keys;       // binary heap array, indexed from 1
+    E& edges;                    // a reference to `edges`
+    std::vector<size_t> handles; // handles[edge_id] is the position of edge in keys
+    size_t n;                    // = heap.size() = keys.size() - 1
 
     // Compare function: larger error --> lower priority
     bool greater(size_t i, size_t j) const {
