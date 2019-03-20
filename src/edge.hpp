@@ -2,8 +2,8 @@
 // Created by nickl on 03/20/19.
 //
 
-#ifndef LIB_MESH_SIMPL_EDGE_H
-#define LIB_MESH_SIMPL_EDGE_H
+#ifndef LIB_MESH_SIMPL_EDGE_HPP
+#define LIB_MESH_SIMPL_EDGE_HPP
 
 #include "types.hpp"
 #include <array>
@@ -72,4 +72,4 @@ typedef std::vector<vec3i> F2E;
 
 } // namespace MeshSimpl
 
-#endif // LIB_MESH_SIMPL_EDGE_H
+#endif // LIB_MESH_SIMPL_EDGE_HPP

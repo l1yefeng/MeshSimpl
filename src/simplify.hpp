@@ -2,8 +2,8 @@
 // Created by nickl on 1/8/19.
 //
 
-#ifndef LIB_MESH_SIMPL_SIMPLIFY_H
-#define LIB_MESH_SIMPL_SIMPLIFY_H
+#ifndef LIB_MESH_SIMPL_SIMPLIFY_HPP
+#define LIB_MESH_SIMPL_SIMPLIFY_HPP
 
 #include "types.hpp"
 
@@ -37,4 +37,4 @@ std::pair<V, F> simplify(const V& vertices, const F& indices,
 
 } // namespace MeshSimpl
 
-#endif // LIB_MESH_SIMPL_SIMPLIFY_H
+#endif // LIB_MESH_SIMPL_SIMPLIFY_HPP

@@ -2,8 +2,8 @@
 // Created by nickl on 12/27/18.
 //
 
-#ifndef LIB_MESH_SIMPL_UTIL_H
-#define LIB_MESH_SIMPL_UTIL_H
+#ifndef LIB_MESH_SIMPL_UTIL_HPP
+#define LIB_MESH_SIMPL_UTIL_HPP
 
 #include "neighbor.hpp"
 #include "types.hpp"
@@ -78,4 +78,4 @@ vec3d operator-(const vec3d& a, const std::vector<double>& b);
 
 } // namespace MeshSimpl
 
-#endif // LIB_MESH_SIMPL_UTIL_H
+#endif // LIB_MESH_SIMPL_UTIL_HPP

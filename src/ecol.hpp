@@ -1,5 +1,5 @@
-#ifndef LIB_MESH_SIMPL_ECOL_H
-#define LIB_MESH_SIMPL_ECOL_H
+#ifndef LIB_MESH_SIMPL_ECOL_HPP
+#define LIB_MESH_SIMPL_ECOL_HPP
 
 #include "edge.hpp"
 #include "neighbor.hpp"
@@ -69,4 +69,4 @@ bool edge_collapse(V& vertices, F& indices, E& edges, F2E& face2edge, Q& quadric
 
 } // namespace MeshSimpl
 
-#endif // LIB_MESH_SIMPL_ECOL_H
+#endif // LIB_MESH_SIMPL_ECOL_HPP

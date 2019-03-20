@@ -2,8 +2,8 @@
 // Created by nickl on 1/8/19.
 //
 
-#ifndef LIB_MESH_SIMPL_QEM_HEAP_H
-#define LIB_MESH_SIMPL_QEM_HEAP_H
+#ifndef LIB_MESH_SIMPL_QEM_HEAP_HPP
+#define LIB_MESH_SIMPL_QEM_HEAP_HPP
 
 #include "edge.hpp"
 #include "types.hpp"
@@ -78,4 +78,4 @@ private:
 
 } // namespace MeshSimpl
 
-#endif // LIB_MESH_SIMPL_QEM_HEAP_H
+#endif // LIB_MESH_SIMPL_QEM_HEAP_HPP

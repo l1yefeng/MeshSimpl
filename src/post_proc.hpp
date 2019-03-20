@@ -2,8 +2,8 @@
 // Created by nickl on 1/8/19.
 //
 
-#ifndef LIB_MESH_SIMPL_POST_PROC_H
-#define LIB_MESH_SIMPL_POST_PROC_H
+#ifndef LIB_MESH_SIMPL_POST_PROC_HPP
+#define LIB_MESH_SIMPL_POST_PROC_HPP
 
 #include "types.hpp"
 
@@ -19,4 +19,4 @@ void compact_data(const std::vector<bool>& deleted_vertex,
 
 } // namespace MeshSimpl
 
-#endif // LIB_MESH_SIMPL_POST_PROC_H
+#endif // LIB_MESH_SIMPL_POST_PROC_HPP

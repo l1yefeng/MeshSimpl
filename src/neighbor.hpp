@@ -2,8 +2,8 @@
 // Created by nickl on 3/13/19.
 //
 
-#ifndef LIB_MESH_SIMPL_NEIGHBOR_H
-#define LIB_MESH_SIMPL_NEIGHBOR_H
+#ifndef LIB_MESH_SIMPL_NEIGHBOR_HPP
+#define LIB_MESH_SIMPL_NEIGHBOR_HPP
 
 #include "edge.hpp"
 #include "types.hpp"
@@ -60,4 +60,4 @@ public:
 
 } // namespace MeshSimpl
 
-#endif // LIB_MESH_SIMPL_NEIGHBOR_H
+#endif // LIB_MESH_SIMPL_NEIGHBOR_HPP

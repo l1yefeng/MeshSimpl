@@ -2,8 +2,8 @@
 // Created by nickl on 01/08/19.
 //
 
-#ifndef LIB_MESH_SIMPL_TYPES_H
-#define LIB_MESH_SIMPL_TYPES_H
+#ifndef LIB_MESH_SIMPL_TYPES_HPP
+#define LIB_MESH_SIMPL_TYPES_HPP
 
 #include <array>
 #include <vector>
@@ -36,4 +36,4 @@ typedef std::vector<vec3i> F2E;
 
 } // namespace MeshSimpl
 
-#endif // LIB_MESH_SIMPL_TYPES_H
+#endif // LIB_MESH_SIMPL_TYPES_HPP

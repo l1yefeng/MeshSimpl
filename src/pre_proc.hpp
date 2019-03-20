@@ -2,8 +2,8 @@
 // Created by nickl on 1/8/19.
 //
 
-#ifndef LIB_MESH_SIMPL_PRE_PROC_H
-#define LIB_MESH_SIMPL_PRE_PROC_H
+#ifndef LIB_MESH_SIMPL_PRE_PROC_HPP
+#define LIB_MESH_SIMPL_PRE_PROC_HPP
 
 #include "types.hpp"
 
@@ -27,4 +27,4 @@ std::pair<E, std::vector<vec3i>> construct_edges(const F& indices, size_t vertex
 
 } // namespace MeshSimpl
 
-#endif // LIB_MESH_SIMPL_PRE_PROC_H
+#endif // LIB_MESH_SIMPL_PRE_PROC_HPP
