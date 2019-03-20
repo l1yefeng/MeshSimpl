@@ -54,13 +54,14 @@ Q compute_quadrics(const V& vertices, const F& indices,
             const vec3d n_face = cross(e[0], e[1]);
 
             for (order k = 0; k < 3; ++k) {
-                if (!((boundary_flags[f] >> k) & 1U))
+                bool bound = (boundary_flags[f] >> k) & 1U; // check bit k
+                if (!bound)
                     continue;
 
                 vec3d normal = cross(n_face, e[k]);
                 const double normal_mag = magnitude(normal);
                 normal /= normal_mag;
-                const double d = -dot(normal, vertices[(k + 1) % 3]);
+                const double d = -dot(normal, vertices[v[(k + 1) % 3]]);
                 Quadric q = make_quadric(normal, d);
 
                 if (weighting == BY_AREA)

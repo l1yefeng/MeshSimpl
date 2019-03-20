@@ -11,7 +11,7 @@ namespace MeshSimpl {
 
 namespace Internal {
 
-static const double CONSTRAINT_PLANE_C = 1.0;
+static const double CONSTRAINT_PLANE_C = 2.0;
 
 // Compute quadrics Q for every vertex
 Q compute_quadrics(const V& vertices, const F& indices,

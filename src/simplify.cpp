@@ -16,6 +16,25 @@ void options_validation(const SimplifyOptions& options) {
         throw std::invalid_argument("ERROR::INVALID_OPTION: strength < 0");
 }
 
+bool is_valid_edge_target(const Internal::Edge& edge,
+                          const std::vector<bool>& deleted_face,
+                          const std::vector<bool>& deleted_vertex, bool fix_boundary) {
+    assert(edge.vertices[0] != edge.vertices[1]);
+    assert(!deleted_vertex[edge.vertices[0]] && !deleted_vertex[edge.vertices[1]]);
+    if (fix_boundary) {
+        assert(edge.boundary_v != Internal::Edge::BOTH);
+    }
+
+    if (edge.on_boundary()) {
+        assert(!deleted_face[edge.faces[0]]);
+        assert(edge.boundary_v == Internal::Edge::BOTH);
+    } else {
+        assert(edge.faces[0] != edge.faces[1]);
+        assert(!deleted_face[edge.faces[0]] && !deleted_face[edge.faces[1]]);
+    }
+    return true;
+}
+
 std::pair<V, F> simplify(const V& vertices, const F& indices,
                          const SimplifyOptions& options) {
     options_validation(options);
@@ -62,7 +81,8 @@ std::pair<V, F> simplify(const V& vertices, const F& indices,
     size_t nv = nv_to_decimate;
     idx prev_target = static_cast<idx>(edges.size());
     while (!heap.empty() && nv > 0) {
-        // collapse an edge to remove 1 vertex and 2 faces in each iteration
+        // target the least-error edge, if it is what we saw last iteration,
+        // it means loop should stop because all remaining edges have been penalized
         const idx target = heap.top();
         if (prev_target == target)
             break;
@@ -70,15 +90,8 @@ std::pair<V, F> simplify(const V& vertices, const F& indices,
 
         const auto& edge = edges[target];
 
-        assert(edge.vertices[0] != edge.vertices[1]);
-        assert(!deleted_face[edge.faces[0]]);
-        assert(!deleted_vertex[edge.vertices[0]] && !deleted_vertex[edge.vertices[1]]);
-
-        if (options.fix_boundary) {
-            assert(edge.faces[0] != edge.faces[1]);
-            assert(edge.boundary_v != Internal::Edge::BOTH);
-            assert(!deleted_face[edge.faces[1]]);
-        }
+        assert(is_valid_edge_target(edge, deleted_face, deleted_vertex,
+                                    options.fix_boundary));
 
         // [5] collapse the least-error edge until mesh is simplified enough
         bool collapsed = edge_collapse(out_vertices, out_indices, edges, face2edge,
@@ -86,11 +99,19 @@ std::pair<V, F> simplify(const V& vertices, const F& indices,
         if (!collapsed)
             continue;
 
+        // mark adjacent faces deleted
         deleted_face[edge.faces[0]] = true;
         if (edge.boundary_v != Internal::Edge::BOTH)
             deleted_face[edge.faces[1]] = true;
+        else
+            assert(edge.on_boundary());
 
+        // mark one (chosen) endpoint deleted
         deleted_vertex[edge.vertices[edge.v_del_order()]] = true;
+
+        // of course there might be edges deleted,
+        // they must have been removed from heap during `edge_collapse`
+
         --nv;
     }
 

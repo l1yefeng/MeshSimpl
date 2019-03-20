@@ -26,7 +26,7 @@ public:
     void pop();
 
     // Fix the priority of an edge after the error value is modified;
-    // Param sinking should be true if the node will have lower priority after fix-up
+    // Param `error_prev` is used to determine the direction of priority change
     void fix(const Edge* ptr, double error_prev);
 
     // Suppress this edge until it is, if ever, updated next time

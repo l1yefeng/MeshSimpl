@@ -13,7 +13,7 @@ namespace Internal {
 
 static const double FOLD_OVER_COS_ANGLE = std::cos(160);
 static const size_t ESTIMATE_VALENCE = 8;
-static const double ASPECT_RATIO_AT_LEAST = 0.01;
+static const double ASPECT_RATIO_AT_LEAST = 0.02;
 
 // Set error and center of edge by choosing a position to collapse into
 void optimal_ecol_vertex_placement(const V& vertices, Edge& edge);

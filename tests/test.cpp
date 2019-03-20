@@ -6,11 +6,13 @@
 
 #include "ecol.hpp"
 #include "post_proc.hpp"
+#include "pre_proc.hpp"
 #include "qem_heap.hpp"
 #include "util.hpp"
 #include <catch2/catch.hpp>
 
 using namespace std;
+using namespace MeshSimpl;
 using namespace MeshSimpl::Internal;
 
 TEST_CASE("Quadric error should be zero when v is on the plane", "[q_error]") {
@@ -106,5 +108,23 @@ TEST_CASE("QEM heap should behave normally", "[QEMHeap]") {
             REQUIRE(heap.top() == e);
             heap.pop();
         }
+    }
+}
+
+TEST_CASE("Edge topology is constructed correctly", "[construct_edges]") {
+    const vector<vector<unsigned int>> indices = {
+        {0, 2, 1}, {2, 3, 1}, {2, 4, 3}, {4, 5, 3}};
+    const vector<char> expected_flags = {0x06, 0x01, 0x04, 0x05};
+
+    const size_t NV = 6;
+    vector<char> boundary_flags(indices.size(), 0x07);
+
+    const auto res = construct_edges(indices, NV, boundary_flags);
+    const auto& edges = res.first;
+    const auto& face2edge = res.second;
+
+    REQUIRE(edges.size() == 9);
+    for (auto i = 0; i < 4; ++i) {
+        REQUIRE(expected_flags[i] == boundary_flags[i]);
     }
 }
