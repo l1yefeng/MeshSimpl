@@ -1,7 +1,6 @@
 #include "clipp.h"
 #include "simplify.hpp"
 #include <chrono>
-#include <cstdlib>
 #include <igl/opengl/glfw/Viewer.h>
 #include <igl/readOBJ.h>
 #include <igl/writeOBJ.h>
@@ -13,30 +12,35 @@ using namespace clipp;
 
 int main(int argc, char* argv[]) {
     string in, out;
-    bool fix_boundary;
+    MeshSimpl::SimplifyOptions options;
     string weighting;
-    float strength;
 
-    auto cli = (value("input", in).doc("input .obj file"),
-                option("-o", "--output") & value("path", out).doc("output file path"),
-                option("-f", "--fix-boundary")
-                    .set(fix_boundary)
-                    .doc("do not move vertices on boundary"),
-                option("-w", "--weighting") &
-                    word("strategy", weighting).doc("one of [area, uniform]"),
-                option("-s", "--strength") &
-                    number("ratio", strength).doc("0.8 means remove 80% vertices"));
+    auto cli =
+        (value("input", in).doc("input .obj file"),
+         option("-o", "--output") & value("path", out).doc("output file path"),
+         option("-f", "--fix-boundary")
+             .set(options.fix_boundary)
+             .doc("do not move vertices on boundary"),
+         option("-w", "--weighting") &
+             value("strategy", weighting).doc("one of { uniform, by-area, by-area-inv }"),
+         option("-s", "--strength") &
+             number("ratio", options.strength).doc("0.8 means remove 80% vertices"));
 
     if (!parse(argc, argv, cli)) {
         cout << make_man_page(cli, argv[0]);
         return 1;
     }
 
-    MeshSimpl::SimplifyOptions options;
-    options.strength = strength;
-    options.fix_boundary = fix_boundary;
-    if (weighting == "area")
+    if (weighting == "uniform")
+        options.weighting = MeshSimpl::UNIFORM;
+    else if (weighting == "by-area")
         options.weighting = MeshSimpl::BY_AREA;
+    else if (weighting == "by-area-inv")
+        options.weighting = MeshSimpl::BY_AREA_INV;
+    else if (!weighting.empty()) {
+        cout << make_man_page(cli, argv[0]);
+        return 1;
+    }
 
     // read obj file
     vector<vector<double>> vertices, out_vertices;

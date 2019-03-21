@@ -112,18 +112,16 @@ TEST_CASE("QEM heap should behave normally", "[QEMHeap]") {
 }
 
 TEST_CASE("Edge topology is constructed correctly", "[construct_edges]") {
-    const vector<vector<unsigned int>> indices = {
-        {0, 2, 1}, {2, 3, 1}, {2, 4, 3}, {4, 5, 3}};
+    vector<vector<unsigned int>> indices = {{0, 2, 1}, {2, 3, 1}, {2, 4, 3}, {4, 5, 3}};
     const vector<char> expected_flags = {0x06, 0x01, 0x04, 0x05};
 
     const size_t NV = 6;
     vector<char> boundary_flags(indices.size(), 0x07);
 
-    const auto res = construct_edges(indices, NV, boundary_flags);
-    const auto& edges = res.first;
-    const auto& face2edge = res.second;
+    Connectivity conn = {indices, {}, {}};
+    construct_edges(NV, conn);
 
-    REQUIRE(edges.size() == 9);
+    REQUIRE(conn.edges.size() == 9);
     for (auto i = 0; i < 4; ++i) {
         REQUIRE(expected_flags[i] == boundary_flags[i]);
     }

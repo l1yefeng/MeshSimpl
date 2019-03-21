@@ -7,7 +7,6 @@
 
 #include "neighbor.hpp"
 #include "types.hpp"
-#include <cassert>
 #include <cmath>
 
 namespace MeshSimpl {
@@ -57,10 +56,10 @@ template <typename Position> inline double q_error(const Quadric& q, const Posit
            dot({q[6], q[7], q[8]}, v) * 2 + q[9];
 }
 
-inline order v_in_face(const F& indices, idx f, idx v) {
-    assert(indices[f][0] == v || indices[f][1] == v || indices[f][2] == v);
-    return indices[f][0] == v ? 0 : (indices[f][1] == v ? 1 : 2);
-}
+bool sort_and_find_intersection(std::vector<idx>::iterator begin0,
+                                std::vector<idx>::iterator end0,
+                                std::vector<idx>::iterator begin1,
+                                std::vector<idx>::iterator end1);
 
 } // namespace Internal
 

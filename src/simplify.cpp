@@ -41,36 +41,27 @@ std::pair<V, F> simplify(const V& vertices, const F& indices,
 
     const size_t NV = vertices.size();
     const size_t nv_to_decimate =
-        NV - std::max(static_cast<int>(std::lround((1 - options.strength) * NV)), 4);
+        NV - std::max(static_cast<int>(std::lround((1 - options.strength) * NV)), 3);
     auto out_vertices = vertices;
     auto out_indices = indices;
 
     if (nv_to_decimate == 0)
         return {out_vertices, out_indices};
 
-    std::vector<char> boundary_flags;
-    if (!options.fix_boundary)
-        boundary_flags = std::vector<char>(indices.size(), 0x07);
+    // keeps a reference to out_indices and init face2edge and edges
+    Internal::Connectivity conn{out_indices, {}, {}};
 
     // [1] find out information of edges (endpoints, incident faces) and face2edge
-    auto edge_topo = Internal::construct_edges(indices, NV, boundary_flags);
-    std::vector<Internal::Edge>& edges = edge_topo.first;
-    std::vector<vec3i>& face2edge = edge_topo.second;
+    Internal::construct_edges(NV, conn);
 
     // [2] compute quadrics of vertices
-    auto quadrics =
-        Internal::compute_quadrics(vertices, indices, boundary_flags, options.weighting);
-
-    if (!boundary_flags.empty()) {
-        // throw away
-        boundary_flags = std::vector<char>();
-    }
+    auto quadrics = Internal::compute_quadrics(vertices, conn, options);
 
     // [3] assigning edge errors using quadrics
-    Internal::compute_errors(vertices, quadrics, edges, options.fix_boundary);
+    Internal::compute_errors(vertices, quadrics, conn.edges, options.fix_boundary);
 
     // [4] create priority queue on quadric error
-    Internal::QEMHeap heap(edges, !options.fix_boundary);
+    Internal::QEMHeap heap(conn.edges, !options.fix_boundary);
 
     std::vector<bool> deleted_face(indices.size(), false);
     std::vector<bool> deleted_vertex(NV, true);
@@ -79,7 +70,7 @@ std::pair<V, F> simplify(const V& vertices, const F& indices,
             deleted_vertex[v] = false;
 
     size_t nv = nv_to_decimate;
-    idx prev_target = static_cast<idx>(edges.size());
+    auto prev_target = static_cast<idx>(conn.edges.size());
     while (!heap.empty() && nv > 0) {
         // target the least-error edge, if it is what we saw last iteration,
         // it means loop should stop because all remaining edges have been penalized
@@ -88,14 +79,14 @@ std::pair<V, F> simplify(const V& vertices, const F& indices,
             break;
         prev_target = target;
 
-        const auto& edge = edges[target];
+        const auto& edge = conn.edges[target];
 
         assert(is_valid_edge_target(edge, deleted_face, deleted_vertex,
                                     options.fix_boundary));
 
         // [5] collapse the least-error edge until mesh is simplified enough
-        bool collapsed = edge_collapse(out_vertices, out_indices, edges, face2edge,
-                                       quadrics, heap, target, options.fix_boundary);
+        bool collapsed =
+            edge_collapse(out_vertices, conn, quadrics, heap, target, options);
         if (!collapsed)
             continue;
 

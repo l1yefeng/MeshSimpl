@@ -9,7 +9,6 @@
 #include "types.hpp"
 
 namespace MeshSimpl {
-
 namespace Internal {
 
 // Reference: https://algs4.cs.princeton.edu/24pq/MinPQ.java
@@ -75,7 +74,6 @@ private:
 };
 
 } // namespace Internal
-
 } // namespace MeshSimpl
 
 #endif // LIB_MESH_SIMPL_QEM_HEAP_HPP

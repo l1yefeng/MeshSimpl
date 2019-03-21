@@ -5,7 +5,6 @@
 #include "post_proc.hpp"
 
 namespace MeshSimpl {
-
 namespace Internal {
 
 void compact_data(const std::vector<bool>& deleted_vertex,
@@ -52,5 +51,4 @@ void compact_data(const std::vector<bool>& deleted_vertex,
 }
 
 } // namespace Internal
-
 } // namespace MeshSimpl

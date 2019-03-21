@@ -10,15 +10,33 @@
 #include <sstream>
 
 namespace MeshSimpl {
-
 namespace Internal {
 
-Q compute_quadrics(const V& vertices, const F& indices,
-                   const std::vector<char>& boundary_flags, WEIGHTING weighting) {
+void weight_quadric(Quadric& quadric, double face_area, WEIGHTING strategy) {
+    switch (strategy) {
+    case BY_AREA:
+        quadric *= face_area;
+        break;
+    case BY_AREA_INV:
+        if (face_area <= std::numeric_limits<double>::epsilon())
+            quadric *= 0.0;
+        else
+            quadric *= 1 / face_area;
+        break;
+    case UNIFORM:
+    default:
+        if (face_area <= std::numeric_limits<double>::epsilon())
+            quadric *= 0.0;
+        break;
+    }
+}
+
+Q compute_quadrics(const V& vertices, Internal::Connectivity& conn,
+                   const SimplifyOptions& options) {
     // quadrics are initialized with all zeros
     Q quadrics(vertices.size());
 
-    for (const auto& face : indices) {
+    for (const auto& face : conn.indices) {
         // calculate the plane of this face (n and d: n'v+d=0 defines the plane)
         const vec3d edge01 = vertices[face[1]] - vertices[face[0]];
         const vec3d edge02 = vertices[face[2]] - vertices[face[0]];
@@ -31,31 +49,30 @@ Q compute_quadrics(const V& vertices, const F& indices,
 
         // calculate quadric Q = (A, b, c) = (nn', dn, d*d)
         Quadric q = make_quadric(normal, d);
-
-        if (weighting == BY_AREA)
-            q *= area;
-        if (weighting == UNIFORM)
-            if (area <= std::numeric_limits<double>::epsilon())
-                q *= 0.0;
+        weight_quadric(q, area, options.weighting);
 
         for (const auto& v : face)
             quadrics[v] += q;
     }
 
-    if (!boundary_flags.empty()) {
-        for (idx f = 0; f < indices.size(); ++f) {
-            if (boundary_flags[f] == 0x00)
+    if (!options.fix_boundary) {
+        for (idx f = 0; f < conn.indices.size(); ++f) {
+            order k;
+            for (k = 0; k < 3; ++k)
+                if (conn.edge_of_face(f, k).on_boundary())
+                    break;
+
+            if (k == 3)
                 continue;
 
-            const auto& v = indices[f];
+            const auto& v = conn.indices[f];
             const std::array<vec3d, 3> e{vertices[v[2]] - vertices[v[1]],
                                          vertices[v[0]] - vertices[v[2]],
                                          vertices[v[1]] - vertices[v[0]]};
             const vec3d n_face = cross(e[0], e[1]);
 
-            for (order k = 0; k < 3; ++k) {
-                bool bound = (boundary_flags[f] >> k) & 1U; // check bit k
-                if (!bound)
+            for (k = 0; k < 3; ++k) {
+                if (!conn.edge_of_face(f, k).on_boundary())
                     continue;
 
                 vec3d normal = cross(n_face, e[k]);
@@ -63,11 +80,8 @@ Q compute_quadrics(const V& vertices, const F& indices,
                 normal /= normal_mag;
                 const double d = -dot(normal, vertices[v[(k + 1) % 3]]);
                 Quadric q = make_quadric(normal, d);
-
-                if (weighting == BY_AREA)
-                    q *= magnitude(n_face) * CONSTRAINT_PLANE_C;
-                else if (weighting == UNIFORM)
-                    q *= CONSTRAINT_PLANE_C;
+                q *= options.border_constraint;
+                weight_quadric(q, magnitude(n_face), options.weighting);
 
                 quadrics[v[(k + 1) % 3]] += q;
                 quadrics[v[(k + 2) % 3]] += q;
@@ -78,34 +92,31 @@ Q compute_quadrics(const V& vertices, const F& indices,
     return quadrics;
 }
 
-bool edge_topo_correctness(const E& edges, const F2E& face2edge, const F& indices) {
-    for (idx f = 0; f < indices.size(); ++f) {
-        const auto& f2e = face2edge[f];
+bool edge_topo_correctness(const Connectivity& conn) {
+    for (idx f = 0; f < conn.indices.size(); ++f) {
+        const auto& f2e = conn.face2edge[f];
         for (order i = 0; i < 3; ++i) {
-            auto vv = edges[f2e[i]].vertices;
-            if (vv[0] >= vv[1])
-                return false;
-            idx v_smaller = indices[f][(i + 1) % 3];
-            idx v_larger = indices[f][(i + 2) % 3];
+            auto vv = conn.edges[f2e[i]].vertices;
+            assert(vv[0] < vv[1]);
+            idx v_smaller = conn.indices[f][(i + 1) % 3];
+            idx v_larger = conn.indices[f][(i + 2) % 3];
             if (v_smaller > v_larger)
                 std::swap(v_smaller, v_larger);
 
             // edge vertices should match face corners
-            if (vv[0] != v_smaller || vv[1] != v_larger)
-                return false;
+            assert(vv[0] == v_smaller && vv[1] == v_larger);
         }
     }
 
     return true;
 }
 
-std::pair<E, std::vector<vec3i>> construct_edges(const F& indices, size_t vertex_cnt,
-                                                 std::vector<char>& boundary_flags) {
+void construct_edges(size_t vertex_cnt, Internal::Connectivity& conn) {
     std::set<Edge> edge_set;
 
     // insert all edges into edge_set and find out if it is on boundary
-    for (idx f = 0; f < indices.size(); ++f) {
-        const auto& face = indices[f];
+    for (idx f = 0; f < conn.indices.size(); ++f) {
+        const auto& face = conn.indices[f];
         for (order k = 0; k < 3; ++k) {
             // construct edge (v[i], v[j]);
             // edge local index will be k (= that of the 3rd vertex)
@@ -119,8 +130,8 @@ std::pair<E, std::vector<vec3i>> construct_edges(const F& indices, size_t vertex
             edge.vertices[0] = v0;
             edge.vertices[1] = v1;
             edge.faces[0] = f;
-            edge.idx_in_face[0] = k;
-            edge.idx_in_face[1] = Edge::INVALID;
+            edge.ord_in_faces[0] = k;
+            edge.ord_in_faces[1] = Edge::INVALID;
             edge.boundary_v = Edge::BOTH;
             std::pair<std::set<Edge>::iterator, bool> it_and_inserted;
             it_and_inserted = edge_set.emplace(edge);
@@ -138,22 +149,18 @@ std::pair<E, std::vector<vec3i>> construct_edges(const F& indices, size_t vertex
                 // modifying through immutable iterator only if do not affect order
                 *const_cast<Edge::BOUNDARY_V*>(&it->boundary_v) = Edge::NONE;
                 *const_cast<idx*>(&it->faces[1]) = f;
-                *const_cast<order*>(&it->idx_in_face[1]) = k;
-                if (!boundary_flags.empty()) {
-                    boundary_flags[it->faces[0]] &= ~(1U << it->idx_in_face[0]);
-                    boundary_flags[it->faces[1]] &= ~(1U << it->idx_in_face[1]);
-                }
+                *const_cast<order*>(&it->ord_in_faces[1]) = k;
             }
         }
     }
 
     // convert edges from set to vector
-    E edges(edge_set.begin(), edge_set.end());
+    conn.edges = E(edge_set.begin(), edge_set.end());
+    conn.face2edge.resize(conn.indices.size());
     std::vector<bool> vertex_on_boundary(vertex_cnt, false);
-    F2E face2edge(indices.size());
 
-    for (idx i = 0; i < edges.size(); ++i) {
-        const auto& edge = edges[i];
+    for (idx i = 0; i < conn.edges.size(); ++i) {
+        const auto& edge = conn.edges[i];
         // identify boundary vertices
         if (edge.boundary_v == Edge::BOTH) {
             vertex_on_boundary[edge.vertices[0]] = true;
@@ -161,13 +168,13 @@ std::pair<E, std::vector<vec3i>> construct_edges(const F& indices, size_t vertex
         }
 
         // populate face2edge references
-        face2edge[edge.faces[0]][edge.idx_in_face[0]] = i;
+        conn.face2edge[edge.faces[0]][edge.ord_in_faces[0]] = i;
         if (edge.boundary_v != Edge::BOTH)
-            face2edge[edge.faces[1]][edge.idx_in_face[1]] = i;
+            conn.face2edge[edge.faces[1]][edge.ord_in_faces[1]] = i;
     }
 
     // non-boundary edges may have one vertex on boundary, find them in this loop
-    for (auto& edge : edges) {
+    for (auto& edge : conn.edges) {
         if (edge.boundary_v == Edge::BOTH)
             continue;
         if (vertex_on_boundary[edge.vertices[0]] && vertex_on_boundary[edge.vertices[1]])
@@ -179,11 +186,8 @@ std::pair<E, std::vector<vec3i>> construct_edges(const F& indices, size_t vertex
         // else totally within the boundary
     }
 
-    assert(edge_topo_correctness(edges, face2edge, indices));
-
-    return {edges, face2edge};
+    assert(edge_topo_correctness(conn));
 }
 
 } // namespace Internal
-
 } // namespace MeshSimpl

@@ -10,7 +10,6 @@
 #include <cassert>
 
 namespace MeshSimpl {
-
 namespace Internal {
 
 // Edge defines the struct of an edge
@@ -31,7 +30,7 @@ struct Edge {
     // index of two incident faces; boundary edges have faces[0]
     vec2i faces;
     // order of this edge in two incident faces, match the order to member "faces"
-    std::array<order, 2> idx_in_face;
+    std::array<order, 2> ord_in_faces;
 
     // quadric error value
     double error;
@@ -40,7 +39,7 @@ struct Edge {
     BOUNDARY_V boundary_v;
 
     // public methods for convenient retrieval of information
-    bool on_boundary() const { return idx_in_face[1] == INVALID; }
+    bool on_boundary() const { return ord_in_faces[1] == INVALID; }
 
     order v_order(idx v) const {
         assert(vertices[0] == v || vertices[1] == v);
@@ -48,7 +47,7 @@ struct Edge {
     }
 
     order f_order(idx f) const {
-        assert(faces[0] == f || (faces[1] == f && idx_in_face[1] != INVALID));
+        assert(faces[0] == f || (faces[1] == f && ord_in_faces[1] != INVALID));
         return faces[0] == f ? 0 : 1;
     }
 
@@ -69,7 +68,6 @@ typedef std::vector<Quadric> Q;
 typedef std::vector<vec3i> F2E;
 
 } // namespace Internal
-
 } // namespace MeshSimpl
 
 #endif // LIB_MESH_SIMPL_EDGE_HPP

@@ -8,7 +8,6 @@
 #include <limits>
 
 namespace MeshSimpl {
-
 namespace Internal {
 
 QEMHeap::QEMHeap(E& edges, bool include_boundary)
@@ -97,5 +96,4 @@ void QEMHeap::prioritize_all() {
 }
 
 } // namespace Internal
-
 } // namespace MeshSimpl
