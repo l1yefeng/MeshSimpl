@@ -11,7 +11,6 @@ bool Internal::sort_and_find_intersection(std::vector<idx>::iterator begin0,
                                           std::vector<idx>::iterator end0,
                                           std::vector<idx>::iterator begin1,
                                           std::vector<idx>::iterator end1) {
-
     std::sort(begin0, end0);
     std::sort(begin1, end1);
     for (auto i0 = begin0, i1 = begin1; i0 != end0 && i1 != end1;) {
