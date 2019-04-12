@@ -13,21 +13,24 @@ namespace MeshSimpl {
 namespace Internal {
 
 // Edge defines the struct of an edge
+//
+// Only some convenient methods are defined for the purpose of less repetition.
+// Methods to initialize (adding first and second face), and update are not provided.
 struct Edge {
     static const order INVALID = -1;
-    enum BOUNDARY_V { V0 = 0, V1 = 1, BOTH, NONE };
+    enum BOUNDARY_V { V0 = 0, V1 = 1, BOTH, NEITHER };
 
     // sum of quadrics of two endpoints
     Quadric q;
     // where this edge collapse into
     vec3d center;
 
-    // index of two endpoints,
-    // when constructing a set of edges, this is used as key by forcing v0 < v1,
-    // the increasing order is unnecessary if not in a set, but mind "boundary_v"
+    // index of two endpoints
     vec2i vertices;
 
-    // index of two incident faces; boundary edges have faces[0]
+    // index of two incident faces;
+    // boundary edges have faces[0] and ord_in_face[1] is INVALID;
+    // all edges have at least face[0] after edges are constructed in `construct_edges()`
     vec2i faces;
     // order of this edge in two incident faces, match the order to member "faces"
     std::array<order, 2> ord_in_faces;
@@ -38,7 +41,10 @@ struct Edge {
     // vertices on boundary
     BOUNDARY_V boundary_v;
 
+    //
     // public methods for convenient retrieval of information
+    //
+
     bool on_boundary() const { return ord_in_faces[1] == INVALID; }
 
     order v_order(idx v) const {
@@ -53,19 +59,15 @@ struct Edge {
 
     order v_del_order() const { return boundary_v == V0 ? 1 : 0; }
 
-    // comparison
-    bool operator<(const Edge& rhs) const {
-        if (vertices[0] < rhs.vertices[0])
-            return true;
-        if (vertices[0] > rhs.vertices[0])
-            return false;
-        return vertices[1] < rhs.vertices[1];
+    //
+    // public methods for convenient update
+    //
+
+    void swap_faces() {
+        std::swap(faces[0], faces[1]);
+        std::swap(ord_in_faces[0], ord_in_faces[1]);
     }
 };
-
-typedef std::vector<Edge> E;
-typedef std::vector<Quadric> Q;
-typedef std::vector<vec3i> F2E;
 
 } // namespace Internal
 } // namespace MeshSimpl

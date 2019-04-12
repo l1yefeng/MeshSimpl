@@ -32,14 +32,6 @@ bool face_fold_over(const V& vertices, const F& indices, const Neighbor& nb, idx
 bool extremely_elongated(const V& vertices, const F& indices, const Neighbor& nb,
                          const vec3d& center_pos, double ratio);
 
-bool boundary_scan_neighbors(const V& vertices, const Connectivity& conn,
-                             const Edge& edge, std::vector<Neighbor>& v_del_neighbors,
-                             std::vector<idx>& v_kept_neighbor_edges,
-                             const SimplifyOptions& options);
-
-bool boundary_edge_collapse(V& vertices, Connectivity& conn, Q& quadrics, QEMHeap& heap,
-                            idx ecol_target, const SimplifyOptions& options);
-
 // Find relevant faces (neighbor faces of two endpoints) one by one around the
 // collapsed edge. Meanwhile this function does geometry and connectivity check to
 // avoid fold-over faces and non-manifold edges.

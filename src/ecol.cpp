@@ -67,6 +67,8 @@ void compute_errors(const V& vertices, const Q& quadrics, E& edges, bool fix_bou
 void update_error_and_center(const V& vertices, const Q& quadrics, QEMHeap& heap,
                              Edge* const edge_ptr, bool fix_boundary) {
     if (fix_boundary && edge_ptr->boundary_v == Edge::BOTH) {
+        // this handles the case when non-boundary edge becomes boundary edge
+        // cannot erase if given edge was on boundary, since then it would not be in heap
         heap.erase_by_ptr(edge_ptr);
     } else {
         const double error_prev = edge_ptr->error;
@@ -109,137 +111,6 @@ bool extremely_elongated(const V& vertices, const F& indices, const Neighbor& nb
     return aspect_ratio < ratio;
 }
 
-bool boundary_scan_neighbors(const V& vertices, const Connectivity& conn,
-                             const Edge& edge, std::vector<Neighbor>& v_del_neighbors,
-                             std::vector<idx>& v_kept_neighbor_edges,
-                             const SimplifyOptions& options) {
-    const idx v_del = edge.vertices[edge.v_del_order()];
-    const idx v_kept = edge.vertices[1 - edge.v_del_order()];
-    const idx f = edge.faces[0];
-    assert(edge.ord_in_faces[0] != Edge::INVALID);
-    std::vector<Neighbor> v_kept_neighbors;
-    std::vector<idx> v_del_twins, v_kept_twins;
-
-    v_del_neighbors.reserve(ESTIMATE_VALENCE / 2);
-    v_kept_neighbors.reserve(ESTIMATE_VALENCE / 2);
-    v_del_twins.reserve(ESTIMATE_VALENCE / 2);
-    v_kept_twins.reserve(ESTIMATE_VALENCE / 2);
-
-    const bool ccw = edge.ord_in_faces[0] != (conn.v_ord_in_face(f, v_del) + 1) % 3;
-
-    Neighbor nb(f, edge.ord_in_faces[0], ccw);
-    while (true) {
-        const auto& next_edge = conn.edge_of_face(nb.f(), nb.i());
-
-        if (next_edge.on_boundary())
-            break;
-
-        nb.rotate(conn);
-        v_del_neighbors.emplace_back(nb);
-        v_del_twins.emplace_back(conn.indices[nb.f()][nb.j()]);
-    }
-
-    nb = Neighbor(f, edge.ord_in_faces[0], !ccw);
-    while (true) {
-        const auto& next_edge = conn.edge_of_face(nb.f(), nb.i());
-        v_kept_neighbor_edges.emplace_back(conn.face2edge[nb.f()][nb.i()]);
-
-        if (next_edge.on_boundary())
-            break;
-
-        nb.rotate(conn);
-        v_kept_neighbors.emplace_back(nb);
-        v_kept_twins.emplace_back(conn.indices[nb.f()][nb.j()]);
-    }
-
-    // check connectivity
-    if (sort_and_find_intersection(v_del_twins.begin(), v_del_twins.end(),
-                                   v_kept_twins.begin(), v_kept_twins.end()))
-        return false;
-
-    // check geometry
-    for (const auto& nb_del : v_del_neighbors)
-        if (face_fold_over(vertices, conn.indices, nb_del, v_del, edge.center,
-                           options.fold_over_angle_threshold))
-            return false;
-    for (const auto& nb_kept : v_kept_neighbors)
-        if (face_fold_over(vertices, conn.indices, nb_kept, v_kept, edge.center,
-                           options.fold_over_angle_threshold))
-            return false;
-
-    // check face quality
-    for (const auto& nb_del : v_del_neighbors)
-        if (extremely_elongated(vertices, conn.indices, nb_del, edge.center,
-                                options.aspect_ratio_at_least))
-            return false;
-    for (const auto& nb_kept : v_del_neighbors)
-        if (extremely_elongated(vertices, conn.indices, nb_kept, edge.center,
-                                options.aspect_ratio_at_least))
-            return false;
-
-    // good to go
-    return true;
-}
-
-bool boundary_edge_collapse(V& vertices, Connectivity& conn, Q& quadrics, QEMHeap& heap,
-                            const idx ecol_target, const SimplifyOptions& options) {
-    auto& edge = conn.edges[ecol_target];
-
-    std::vector<Neighbor> v_del_neighbors;
-    std::vector<idx> v_kept_neighbor_edges;
-    if (!boundary_scan_neighbors(vertices, conn, edge, v_del_neighbors,
-                                 v_kept_neighbor_edges, options)) {
-        heap.penalize(ecol_target);
-        return false;
-    }
-
-    // now that we are certain this edge is to be collapsed, remove it from heap
-    heap.pop();
-
-    const idx v_del = edge.vertices[edge.v_del_order()];
-    const idx v_kept = edge.vertices[1 - edge.v_del_order()];
-    const idx f = edge.faces[0];
-
-    // update vertex position and quadric
-    copy_vec3(edge.center, vertices[v_kept]);
-    quadrics[v_kept] = edge.q;
-
-    const idx e_kept_idx = conn.edge_idx_across_from_v(f, v_del);
-    Edge* dirty_edge_ptr = &conn.edges[e_kept_idx];
-
-    // it is possible that v_del_neighbors is empty
-    heap.erase(conn.edge_idx_across_from_v(f, v_kept));
-    const order ford = dirty_edge_ptr->f_order(f);
-    if (v_del_neighbors.empty()) {
-        dirty_edge_ptr->ord_in_faces[ford] = Edge::INVALID;
-        if (ford == 0) {
-            std::swap(dirty_edge_ptr->faces[0], dirty_edge_ptr->faces[1]);
-            std::swap(dirty_edge_ptr->ord_in_faces[0], dirty_edge_ptr->ord_in_faces[1]);
-        }
-    } else {
-        auto it = v_del_neighbors.begin();
-        conn.face2edge[it->f()][it->j()] = e_kept_idx;
-        dirty_edge_ptr->faces[ford] = it->f();
-        dirty_edge_ptr->ord_in_faces[ford] = it->j();
-    }
-
-    // every face centered around deleted vertex
-    for (const auto& nb : v_del_neighbors) {
-        conn.indices[nb.f()][nb.center()] = v_kept;
-        dirty_edge_ptr = &conn.edge_of_face(nb.f(), nb.i());
-        const order v_del_in_edge = dirty_edge_ptr->v_order(v_del);
-        dirty_edge_ptr->vertices[v_del_in_edge] = v_kept;
-        assert(dirty_edge_ptr->boundary_v != Edge::NONE);
-        update_error_and_center(vertices, quadrics, heap, dirty_edge_ptr, false);
-    }
-
-    assert(!v_kept_neighbor_edges.empty());
-    for (const idx e_dirty : v_kept_neighbor_edges)
-        update_error_and_center(vertices, quadrics, heap, &conn.edges[e_dirty], false);
-
-    return true;
-}
-
 bool scan_neighbors(const V& vertices, const Connectivity& conn, const Edge& edge,
                     std::vector<Neighbor>& v_del_neighbors,
                     std::vector<idx>& v_kept_neighbor_edges,
@@ -247,54 +118,104 @@ bool scan_neighbors(const V& vertices, const Connectivity& conn, const Edge& edg
     const idx v_del = edge.vertices[edge.v_del_order()];
     const idx v_kept = edge.vertices[1 - edge.v_del_order()];
     std::vector<Neighbor> v_kept_neighbors;
-    const vec2i& ff = edge.faces;
     std::vector<idx> v_del_twins, v_kept_twins;
 
-    v_del_neighbors.reserve(ESTIMATE_VALENCE);
-    v_kept_neighbors.reserve(ESTIMATE_VALENCE);
-    v_del_twins.reserve(ESTIMATE_VALENCE);
-    v_kept_twins.reserve(ESTIMATE_VALENCE);
+    const bool ccw =
+        edge.ord_in_faces[0] != (conn.v_ord_in_face(edge.faces[0], v_del) + 1) % 3;
 
-    const bool ccw = edge.ord_in_faces[0] != (conn.v_ord_in_face(ff[0], v_del) + 1) % 3;
+    if (!edge.on_boundary()) {
+        // collapse information around a non-boundary edge
 
-    Neighbor nb(ff[0], edge.ord_in_faces[0], ccw);
-    while (true) {
-        nb.rotate(conn);
-        if (nb.f() == ff[1])
-            break;
-        v_del_neighbors.emplace_back(nb);
-        v_del_twins.emplace_back(conn.indices[nb.f()][nb.i()]);
-    }
+        const vec2i& ff = edge.faces;
 
-    bool boundary_hit = false; // useful in case v_kept is on boundary
-    nb = Neighbor(ff[1], edge.ord_in_faces[1], ccw);
-    while (true) {
-        const auto& next_edge = conn.edge_of_face(nb.f(), nb.i());
+        v_del_neighbors.reserve(ESTIMATE_VALENCE);
+        v_kept_neighbors.reserve(ESTIMATE_VALENCE);
+        v_del_twins.reserve(ESTIMATE_VALENCE);
+        v_kept_twins.reserve(ESTIMATE_VALENCE);
 
-        if (next_edge.on_boundary()) {
-            v_kept_twins.emplace_back(conn.indices[nb.f()][nb.j()]);
-            v_kept_neighbor_edges.emplace_back(conn.face2edge[nb.f()][nb.i()]);
-            if (boundary_hit)
-                break; // while-loop breaks here if one v_kept is on boundary
-            boundary_hit = true;
-            nb = Neighbor(ff[0], edge.ord_in_faces[0], !ccw);
-            continue;
+        Neighbor nb(ff[0], edge.ord_in_faces[0], ccw);
+        while (true) {
+            nb.rotate(conn);
+            if (nb.f() == ff[1])
+                break;
+            v_del_neighbors.emplace_back(nb);
+            v_del_twins.emplace_back(conn.indices[nb.f()][nb.i()]);
         }
 
-        nb.rotate(conn);
-        v_kept_neighbor_edges.emplace_back(conn.face2edge[nb.f()][nb.j()]);
-        v_kept_twins.emplace_back(conn.indices[nb.f()][nb.i()]);
-        if (nb.f() == ff[0])
-            break; // while-loop breaks here if there is no business of boundary
-        // this face is deleted thus unnecessary to check fold-over if f == ff[0]
-        v_kept_neighbors.emplace_back(nb);
+        bool boundary_hit = false; // useful in case v_kept is on boundary
+        nb = Neighbor(ff[1], edge.ord_in_faces[1], ccw);
+        while (true) {
+            const auto& next_edge = conn.edge_of_face(nb.f(), nb.i());
+
+            if (next_edge.on_boundary()) {
+                v_kept_twins.emplace_back(conn.indices[nb.f()][nb.j()]);
+                v_kept_neighbor_edges.emplace_back(conn.face2edge[nb.f()][nb.i()]);
+                if (boundary_hit)
+                    break; // while-loop breaks here if one v_kept is on boundary
+                boundary_hit = true;
+                nb = Neighbor(ff[0], edge.ord_in_faces[0], !ccw);
+                continue;
+            }
+
+            nb.rotate(conn);
+            v_kept_neighbor_edges.emplace_back(conn.face2edge[nb.f()][nb.j()]);
+            v_kept_twins.emplace_back(conn.indices[nb.f()][nb.i()]);
+            if (nb.f() == ff[0]) {
+                // while-loop breaks here if there is no business of boundary
+                assert(!boundary_hit);
+                break;
+            }
+            // this face is deleted thus unnecessary to check fold-over if f == ff[0]
+            v_kept_neighbors.emplace_back(nb);
+        }
+
+        // if v_del_twins is empty, the target edge has incident faces folded back to back
+        if (v_del_twins.empty())
+            return false;
+
+        // we actually want to check intersection
+        // on items starting from `v_del_twins[1]` with those in `v_kept_twins`
+        v_del_twins.erase(v_del_twins.begin());
+
+    } else {
+        // collapse information around a boundary edge
+
+        assert(edge.ord_in_faces[0] != Edge::INVALID);
+        const idx f = edge.faces[0];
+
+        v_del_neighbors.reserve(ESTIMATE_VALENCE / 2);
+        v_kept_neighbors.reserve(ESTIMATE_VALENCE / 2);
+        v_del_twins.reserve(ESTIMATE_VALENCE / 2);
+        v_kept_twins.reserve(ESTIMATE_VALENCE / 2);
+
+        Neighbor nb(f, edge.ord_in_faces[0], ccw);
+        while (true) {
+            const auto& next_edge = conn.edge_of_face(nb.f(), nb.i());
+
+            if (next_edge.on_boundary())
+                break;
+
+            nb.rotate(conn);
+            v_del_neighbors.emplace_back(nb);
+            v_del_twins.emplace_back(conn.indices[nb.f()][nb.j()]);
+        }
+
+        nb = Neighbor(f, edge.ord_in_faces[0], !ccw);
+        while (true) {
+            const auto& next_edge = conn.edge_of_face(nb.f(), nb.i());
+            v_kept_neighbor_edges.emplace_back(conn.face2edge[nb.f()][nb.i()]);
+
+            if (next_edge.on_boundary())
+                break;
+
+            nb.rotate(conn);
+            v_kept_neighbors.emplace_back(nb);
+            v_kept_twins.emplace_back(conn.indices[nb.f()][nb.j()]);
+        }
     }
 
-    // check connectivity
-    // Intersection check ref: en.cppreference.com/w/cpp/algorithm/set_intersection.html
-    assert(!v_del_twins.empty());
-    if (sort_and_find_intersection(v_del_twins.begin() + 1, v_del_twins.end(),
-                                   v_kept_twins.begin(), v_kept_twins.end()))
+    // check connectivity: intersection nonempty indicates topology change after collapse
+    if (sort_and_find_intersection(v_del_twins, v_kept_twins))
         return false;
 
     // check geometry
@@ -325,19 +246,11 @@ bool edge_collapse(V& vertices, Internal::Connectivity& conn, Q& quadrics, QEMHe
                    const idx ecol_target, const SimplifyOptions& options) {
     auto& edge = conn.edges[ecol_target];
 
-    // a whole other function does this job
-    if (edge.boundary_v == Edge::BOTH) {
-        assert(!options.fix_boundary);
-        // edge on boundary will have v_boundary == BOTH AND both ord_in_faces != INVALID
-        // if non-boundary edge has two endpoints on boundary, we skip collapsing it
-        // because it is possible to produce non-manifold vertex
-        if (edge.on_boundary()) {
-            return boundary_edge_collapse(vertices, conn, quadrics, heap, ecol_target,
-                                          options);
-        } else {
-            heap.penalize(ecol_target);
-            return false;
-        }
+    // if non-boundary edge has two endpoints on boundary, we avoid collapsing it
+    // because it is possible to produce non-manifold vertex
+    if (edge.boundary_v == Edge::BOTH && !edge.on_boundary()) {
+        heap.penalize(ecol_target);
+        return false;
     }
 
     // collect neighboring faces into two containers
@@ -352,62 +265,110 @@ bool edge_collapse(V& vertices, Internal::Connectivity& conn, Q& quadrics, QEMHe
     // now that we are certain this edge is to be collapsed, remove it from heap
     heap.pop();
 
-    const vec2i& ff = edge.faces;
     const idx v_del = edge.vertices[edge.v_del_order()];
     const idx v_kept = edge.vertices[1 - edge.v_del_order()];
 
-    // update vertex position and quadric
-    if (edge.boundary_v == Edge::NONE)
-        copy_vec3(edge.center, vertices[v_kept]);
-    quadrics[v_kept] = edge.q;
+    if (!edge.on_boundary()) {
+        // collapse a non-boundary edge and update its neighborhood
 
-    vec2i e_kept; // global index of kept edge in two deleted faces
-    for (auto i : {0, 1})
-        e_kept[i] = conn.edge_idx_across_from_v(ff[i], v_del);
+        const vec2i& ff = edge.faces;
 
-    auto it = v_del_neighbors.begin();
-    Edge* dirty_edge_ptr = &conn.edges[e_kept[0]];
+        // update vertex position and quadric
+        if (edge.boundary_v == Edge::NEITHER)
+            copy_vec3(edge.center, vertices[v_kept]);
+        quadrics[v_kept] = edge.q;
 
-    // first face to process: deleted face 0
-    conn.indices[it->f()][it->center()] = v_kept;
-    heap.erase(conn.face2edge[it->f()][it->j()]);
-    conn.face2edge[it->f()][it->j()] = e_kept[0];
-    const order f0_in_edge = dirty_edge_ptr->f_order(ff[0]);
-    dirty_edge_ptr->faces[f0_in_edge] = it->f();
-    dirty_edge_ptr->ord_in_faces[f0_in_edge] = it->j();
+        vec2i e_kept; // global index of kept edge in two deleted faces
+        for (auto i : {0, 1})
+            e_kept[i] = conn.edge_idx_across_from_v(ff[i], v_del);
 
-    // every face centered around deleted vertex
-    for (++it; it != v_del_neighbors.end(); ++it) {
+        auto it = v_del_neighbors.begin();
+        Edge* dirty_edge_ptr = &conn.edges[e_kept[0]];
+
+        // first face to process: deleted face 0
         conn.indices[it->f()][it->center()] = v_kept;
-        dirty_edge_ptr = &conn.edge_of_face(it->f(), it->j());
-        const order v_del_in_edge = dirty_edge_ptr->v_order(v_del);
-        dirty_edge_ptr->vertices[v_del_in_edge] = v_kept;
-        if (edge.boundary_v != Edge::NONE) {
-            // not collapsing an edge entirely in the interior
-            assert(edge.boundary_v == Edge::V0 || edge.boundary_v == Edge::V1);
-            assert(dirty_edge_ptr->boundary_v != Edge::BOTH);
-            if (dirty_edge_ptr->boundary_v == Edge::NONE)
-                dirty_edge_ptr->boundary_v = static_cast<Edge::BOUNDARY_V>(v_del_in_edge);
-            else
-                dirty_edge_ptr->boundary_v = Edge::BOTH;
+        heap.erase(conn.face2edge[it->f()][it->j()]);
+        conn.face2edge[it->f()][it->j()] = e_kept[0];
+        const order f0_in_edge = dirty_edge_ptr->f_order(ff[0]);
+        dirty_edge_ptr->faces[f0_in_edge] = it->f();
+        dirty_edge_ptr->ord_in_faces[f0_in_edge] = it->j();
+
+        // every face centered around deleted vertex
+        for (++it; it != v_del_neighbors.end(); ++it) {
+            conn.indices[it->f()][it->center()] = v_kept;
+            dirty_edge_ptr = &conn.edge_of_face(it->f(), it->j());
+            const order v_del_in_edge = dirty_edge_ptr->v_order(v_del);
+            dirty_edge_ptr->vertices[v_del_in_edge] = v_kept;
+            if (edge.boundary_v != Edge::NEITHER) {
+                // not collapsing an edge entirely in the interior
+                assert(edge.boundary_v == Edge::V0 || edge.boundary_v == Edge::V1);
+                assert(dirty_edge_ptr->boundary_v != Edge::BOTH);
+                if (dirty_edge_ptr->boundary_v == Edge::NEITHER)
+                    dirty_edge_ptr->boundary_v =
+                        static_cast<Edge::BOUNDARY_V>(v_del_in_edge);
+                else
+                    dirty_edge_ptr->boundary_v = Edge::BOTH;
+            }
+            update_error_and_center(vertices, quadrics, heap, dirty_edge_ptr,
+                                    options.fix_boundary);
         }
-        update_error_and_center(vertices, quadrics, heap, dirty_edge_ptr,
-                                options.fix_boundary);
+
+        // the deleted face 1
+        --it;
+        heap.erase(conn.face2edge[it->f()][it->i()]);
+        conn.face2edge[it->f()][it->i()] = e_kept[1];
+        dirty_edge_ptr = &conn.edges[e_kept[1]];
+        const order f1_in_edge = dirty_edge_ptr->f_order(ff[1]);
+        dirty_edge_ptr->faces[f1_in_edge] = it->f();
+        dirty_edge_ptr->ord_in_faces[f1_in_edge] = it->i();
+
+        // every edge centered around the kept vertex
+        for (const idx e_dirty : v_kept_neighbor_edges)
+            if (!(options.fix_boundary && conn.edges[e_dirty].boundary_v == Edge::BOTH))
+                update_error_and_center(vertices, quadrics, heap, &conn.edges[e_dirty],
+                                        options.fix_boundary);
+
+    } else {
+        // collapse a boundary edge and update its neighborhood
+
+        const idx f = edge.faces[0];
+
+        // update vertex position and quadric
+        copy_vec3(edge.center, vertices[v_kept]);
+        quadrics[v_kept] = edge.q;
+
+        const idx e_kept_idx = conn.edge_idx_across_from_v(f, v_del);
+        Edge* dirty_edge_ptr = &conn.edges[e_kept_idx];
+
+        // it is possible that v_del_neighbors is empty
+        heap.erase(conn.edge_idx_across_from_v(f, v_kept));
+        const order ford = dirty_edge_ptr->f_order(f);
+        if (v_del_neighbors.empty()) {
+            dirty_edge_ptr->ord_in_faces[ford] = Edge::INVALID;
+            if (ford == 0)
+                dirty_edge_ptr->swap_faces();
+        } else {
+            auto it = v_del_neighbors.begin();
+            conn.face2edge[it->f()][it->j()] = e_kept_idx;
+            dirty_edge_ptr->faces[ford] = it->f();
+            dirty_edge_ptr->ord_in_faces[ford] = it->j();
+        }
+
+        // every face centered around deleted vertex
+        for (const auto& nb : v_del_neighbors) {
+            conn.indices[nb.f()][nb.center()] = v_kept;
+            dirty_edge_ptr = &conn.edge_of_face(nb.f(), nb.i());
+            const order v_del_in_edge = dirty_edge_ptr->v_order(v_del);
+            dirty_edge_ptr->vertices[v_del_in_edge] = v_kept;
+            assert(dirty_edge_ptr->boundary_v != Edge::NEITHER);
+            update_error_and_center(vertices, quadrics, heap, dirty_edge_ptr, false);
+        }
+
+        assert(!v_kept_neighbor_edges.empty());
+        for (const idx e_dirty : v_kept_neighbor_edges)
+            update_error_and_center(vertices, quadrics, heap, &conn.edges[e_dirty],
+                                    false);
     }
-
-    // the deleted face 1
-    --it;
-    heap.erase(conn.face2edge[it->f()][it->i()]);
-    conn.face2edge[it->f()][it->i()] = e_kept[1];
-    dirty_edge_ptr = &conn.edges[e_kept[1]];
-    const order f1_in_edge = dirty_edge_ptr->f_order(ff[1]);
-    dirty_edge_ptr->faces[f1_in_edge] = it->f();
-    dirty_edge_ptr->ord_in_faces[f1_in_edge] = it->i();
-
-    // every edge centered around the kept vertex
-    for (const idx e_dirty : v_kept_neighbor_edges)
-        update_error_and_center(vertices, quadrics, heap, &conn.edges[e_dirty],
-                                options.fix_boundary);
 
     return true;
 }

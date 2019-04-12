@@ -15,14 +15,14 @@ int main(int argc, char* argv[]) {
     MeshSimpl::SimplifyOptions options;
     string weighting;
 
-    auto cli =
-        (
-         (value("input", in)) % "input .obj file",
-         (option("-o", "--output") & value("path", out)) % "output file path",
-         (option("-f", "--fix-boundary").set(options.fix_boundary)) % "do not move vertices on boundary",
-         (option("-w", "--weighting") & value("strategy", weighting)) % "one of { uniform, by-area, by-area-inv }",
-         (option("-s", "--strength") & number("ratio", options.strength)) % "0.8 means remove 80% vertices"
-        );
+    auto cli = ((value("input", in)) % "input .obj file",
+                (option("-o", "--output") & value("path", out)) % "output file path",
+                (option("-f", "--fix-boundary").set(options.fix_boundary)) %
+                    "do not move vertices on boundary",
+                (option("-w", "--weighting") & value("strategy", weighting)) %
+                    "one of { uniform, by-area, by-area-inv }",
+                (option("-s", "--strength") & number("ratio", options.strength)) %
+                    "0.8 means remove 80% vertices");
 
     if (!parse(argc, argv, cli)) {
         cout << make_man_page(cli, argv[0]);
@@ -41,31 +41,27 @@ int main(int argc, char* argv[]) {
     }
 
     // read obj file
-    vector<vector<double>> vertices, out_vertices;
-    vector<vector<unsigned int>> indices, out_indices;
+    vector<vector<double>> vertices;
+    vector<vector<unsigned int>> indices;
     igl::readOBJ(in, vertices, indices);
+    const MeshSimpl::TriMesh mesh = {vertices, indices};
+    MeshSimpl::TriMesh out_mesh;
 
-    try {
-        const auto before = chrono::steady_clock::now();
-        auto res = MeshSimpl::simplify(vertices, indices, options);
-        const auto after = chrono::steady_clock::now();
-        const long duration =
-            chrono::duration_cast<chrono::milliseconds>(after - before).count();
-        std::cout << "[INFO] Simplification completed (" << duration << " milliseconds)"
-                  << std::endl;
-        out_vertices = res.first;
-        out_indices = res.second;
-    } catch (char const* exception) {
-        cerr << exception << endl;
-        return 1;
-    }
+    const auto before = chrono::steady_clock::now();
+    MeshSimpl::simplify(mesh, out_mesh, options);
+    const auto after = chrono::steady_clock::now();
+    const long duration =
+        chrono::duration_cast<chrono::milliseconds>(after - before).count();
+    std::cout << "[INFO] Simplification completed (" << duration << " ms)" << std::endl;
 
-    Eigen::MatrixXd V(out_vertices.size(), 3);
+    Eigen::MatrixXd V(out_mesh.vertices.size(), 3);
     for (int i = 0; i < V.rows(); ++i)
-        V.row(i) << out_vertices[i][0], out_vertices[i][1], out_vertices[i][2];
-    Eigen::MatrixXi F(out_indices.size(), 3);
+        V.row(i) << out_mesh.vertices[i][0], out_mesh.vertices[i][1],
+            out_mesh.vertices[i][2];
+    Eigen::MatrixXi F(out_mesh.indices.size(), 3);
     for (int i = 0; i < F.rows(); ++i)
-        F.row(i) << out_indices[i][0], out_indices[i][1], out_indices[i][2];
+        F.row(i) << out_mesh.indices[i][0], out_mesh.indices[i][1],
+            out_mesh.indices[i][2];
 
     if (out.empty()) {
         // view

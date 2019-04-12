@@ -11,10 +11,10 @@ namespace MeshSimpl {
 
 void options_validation(const SimplifyOptions& options);
 
+bool simplify(TriMesh& mesh, const SimplifyOptions& options = {});
+
 // Mesh simplification main method.
-// TODO: Ignoring the 4th and the following values (if exist) in vertices.
-std::pair<V, F> simplify(const V& vertices, const F& indices,
-                         const SimplifyOptions& options = {});
+bool simplify(const TriMesh& input, TriMesh& output, const SimplifyOptions& options = {});
 
 } // namespace MeshSimpl
 

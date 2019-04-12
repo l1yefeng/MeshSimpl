@@ -17,7 +17,9 @@ QEMHeap::QEMHeap(E& edges, bool include_boundary)
             keys[handles[i] = ++n] = i;
 
     keys.resize(n + 1);
-    prioritize_all();
+    for (size_t k = n / 2; k >= 1; --k)
+        sink(k);
+    assert(is_min_heap());
 }
 
 void QEMHeap::pop() {
@@ -43,8 +45,7 @@ void QEMHeap::penalize(idx e) {
 void QEMHeap::erase(idx e) {
     const double error_prev = edges[e].error;
     size_t k = handles[e];
-    if (k > n)
-        return; // target edge is not in the heap
+    assert(k < n + 1 && k >= 1); // check existence in heap
 
     exchange(k, n--);
     if (edges[keys[k]].error > error_prev)
@@ -64,10 +65,8 @@ bool QEMHeap::is_min_heap(size_t k) const {
         return true;
     size_t left = 2 * k;
     size_t right = 2 * k + 1;
-    if (left <= n && greater(k, left))
-        return false;
-    if (right <= n && greater(k, right))
-        return false;
+    assert(!(left <= n && greater(k, left)));
+    assert(!(right <= n && greater(k, right)));
     return is_min_heap(left) && is_min_heap(right);
 }
 
@@ -79,6 +78,7 @@ void QEMHeap::swim(size_t k) {
 }
 
 void QEMHeap::sink(size_t k) {
+    assert(k >= 1);
     while (2 * k <= n) {
         size_t j = 2 * k;
         if (j < n && greater(j, j + 1))
@@ -88,11 +88,6 @@ void QEMHeap::sink(size_t k) {
         exchange(k, j);
         k = j;
     }
-}
-void QEMHeap::prioritize_all() {
-    for (size_t k = n / 2; k >= 1; --k)
-        sink(k);
-    assert(is_min_heap());
 }
 
 } // namespace Internal

@@ -24,7 +24,7 @@ namespace Internal {
 class Neighbor {
 private:
     idx face; // face index in indices
-    bool ccw; // set to false when constructed
+    bool ccw; // determines the direction of rotation
     order vi; // i = (j + 1) % 3 if clockwise
     order vj; // j = (center + 1) % 3 if clockwise
 

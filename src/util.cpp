@@ -7,13 +7,13 @@
 
 namespace MeshSimpl {
 
-bool Internal::sort_and_find_intersection(std::vector<idx>::iterator begin0,
-                                          std::vector<idx>::iterator end0,
-                                          std::vector<idx>::iterator begin1,
-                                          std::vector<idx>::iterator end1) {
-    std::sort(begin0, end0);
-    std::sort(begin1, end1);
-    for (auto i0 = begin0, i1 = begin1; i0 != end0 && i1 != end1;) {
+// Intersection check ref: en.cppreference.com/w/cpp/algorithm/set_intersection.html
+bool Internal::sort_and_find_intersection(std::vector<idx>& values0,
+                                          std::vector<idx>& values1) {
+    std::sort(values0.begin(), values0.end());
+    std::sort(values1.begin(), values1.end());
+    for (auto i0 = values0.begin(), i1 = values1.begin();
+         i0 != values0.end() && i1 != values1.end();) {
         if (*i0 < *i1)
             ++i0;
         else if (*i0 > *i1)

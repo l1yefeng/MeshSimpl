@@ -53,6 +53,8 @@ private:
 
     // Compare function: larger error --> lower priority
     bool greater(size_t i, size_t j) const {
+        assert(!std::isnan(edges[keys[i]].error));
+        assert(!std::isnan(edges[keys[j]].error));
         return edges[keys[i]].error > edges[keys[j]].error;
     }
 
@@ -68,9 +70,6 @@ private:
 
     // Adjust the priority of node k: direction is towards lower priority
     void sink(size_t k);
-
-    // Prioritize keys
-    void prioritize_all();
 };
 
 } // namespace Internal
