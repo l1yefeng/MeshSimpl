@@ -1,0 +1,9 @@
+
+Mesh simplification implementation:
+
+- Restriction on input:
+    - Cannot handle non-manifold mesh
+    - Cannot handle mesh with wrong oriented face
+
+- Simplification flaws:
+    - Not able to change topology

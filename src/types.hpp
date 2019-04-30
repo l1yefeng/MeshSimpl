@@ -21,13 +21,6 @@ typedef std::vector<std::vector<idx>> F;    // input/output face indices
 
 enum WEIGHTING { UNIFORM, BY_AREA, BY_AREA_INV };
 
-struct TileBounds {
-    double min_x;
-    double max_x;
-    double min_y;
-    double max_y;
-};
-
 struct TriMesh {
     V vertices;
     F indices;
@@ -64,11 +57,6 @@ struct SimplifyOptions {
     // used to check if, during edge collapse, faces become extremely elongated;
     // aspect_ratio = 8(s-a)(s-b)(s-c)/abc, faces with lower aspect ratio -> lower quality
     double aspect_ratio_at_least = 0.02;
-
-    // TODO: used to experiment the boundary-interior interleave simplification;
-    // tile_bounds will be read if experimenting is true and is useless otherwise
-    bool experimenting = false;
-    TileBounds tile_bounds = {};
 };
 
 namespace Internal {

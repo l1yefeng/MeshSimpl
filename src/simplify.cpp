@@ -59,13 +59,8 @@ bool simplify(TriMesh& mesh, const SimplifyOptions& options) {
     std::vector<bool> deleted_vertex(NV, true);
 
     // [1] find out information of edges (endpoints, incident faces) and face2edge
-    {
-        std::forward_list<idx> invalid_faces;
-        Internal::construct_edges(vertices, conn, invalid_faces);
 
-        for (auto df : invalid_faces)
-            deleted_face[df] = true;
-    }
+    Internal::construct_edges(vertices, conn);
 
     // [2] compute quadrics of vertices
     Internal::Q quadrics;
