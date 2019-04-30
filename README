@@ -1,5 +1,8 @@
 
-Mesh simplification implementation:
+Mesh simplification implementation
+
+* While the library (src subdirectory) does not have any dependency,
+  building example needs ``libigl'' to read/write/visualize mesh data
 
 - Restriction on input:
     - Cannot handle non-manifold mesh
