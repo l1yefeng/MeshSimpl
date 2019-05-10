@@ -15,14 +15,23 @@ int main(int argc, char* argv[]) {
     MeshSimpl::SimplifyOptions options;
     string weighting;
 
-    auto cli = ((value("input", in)) % "input .obj file",
-                (option("-o", "--output") & value("path", out)) % "output file path",
-                (option("-f", "--fix-boundary").set(options.fix_boundary)) %
-                    "do not move vertices on boundary",
-                (option("-w", "--weighting") & value("strategy", weighting)) %
-                    "one of { uniform, by-area, by-area-inv }",
-                (option("-s", "--strength") & number("ratio", options.strength)) %
-                    "0.8 means remove 80% vertices");
+    auto cli =
+        ((value("input", in)) % "input .obj file",
+         (option("-o", "--output") & value("path", out)) % "output file path",
+         (option("-f", "--fix-boundary").set(options.fix_boundary)) %
+             "do not move vertices on boundary",
+         (option("-w", "--weighting") & value("strategy", weighting)) %
+             "one of { uniform, by-area, by-area-inv }",
+         (option("-s", "--strength") & number("ratio", options.strength)) %
+             "0.8 means remove 80% vertices",
+         (option("--border-constraint") & number("constant", options.border_constraint)) %
+             "default is 2, assign larger constant to make border more reluctant to "
+             "shrink",
+         (option("--fold-over") & number("angle", options.fold_over_angle_threshold)) %
+             "default is cos(160), change of angle of faces cannot be larger than this "
+             "angle",
+         (option("--triangle-quality") & number("ratio", options.aspect_ratio_at_least)) %
+             "default is 0.02, aspect_ratio cannot be smaller than this value");
 
     if (!parse(argc, argv, cli)) {
         cout << make_man_page(cli, argv[0]);
