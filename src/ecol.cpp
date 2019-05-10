@@ -347,6 +347,12 @@ bool edge_collapse(V& vertices, Internal::Connectivity& conn, Q& quadrics, QEMHe
             dirty_edge_ptr->ord_in_faces[ford] = Edge::INVALID;
             if (ford == 0)
                 dirty_edge_ptr->swap_faces();
+            if (dirty_edge_ptr->ord_in_faces[0] == Edge::INVALID) {
+                // this edge has two faces disappeared
+                // what happens is that a single triangle got an edge collapsed
+                assert(conn.edges[conn.edge_idx_across_from_v(f, v_kept)].on_boundary());
+                heap.erase_by_ptr(dirty_edge_ptr);
+            }
         } else {
             auto it = v_del_neighbors.begin();
             conn.face2edge[it->f()][it->j()] = e_kept_idx;
