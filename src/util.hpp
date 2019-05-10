@@ -9,7 +9,6 @@
 #include "types.hpp"
 #include <algorithm>
 #include <cmath>
-#include <forward_list>
 
 namespace MeshSimpl {
 
@@ -48,12 +47,6 @@ inline double magnitude(const vec3d& x) {
     return std::sqrt(x[0] * x[0] + x[1] * x[1] + x[2] * x[2]);
 }
 
-// Area of triangle (a, b, c)
-inline double tri_area(const std::vector<double>& a, const std::vector<double>& b,
-                       const std::vector<double>& c) {
-    return magnitude(cross(b - a, c - a));
-}
-
 template <typename PositionSrc, typename PositionDest>
 inline void copy_vec3(const PositionSrc& src, PositionDest& dest) {
     std::copy(src.begin(), src.begin() + 3, dest.begin());
@@ -77,10 +70,6 @@ template <typename Position> inline double q_error(const Quadric& q, const Posit
 }
 
 bool sort_and_find_intersection(std::vector<idx>& values0, std::vector<idx>& values1);
-
-inline bool flist_contains(const std::forward_list<idx>& fl, const idx f) {
-    return std::find(fl.begin(), fl.end(), f) != fl.end();
-}
 
 } // namespace Internal
 

@@ -6,7 +6,6 @@
 #define LIB_MESH_SIMPL_PRE_PROC_HPP
 
 #include "types.hpp"
-#include <forward_list>
 #include <map>
 
 namespace MeshSimpl {
@@ -19,9 +18,6 @@ void weight_quadric(Quadric& quadric, double face_area, WEIGHTING strategy);
 void compute_quadrics(const V& vertices, Internal::Connectivity& conn, Q& quadrics,
                       const std::vector<bool>& deleted_face,
                       const SimplifyOptions& options);
-
-// Short-hand type definition
-typedef std::forward_list<std::pair<idx, order>> flist_t;
 
 // Build connectivity from `conn.indices`
 // Output `conn.edges`: list of `Edge`
