@@ -1,12 +1,15 @@
 
 Mesh simplification implementation
 
-* While the library (src subdirectory) does not have any dependency,
-  building example needs ``libigl'' to read/write/visualize mesh data
-
 - Restriction on input:
     - Cannot handle non-manifold mesh
     - Cannot handle mesh with wrong oriented face
 
 - Simplification flaws:
     - Not able to change topology
+
+- To-do-next:
+    - Use OOP to improve program
+        - neighborhood
+    - Fix bug
+        - not stable at all!!!

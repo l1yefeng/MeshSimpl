@@ -17,6 +17,6 @@ bool simplify(TriMesh& mesh, const SimplifyOptions& options = {});
 bool simplify(const TriMesh& input, TriMesh& output,
               const SimplifyOptions& options = {});
 
-} // namespace MeshSimpl
+}  // namespace MeshSimpl
 
-#endif // LIB_MESH_SIMPL_SIMPLIFY_HPP
+#endif  // LIB_MESH_SIMPL_SIMPLIFY_HPP

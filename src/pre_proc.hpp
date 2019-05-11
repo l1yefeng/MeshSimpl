@@ -5,9 +5,9 @@
 #ifndef LIB_MESH_SIMPL_PRE_PROC_HPP
 #define LIB_MESH_SIMPL_PRE_PROC_HPP
 
+#include <map>
 #include "marker.hpp"
 #include "types.hpp"
-#include <map>
 
 namespace MeshSimpl {
 namespace Internal {
@@ -22,13 +22,15 @@ void compute_quadrics(const V& vertices, Internal::Connectivity& conn,
 // Build connectivity from `conn.indices`
 // Output `conn.edges`: list of `Edge`
 // Output `conn.face2edge`: |F|x3 matrix,
-//  face2edge[face index][order of vertex v] = index of edge across from v on face
-// Output `invalid_faces`: list of invalid face indexes (incident to non-manifold edges)
+//  face2edge[face index][order of vertex v] = index of edge across from v on
+//  face
+// Output `invalid_faces`: list of invalid face indexes (incident to
+// non-manifold edges)
 //
 // This method does not initialize members optimal_pos and error in struct Edge.
 void construct_edges(const V& vertices, Internal::Connectivity& conn);
 
-} // namespace Internal
-} // namespace MeshSimpl
+}  // namespace Internal
+}  // namespace MeshSimpl
 
-#endif // LIB_MESH_SIMPL_PRE_PROC_HPP
+#endif  // LIB_MESH_SIMPL_PRE_PROC_HPP
