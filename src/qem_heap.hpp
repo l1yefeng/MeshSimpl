@@ -33,7 +33,9 @@ public:
 
     // Erase edge with id `e`. Does nothing if edge is not in heap
     void erase(idx e);
-    void erase_by_ptr(const Edge* ptr) { erase(static_cast<idx>(ptr - edges.data())); }
+    void erase_by_ptr(const Edge* ptr) {
+        erase(static_cast<idx>(ptr - edges.data()));
+    }
 
     // Returns true if heap is empty
     bool empty() const { return n == 0; }
@@ -46,10 +48,11 @@ public:
     std::vector<idx>::const_iterator end() const { return keys.end(); }
 
 private:
-    std::vector<idx> keys;       // binary heap array, indexed from 1
-    E& edges;                    // a reference to `edges`
-    std::vector<size_t> handles; // handles[edge_id] is the position of edge in keys
-    size_t n;                    // = heap.size() = keys.size() - 1
+    std::vector<idx> keys; // binary heap array, indexed from 1
+    E& edges;              // a reference to `edges`
+    std::vector<size_t>
+        handles; // handles[edge_id] is the position of edge in keys
+    size_t n;    // = heap.size() = keys.size() - 1
 
     // Compare function: larger error --> lower priority
     bool greater(size_t i, size_t j) const {

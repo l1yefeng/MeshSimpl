@@ -5,6 +5,7 @@
 #ifndef LIB_MESH_SIMPL_PRE_PROC_HPP
 #define LIB_MESH_SIMPL_PRE_PROC_HPP
 
+#include "marker.hpp"
 #include "types.hpp"
 #include <map>
 
@@ -15,9 +16,8 @@ void weight_quadric(Quadric& quadric, double face_area, WEIGHTING strategy);
 
 // Compute quadrics Q for every vertex
 // Output `quadrics`: one quadric for each vertex
-void compute_quadrics(const V& vertices, Internal::Connectivity& conn, Q& quadrics,
-                      const std::vector<bool>& deleted_face,
-                      const SimplifyOptions& options);
+void compute_quadrics(const V& vertices, Internal::Connectivity& conn,
+                      Q& quadrics, const SimplifyOptions& options);
 
 // Build connectivity from `conn.indices`
 // Output `conn.edges`: list of `Edge`

@@ -7,15 +7,14 @@
 namespace MeshSimpl {
 namespace Internal {
 
-void compact_data(const std::vector<bool>& deleted_vertex,
-                  const std::vector<bool>& deleted_face, V& vertices, F& indices) {
+void compact_data(V& vertices, F& indices, const Marker& marker) {
     std::vector<std::array<std::vector<idx>, 3>> vertex2face(vertices.size());
 
     // get rid of all deleted faces
     for (size_t lo = 0, hi = indices.size() - 1;; ++lo, --hi) {
-        while (!deleted_face[lo] && lo <= hi)
+        while (marker.exist_f(lo) && lo <= hi)
             ++lo;
-        while (deleted_face[hi] && lo < hi)
+        while (!marker.exist_f(hi) && lo < hi)
             --hi;
         if (lo >= hi) {
             indices.resize(lo);
@@ -31,9 +30,9 @@ void compact_data(const std::vector<bool>& deleted_vertex,
 
     // get rid of deleted vertices and keep the mapping valid
     for (size_t lo = 0, hi = vertices.size() - 1;; ++lo, --hi) {
-        while (!deleted_vertex[lo] && lo <= hi)
+        while (marker.exist_v(lo) && lo <= hi)
             ++lo;
-        while (deleted_vertex[hi] && lo < hi)
+        while (!marker.exist_v(hi) && lo < hi)
             --hi;
         if (lo >= hi) {
             vertices.resize(lo);

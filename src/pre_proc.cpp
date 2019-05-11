@@ -4,6 +4,7 @@
 
 #include "pre_proc.hpp"
 #include "edge.hpp"
+#include "marker.hpp"
 #include "util.hpp"
 #include <algorithm>
 #include <limits>
@@ -31,17 +32,12 @@ void weight_quadric(Quadric& quadric, double face_area, WEIGHTING strategy) {
     }
 }
 
-void compute_quadrics(const V& vertices, Internal::Connectivity& conn, Q& quadrics,
-                      const std::vector<bool>& deleted_face,
-                      const SimplifyOptions& options) {
+void compute_quadrics(const V& vertices, Internal::Connectivity& conn,
+                      Q& quadrics, const SimplifyOptions& options) {
     // quadrics are initialized with all zeros
     quadrics.resize(vertices.size());
 
-    for (idx f = 0; f < conn.indices.size(); ++f) {
-        if (deleted_face[f])
-            continue;
-
-        const auto& face = conn.indices[f];
+    for (const auto& face : conn.indices) {
         // calculate the plane of this face (n and d: n'v+d=0 defines the plane)
         const vec3d edge01 = vertices[face[1]] - vertices[face[0]];
         const vec3d edge02 = vertices[face[2]] - vertices[face[0]];
@@ -66,9 +62,6 @@ void compute_quadrics(const V& vertices, Internal::Connectivity& conn, Q& quadri
 
     if (!options.fix_boundary) {
         for (idx f = 0; f < conn.indices.size(); ++f) {
-            if (deleted_face[f])
-                continue;
-
             order k;
             for (k = 0; k < 3; ++k)
                 if (conn.edge_of_face(f, k).on_boundary())
@@ -147,7 +140,8 @@ void construct_edges(const V& vertices, Internal::Connectivity& conn) {
             edge.ord_in_faces[0] = k;
             edge.ord_in_faces[1] = Edge::INVALID;
             edge.boundary_v = Edge::BOTH;
-            auto it_and_inserted = edge_set.emplace(std::make_pair(v0, v1), edge);
+            auto it_and_inserted =
+                edge_set.emplace(std::make_pair(v0, v1), edge);
             auto it = it_and_inserted.first;
 
             if (!it_and_inserted.second) {
@@ -190,7 +184,8 @@ void construct_edges(const V& vertices, Internal::Connectivity& conn) {
     for (auto& edge : conn.edges) {
         if (edge.boundary_v == Edge::BOTH)
             continue;
-        if (vertex_on_boundary[edge.vertices[0]] && vertex_on_boundary[edge.vertices[1]])
+        if (vertex_on_boundary[edge.vertices[0]] &&
+            vertex_on_boundary[edge.vertices[1]])
             edge.boundary_v = Edge::BOTH;
         else if (vertex_on_boundary[edge.vertices[0]])
             edge.boundary_v = Edge::V0;

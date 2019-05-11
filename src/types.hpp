@@ -11,13 +11,13 @@
 
 namespace MeshSimpl {
 
-typedef unsigned int idx;                   // edge, vertex, face index
-typedef char order;                         // edge/vertex local order to face; [0, 3)
-typedef std::array<double, 3> vec3d;        // double
-typedef std::array<idx, 3> vec3i;           // idx
-typedef std::array<idx, 2> vec2i;           // idx
-typedef std::vector<std::vector<double>> V; // input/output vertex positions
-typedef std::vector<std::vector<idx>> F;    // input/output face indices
+typedef unsigned int idx;            // edge, vertex, face index
+typedef char order;                  // edge/vertex local order to face; [0, 3)
+typedef std::array<double, 3> vec3d; // double
+typedef std::array<idx, 3> vec3i;    // idx
+typedef std::array<idx, 2> vec2i;    // idx
+typedef std::vector<vec3d> V;        // input/output vertex positions
+typedef std::vector<vec3i> F;        // input/output face indices
 
 enum WEIGHTING { UNIFORM, BY_AREA, BY_AREA_INV };
 

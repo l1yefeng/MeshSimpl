@@ -17,7 +17,9 @@ struct Connectivity {
     F2E face2edge;
 
     Edge& edge_of_face(idx f, order k) { return edges[face2edge[f][k]]; }
-    Edge const& edge_of_face(idx f, order k) const { return edges[face2edge[f][k]]; }
+    Edge const& edge_of_face(idx f, order k) const {
+        return edges[face2edge[f][k]];
+    }
 
     order v_ord_in_face(idx f, idx v) const {
         assert(indices[f][0] == v || indices[f][1] == v || indices[f][2] == v);
