@@ -46,10 +46,10 @@ class Neighbor {
     const idx prev_center = conn.indices[face][center()];
 
     const order ford = curr_edge.f_order(face);
-    const idx next_face = curr_edge.faces[1 - ford];
+    const idx next_face = curr_edge.face(1 - ford);
     assert(face != next_face);
     face = next_face;
-    vj = curr_edge.ord_in_faces[1 - ford];
+    vj = curr_edge.ord_in_face(1 - ford);
     vi = get_i_from_j(vj);
 
     assert(conn.indices[face][center()] == prev_center);

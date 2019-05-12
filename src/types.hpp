@@ -66,7 +66,7 @@ namespace Internal {
 typedef std::array<double, 10> Quadric;
 
 // Defined in edge.hpp
-struct Edge;
+class Edge;
 
 // Defined in connectivity.hpp
 struct Connectivity;

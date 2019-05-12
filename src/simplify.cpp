@@ -22,23 +22,23 @@ void options_validation(const SimplifyOptions& options) {
 
 bool is_valid_edge_target(const Edge& edge, const Marker& marker,
                           bool fix_boundary) {
-  assert(edge.vertices[0] != edge.vertices[1]);
-  assert(marker.exist_v(edge.vertices[0]) && marker.exist_v(edge.vertices[1]));
+  assert(edge[0] != edge[1]);
+  assert(marker.exist_v(edge[0]) && marker.exist_v(edge[1]));
   if (fix_boundary) {
-    assert(edge.boundary_v != Edge::BOTH);
+    assert(!edge.both_v_on_border());
   }
 
   if (edge.on_boundary()) {
-    assert(marker.exist_f(edge.faces[0]));
-    assert(edge.boundary_v == Edge::BOTH);
+    assert(marker.exist_f(edge.face(0)));
+    assert(edge.both_v_on_border());
   } else {
-    assert(edge.faces[0] != edge.faces[1]);
-    assert(marker.exist_f(edge.faces[0]) && marker.exist_f(edge.faces[1]));
+    assert(edge.face(0) != edge.face(1));
+    assert(marker.exist_f(edge.face(0)) && marker.exist_f(edge.face(1)));
   }
   return true;
 }
 
-bool simplify(TriMesh& mesh, const SimplifyOptions& options) {
+void simplify(TriMesh& mesh, const SimplifyOptions& options) {
   options_validation(options);
 
   const size_t NV = mesh.vertices.size();
@@ -48,7 +48,7 @@ bool simplify(TriMesh& mesh, const SimplifyOptions& options) {
   auto& vertices = mesh.vertices;
   auto& indices = mesh.indices;
 
-  if (nv_to_decimate == 0) return true;
+  if (nv_to_decimate == 0) return;
 
   // keeps a reference to indices and init face2edge and edges
   Connectivity conn{indices, {}, {}};
@@ -65,7 +65,8 @@ bool simplify(TriMesh& mesh, const SimplifyOptions& options) {
   compute_quadrics(vertices, conn, quadrics, options);
 
   // [3] assigning edge errors using quadrics
-  compute_errors(vertices, quadrics, conn.edges, options.fix_boundary);
+  for (auto& edge : conn.edges)
+    edge.plan_collapse(vertices, quadrics, options.fix_boundary);
 
   // [4] create priority queue on quadric error
   QEMHeap heap(conn.edges, !options.fix_boundary);
@@ -75,29 +76,31 @@ bool simplify(TriMesh& mesh, const SimplifyOptions& options) {
     // target the least-error edge, if it is what we saw last iteration,
     // it means loop should stop because all remaining edges have been penalized
     const idx target = heap.top();
-    if (conn.edges[target].error >= std::numeric_limits<double>::max()) break;
+    if (conn.edges[target].col_error() >= std::numeric_limits<double>::max())
+      break;
 
     const auto& edge = conn.edges[target];
 
     assert(is_valid_edge_target(edge, marker, options.fix_boundary));
 
     // [5] collapse the least-error edge until mesh is simplified enough
+    order del_ord = edge.v_del_order();
     bool collapsed =
-        edge_collapse(vertices, conn, quadrics, heap, target, options);
+        edge_collapse(vertices, conn, quadrics, heap, target, del_ord, options);
     if (!collapsed) continue;
 
     // mark adjacent faces deleted
-    marker.mark_f(edge.faces[0]);
-    if (edge.boundary_v != Edge::BOTH)
-      marker.mark_f(edge.faces[1]);
+    marker.mark_f(edge.face(0));
+    if (!edge.both_v_on_border())
+      marker.mark_f(edge.face(1));
     else
       assert(edge.on_boundary());
 
     // mark one (chosen) endpoint deleted
-    marker.mark_v(edge.vertices[edge.v_del_order()]);
+    marker.mark_v(edge[del_ord]);
 
-    // of course there might be edges deleted,
-    // they must have been removed from heap during `edge_collapse`
+    // of course there might have been edges deleted,
+    // they were removed from heap during `edge_collapse`
 
     --nv;
   }
@@ -105,8 +108,6 @@ bool simplify(TriMesh& mesh, const SimplifyOptions& options) {
   // edges are pointless from this point on, but need to fix vertices and
   // indices
   compact_data(vertices, indices, marker);
-
-  return true;
 }
 
 }  // namespace MeshSimpl

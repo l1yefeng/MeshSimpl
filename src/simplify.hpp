@@ -11,7 +11,7 @@ namespace MeshSimpl {
 
 void options_validation(const SimplifyOptions& options);
 
-bool simplify(TriMesh& mesh, const SimplifyOptions& options = {});
+void simplify(TriMesh& mesh, const SimplifyOptions& options = {});
 
 // Mesh simplification main method.
 bool simplify(const TriMesh& input, TriMesh& output,

@@ -31,8 +31,8 @@ void weight_quadric(Quadric& quadric, double face_area, WEIGHTING strategy) {
   }
 }
 
-void compute_quadrics(const V& vertices, Internal::Connectivity& conn,
-                      Q& quadrics, const SimplifyOptions& options) {
+void compute_quadrics(const V& vertices, Connectivity& conn, Q& quadrics,
+                      const SimplifyOptions& options) {
   // quadrics are initialized with all zeros
   quadrics.resize(vertices.size());
 
@@ -98,7 +98,7 @@ bool edge_topo_correctness(const Connectivity& conn) {
   for (idx f = 0; f < conn.indices.size(); ++f) {
     const auto& f2e = conn.face2edge[f];
     for (order i = 0; i < 3; ++i) {
-      auto vv = conn.edges[f2e[i]].vertices;
+      auto& vv = conn.edges[f2e[i]].vertices();
       assert(vv[0] < vv[1]);
       idx v_smaller = conn.indices[f][(i + 1) % 3];
       idx v_larger = conn.indices[f][(i + 2) % 3];
@@ -126,26 +126,16 @@ void construct_edges(const V& vertices, Internal::Connectivity& conn) {
       idx v0 = face[i];
       idx v1 = face[j];
       if (v0 > v1) std::swap(v0, v1);
-      Edge edge{};
-      edge.vertices[0] = v0;
-      edge.vertices[1] = v1;
-      edge.faces[0] = f;
-      edge.ord_in_faces[0] = k;
-      edge.ord_in_faces[1] = Edge::INVALID;
-      edge.boundary_v = Edge::BOTH;
+      Edge edge(v0, v1);
+      edge.attach_1st_face(f, k);
       auto it_and_inserted = edge_set.emplace(std::make_pair(v0, v1), edge);
       auto it = it_and_inserted.first;
 
       if (!it_and_inserted.second) {
-        auto& curr_edge = it->second;
-        if (curr_edge.boundary_v == Edge::NEITHER) {
-          // add to face list
+        if (!it->second.attach_2nd_face(f, k)) {
           throw std::invalid_argument(
               "ERROR::INPUT_MESH: detected non-manifold edge");
         }
-        curr_edge.boundary_v = Edge::NEITHER;
-        curr_edge.faces[1] = f;
-        curr_edge.ord_in_faces[1] = k;
       }
     }
   }
@@ -157,31 +147,24 @@ void construct_edges(const V& vertices, Internal::Connectivity& conn) {
   conn.face2edge.resize(conn.indices.size());
   std::vector<bool> vertex_on_boundary(vertices.size(), false);
 
-  for (idx i = 0; i < conn.edges.size(); ++i) {
-    const auto& edge = conn.edges[i];
+  for (idx e = 0; e < conn.edges.size(); ++e) {
+    const auto& edge = conn.edges[e];
     // identify boundary vertices
-    if (edge.boundary_v == Edge::BOTH) {
-      vertex_on_boundary[edge.vertices[0]] = true;
-      vertex_on_boundary[edge.vertices[1]] = true;
+    if (edge.both_v_on_border()) {
+      vertex_on_boundary[edge[0]] = true;
+      vertex_on_boundary[edge[1]] = true;
     }
 
     // populate face2edge references
-    conn.face2edge[edge.faces[0]][edge.ord_in_faces[0]] = i;
-    if (edge.boundary_v != Edge::BOTH)
-      conn.face2edge[edge.faces[1]][edge.ord_in_faces[1]] = i;
+    conn.face2edge[edge.face(0)][edge.ord_in_face(0)] = e;
+    if (!edge.both_v_on_border())
+      conn.face2edge[edge.face(1)][edge.ord_in_face(1)] = e;
   }
 
   // non-boundary edges may have one vertex on boundary, find them in this loop
   for (auto& edge : conn.edges) {
-    if (edge.boundary_v == Edge::BOTH) continue;
-    if (vertex_on_boundary[edge.vertices[0]] &&
-        vertex_on_boundary[edge.vertices[1]])
-      edge.boundary_v = Edge::BOTH;
-    else if (vertex_on_boundary[edge.vertices[0]])
-      edge.boundary_v = Edge::V0;
-    else if (vertex_on_boundary[edge.vertices[1]])
-      edge.boundary_v = Edge::V1;
-    // else totally within the boundary
+    edge.set_v_on_border(vertex_on_boundary[edge[0]],
+                         vertex_on_boundary[edge[1]]);
   }
 
   assert(edge_topo_correctness(conn));

@@ -13,7 +13,7 @@ namespace Internal {
 QEMHeap::QEMHeap(E& edges, bool include_boundary)
     : keys(edges.size() + 1), edges(edges), handles(edges.size()), n(0) {
   for (idx i = 0; i < edges.size(); ++i)
-    if (include_boundary || (edges[i].boundary_v != Edge::BOTH))
+    if (include_boundary || !edges[i].both_v_on_border())
       keys[handles[i] = ++n] = i;
 
   keys.resize(n + 1);
@@ -30,24 +30,24 @@ void QEMHeap::pop() {
 void QEMHeap::fix(const Edge* ptr, double error_prev) {
   auto e = static_cast<idx>(ptr - edges.data());
   size_t k = handles[e];
-  if (ptr->error > error_prev)
+  if (ptr->col_error() > error_prev)
     sink(k);
   else
     swim(k);
 }
 
 void QEMHeap::penalize(idx e) {
-  edges[e].error = std::numeric_limits<double>::max();
+  edges[e].set_infty_error();
   sink(handles[e]);
 }
 
 void QEMHeap::erase(idx e) {
-  const double error_prev = edges[e].error;
+  const double error_prev = edges[e].col_error();
   size_t k = handles[e];
   assert(k < n + 1 && k >= 1);  // check existence in heap
 
   exchange(k, n--);
-  if (edges[keys[k]].error > error_prev)
+  if (edges[keys[k]].col_error() > error_prev)
     sink(k);
   else
     swim(k);

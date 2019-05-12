@@ -56,9 +56,9 @@ class QEMHeap {
 
   // Compare function: larger error --> lower priority
   bool greater(size_t i, size_t j) const {
-    assert(!std::isnan(edges[keys[i]].error));
-    assert(!std::isnan(edges[keys[j]].error));
-    return edges[keys[i]].error > edges[keys[j]].error;
+    assert(!std::isnan(edges[keys[i]].col_error()));
+    assert(!std::isnan(edges[keys[j]].col_error()));
+    return edges[keys[i]].col_error() > edges[keys[j]].col_error();
   }
 
   // Helper function: the sole function that modifies handles and keys data

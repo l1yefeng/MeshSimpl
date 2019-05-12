@@ -7,6 +7,7 @@ add_library(${PROJECT_NAME}
         connectivity.hpp
         ecol.cpp
         ecol.hpp
+        edge.cpp
         edge.hpp
         marker.hpp
         neighbor.hpp
