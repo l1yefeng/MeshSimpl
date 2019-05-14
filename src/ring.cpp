@@ -66,12 +66,14 @@ void InteriorRing::collect() {
     nb.rotate(faces);
     v_kept_neighbor_edges.push_back(faces[nb.f()].edge(nb.j()));
     v_kept_twins.push_back(faces[nb.f()][nb.i()]);
+
+    // this face is deleted thus unnecessary to check fold-over if f == f0
     if (nb.f() == f0) {
       // while-loop breaks here if there is no business of boundary
       assert(!boundary_hit);
       break;
     }
-    // this face is deleted thus unnecessary to check fold-over if f == f0
+
     v_kept_neighbors.push_back(nb);
   }
 }
@@ -178,7 +180,7 @@ bool BoundaryRing::check_env() {
   return true;
 }
 
-void BoundaryRing::collapse(Q &quadrics, QEMHeap &heap, bool fix_boundary) {
+void BoundaryRing::collapse(Q &quadrics, QEMHeap &heap, bool) {
   const idx f = edge.face(0);
 
   // update vertex position and quadric
