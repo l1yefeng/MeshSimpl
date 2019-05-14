@@ -2,8 +2,8 @@
 // Created by nickl on 1/8/19.
 //
 
-#ifndef LIB_MESH_SIMPL_POST_PROC_HPP
-#define LIB_MESH_SIMPL_POST_PROC_HPP
+#ifndef MESH_SIMPL_POST_PROC_HPP
+#define MESH_SIMPL_POST_PROC_HPP
 
 #include "marker.hpp"
 #include "types.hpp"
@@ -13,9 +13,10 @@ namespace Internal {
 
 // Remove the vertices and indices that are marked deleted, and reduce the
 // vector size
-void compact_data(V& vertices, F& indices, const Marker& marker);
+void compact_data(V &vertices, std::vector<vec3i> &indices,
+                  const Marker &marker);
 
 }  // namespace Internal
 }  // namespace MeshSimpl
 
-#endif  // LIB_MESH_SIMPL_POST_PROC_HPP
+#endif  // MESH_SIMPL_POST_PROC_HPP

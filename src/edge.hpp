@@ -2,10 +2,9 @@
 // Created by nickl on 03/20/19.
 //
 
-#ifndef LIB_MESH_SIMPL_EDGE_HPP
-#define LIB_MESH_SIMPL_EDGE_HPP
+#ifndef MESH_SIMPL_EDGE_HPP
+#define MESH_SIMPL_EDGE_HPP
 
-#include <array>
 #include <cassert>
 #include <limits>
 #include "types.hpp"
@@ -77,13 +76,13 @@ class Edge {
   //
 
   // Returns the collapse center of next collapse
-  const vec3d& col_center() const { return center; }
+  const vec3d &col_center() const { return center; }
 
   // Returns the error value made of next collapse
   double col_error() const { return error; }
 
   // Returns the sum of quadrics of two endpoints
-  const Quadric& col_q() const { return q; }
+  const Quadric &col_q() const { return q; }
 
   bool both_v_on_border() const { return v_on_border[0] && v_on_border[1]; }
 
@@ -113,7 +112,7 @@ class Edge {
   // Returns the order of endpoint v on this edge
   order v_order(idx v) const {
     assert(vv[0] == v || vv[1] == v);
-    return ff[0] == v ? 0 : 1;
+    return vv[0] == v ? 0 : 1;
   }
 
   // Returns the order of the endpoint next collapse should delete.
@@ -122,9 +121,9 @@ class Edge {
   // vertex (the center)
   order v_del_order() const { return v_on_border[0] ? 1 : 0; }
 
-  const vec2i& faces() const { return ff; }
+  const vec2i &faces() const { return ff; }
 
-  const vec2i& vertices() const { return vv; }
+  const vec2i &vertices() const { return vv; }
 
   idx operator[](order ord) const { return vv[ord]; }
 
@@ -137,7 +136,7 @@ class Edge {
   //  - what is current sum of endpoints quadrics
   //  - which position to collapse into (center)
   //  - what will be the error
-  void plan_collapse(const V& vertices, const Q& quadrics, bool fix_boundary);
+  void plan_collapse(const V &vertices, const Q &quadrics, bool fix_boundary);
 
   void set_infty_error() { error = std::numeric_limits<double>::max(); }
 
@@ -156,4 +155,4 @@ class Edge {
 }  // namespace Internal
 }  // namespace MeshSimpl
 
-#endif  // LIB_MESH_SIMPL_EDGE_HPP
+#endif  // MESH_SIMPL_EDGE_HPP

@@ -29,7 +29,7 @@ void Edge::set_v_on_border(bool v0_on_border, bool v1_on_border) {
   v_on_border[1] = v1_on_border;
 }
 
-void Edge::plan_collapse(const V& vertices, const Q& quadrics,
+void Edge::plan_collapse(const V &vertices, const Q &quadrics,
                          bool fix_boundary) {
   q = quadrics[vv[0]] + quadrics[vv[1]];
 
@@ -105,4 +105,4 @@ void Edge::replace_f(idx prev_f, idx new_f, order new_ord_in_face) {
 }
 
 }  // namespace Internal
-}
+}  // namespace MeshSimpl

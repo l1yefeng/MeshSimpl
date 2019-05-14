@@ -3,14 +3,12 @@
 //
 
 #include "qem_heap.hpp"
-#include <cassert>
-#include <limits>
-#include "ecol.hpp"
+#include "edge.hpp"
 
 namespace MeshSimpl {
 namespace Internal {
 
-QEMHeap::QEMHeap(E& edges, bool include_boundary)
+QEMHeap::QEMHeap(E &edges, bool include_boundary)
     : keys(edges.size() + 1), edges(edges), handles(edges.size()), n(0) {
   for (idx i = 0; i < edges.size(); ++i)
     if (include_boundary || !edges[i].both_v_on_border())
@@ -27,7 +25,7 @@ void QEMHeap::pop() {
   keys.resize(n + 1);
 }
 
-void QEMHeap::fix(const Edge* ptr, double error_prev) {
+void QEMHeap::fix(const Edge *ptr, double error_prev) {
   auto e = static_cast<idx>(ptr - edges.data());
   size_t k = handles[e];
   if (ptr->col_error() > error_prev)
@@ -36,12 +34,14 @@ void QEMHeap::fix(const Edge* ptr, double error_prev) {
     swim(k);
 }
 
-void QEMHeap::penalize(idx e) {
-  edges[e].set_infty_error();
-  sink(handles[e]);
+void QEMHeap::penalize(Edge *edge) {
+  edge->set_infty_error();
+  sink(handles[edge - edges.data()]);
 }
 
-void QEMHeap::erase(idx e) {
+void QEMHeap::erase(const Edge *ptr) {
+  idx e = ptr - edges.data();
+
   const double error_prev = edges[e].col_error();
   size_t k = handles[e];
   assert(k < n + 1 && k >= 1);  // check existence in heap
@@ -52,6 +52,12 @@ void QEMHeap::erase(idx e) {
   else
     swim(k);
   keys.resize(n + 1);
+}
+
+bool QEMHeap::greater(size_t i, size_t j) const {
+  assert(!std::isnan(edges[keys[i]].col_error()));
+  assert(!std::isnan(edges[keys[j]].col_error()));
+  return edges[keys[i]].col_error() > edges[keys[j]].col_error();
 }
 
 void QEMHeap::exchange(size_t i, size_t j) {

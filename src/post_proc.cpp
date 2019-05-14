@@ -7,7 +7,8 @@
 namespace MeshSimpl {
 namespace Internal {
 
-void compact_data(V& vertices, F& indices, const Marker& marker) {
+void compact_data(V &vertices, std::vector<vec3i> &indices,
+                  const Marker &marker) {
   std::vector<std::array<std::vector<idx>, 3>> vertex2face(vertices.size());
 
   // get rid of all deleted faces

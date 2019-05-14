@@ -2,8 +2,8 @@
 // Created by nickl on 5/10/19.
 //
 
-#ifndef LIB_MESH_SIMPL_MARKER_HPP
-#define LIB_MESH_SIMPL_MARKER_HPP
+#ifndef MESH_SIMPL_MARKER_HPP
+#define MESH_SIMPL_MARKER_HPP
 
 #include <cassert>
 #include "types.hpp"
@@ -20,21 +20,26 @@ class Marker {
  public:
   Marker(size_t vertex_cnt, size_t face_cnt)
       : vertices(vertex_cnt, true), faces(face_cnt, false) {}
+
   bool exist_f(idx f) const { return !faces[f]; }
+
   bool exist_v(idx v) const { return !vertices[v]; }
+
   void mark_v(idx v) {
     assert(!vertices[v]);
     vertices[v] = true;
   }
+
   void mark_f(idx f) {
     assert(!faces[f]);
     faces[f] = true;
   }
-  void mark_unref_v(const F& indices) {
+
+  void mark_unref_v(const std::vector<vec3i> &indices) {
     for (idx f = 0; f < indices.size(); ++f) {
       if (!faces[f]) {
-        const auto& face = indices[f];
-        for (idx v : face) vertices[v] = false;
+        const auto &vvv = indices[f];
+        for (idx v : vvv) vertices[v] = false;
       }
     }
   }
@@ -43,4 +48,4 @@ class Marker {
 }  // namespace Internal
 }  // namespace MeshSimpl
 
-#endif  // LIB_MESH_SIMPL_MARKER_HPP
+#endif  // MESH_SIMPL_MARKER_HPP

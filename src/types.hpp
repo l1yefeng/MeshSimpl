@@ -2,8 +2,8 @@
 // Created by nickl on 01/08/19.
 //
 
-#ifndef LIB_MESH_SIMPL_TYPES_HPP
-#define LIB_MESH_SIMPL_TYPES_HPP
+#ifndef MESH_SIMPL_TYPES_HPP
+#define MESH_SIMPL_TYPES_HPP
 
 #include <array>
 #include <cmath>
@@ -17,19 +17,13 @@ typedef std::array<double, 3> vec3d;  // double
 typedef std::array<idx, 3> vec3i;     // idx
 typedef std::array<idx, 2> vec2i;     // idx
 typedef std::vector<vec3d> V;         // input/output vertex positions
-typedef std::vector<vec3i> F;         // input/output face indices
 
 enum WEIGHTING { UNIFORM, BY_AREA, BY_AREA_INV };
-
-struct TriMesh {
-  V vertices;
-  F indices;
-};
 
 struct SimplifyOptions {
   // simplifies until vertex count is 1-strength of the original,
   // only accept value in range [0, 1)
-  float strength = 0.5f;
+  float strength = 0.0f;
 
   // weight the quadrics by triangle area, i.e., Q becomes Q * weight
   // a larger weight makes the computed error larger thus "later" to modify
@@ -68,15 +62,15 @@ typedef std::array<double, 10> Quadric;
 // Defined in edge.hpp
 class Edge;
 
-// Defined in connectivity.hpp
-struct Connectivity;
+// Defined in face.hpp
+class Face;
 
 typedef std::vector<Edge> E;
 typedef std::vector<Quadric> Q;
-typedef std::vector<vec3i> F2E;
+typedef std::vector<Face> F;
 
 }  // namespace Internal
 
 }  // namespace MeshSimpl
 
-#endif  // LIB_MESH_SIMPL_TYPES_HPP
+#endif  // MESH_SIMPL_TYPES_HPP

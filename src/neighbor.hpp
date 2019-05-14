@@ -2,11 +2,11 @@
 // Created by nickl on 3/13/19.
 //
 
-#ifndef LIB_MESH_SIMPL_NEIGHBOR_HPP
-#define LIB_MESH_SIMPL_NEIGHBOR_HPP
+#ifndef MESH_SIMPL_NEIGHBOR_HPP
+#define MESH_SIMPL_NEIGHBOR_HPP
 
-#include "connectivity.hpp"
 #include "edge.hpp"
+#include "face.hpp"
 #include "types.hpp"
 
 namespace MeshSimpl {
@@ -34,29 +34,33 @@ class Neighbor {
  public:
   Neighbor(idx face, order vj, bool ccw)
       : face(face), ccw(ccw), vi(get_i_from_j(vj)), vj(vj) {}
+
   idx f() const { return face; }
+
   order i() const { return vi; }
+
   order j() const { return vj; }
+
   order center() const { return 3 - vi - vj; }
 
-  void rotate(const Connectivity& conn) {
-    const auto& curr_edge = conn.edge_of_face(face, vi);
-    assert(!curr_edge.on_boundary());
+  void rotate(const F &faces) {
+    const Edge *curr_edge = faces[face].edge(vi);
+    assert(!curr_edge->on_boundary());
 
-    const idx prev_center = conn.indices[face][center()];
+    const idx prev_center = faces[face][center()];
 
-    const order ford = curr_edge.f_order(face);
-    const idx next_face = curr_edge.face(1 - ford);
+    const order ford = curr_edge->f_order(face);
+    const idx next_face = curr_edge->face(1 - ford);
     assert(face != next_face);
     face = next_face;
-    vj = curr_edge.ord_in_face(1 - ford);
+    vj = curr_edge->ord_in_face(1 - ford);
     vi = get_i_from_j(vj);
 
-    assert(conn.indices[face][center()] == prev_center);
+    assert(faces[face][center()] == prev_center);
   }
 };
 
 }  // namespace Internal
 }  // namespace MeshSimpl
 
-#endif  // LIB_MESH_SIMPL_NEIGHBOR_HPP
+#endif  // MESH_SIMPL_NEIGHBOR_HPP
