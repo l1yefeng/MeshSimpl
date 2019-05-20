@@ -9,28 +9,28 @@ namespace MeshSimpl {
 namespace Internal {
 
 bool Ring::check_geom(double foldover_angle) const {
-  for (const auto &nb_del : v_del_neighbors) {
-    if (face_fold_over(vertices, faces, nb_del, v_del, edge.col_center(),
-                       foldover_angle))
+  for (const auto &nb : v_del_neighbors) {
+    if (is_face_folded(vertices, faces, nb.f(faces), nb.center(),
+                       edge.col_center(), foldover_angle))
       return false;
   }
-  for (const auto &nb_kept : v_kept_neighbors) {
-    if (face_fold_over(vertices, faces, nb_kept, v_kept, edge.col_center(),
-                       foldover_angle))
+  for (const auto &nb : v_kept_neighbors) {
+    if (is_face_folded(vertices, faces, nb.f(faces), nb.center(),
+                       edge.col_center(), foldover_angle))
       return false;
   }
   return true;
 }
 
 bool Ring::check_quality(double aspect_ratio) const {
-  for (const auto &nb_del : v_del_neighbors) {
-    if (extremely_elongated(vertices, faces, nb_del, edge.col_center(),
-                            aspect_ratio))
+  for (const auto &nb : v_del_neighbors) {
+    if (is_face_elongated(vertices[v_del], vertices[nb.first_v(faces)],
+                          vertices[nb.second_v(faces)], aspect_ratio))
       return false;
   }
-  for (const auto &nb_kept : v_del_neighbors) {
-    if (extremely_elongated(vertices, faces, nb_kept, edge.col_center(),
-                            aspect_ratio))
+  for (const auto &nb : v_del_neighbors) {
+    if (is_face_elongated(vertices[v_kept], vertices[nb.first_v(faces)],
+                          vertices[nb.second_v(faces)], aspect_ratio))
       return false;
   }
   return true;

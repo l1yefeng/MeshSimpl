@@ -61,6 +61,10 @@ inline double q_error(const Quadric &q, const vec3d &v) {
          dot({q[6], q[7], q[8]}, v) * 2 + q[9];
 }
 
+inline order next(order ord) { return (ord + 1) % 3; }
+
+inline order prev(order ord) { return (ord + 2) % 3; }
+
 bool sort_and_find_intersection(std::vector<idx> &values0,
                                 std::vector<idx> &values1);
 

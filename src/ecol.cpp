@@ -23,34 +23,34 @@ void update_error_and_center(const V &vertices, const Q &quadrics,
   }
 }
 
-bool face_fold_over(const V &vertices, const F &faces, const Neighbor &nb,
-                    idx v_move, const vec3d &move_to, double angle) {
-  assert(v_move == faces[nb.f()][nb.center()]);
-  const idx vi = faces[nb.f()][nb.i()];
-  const idx vj = faces[nb.f()][nb.j()];
-  const vec3d e0 = vertices[vj] - vertices[vi];
-  const vec3d e1_prev = vertices[v_move] - vertices[vj];
-  const vec3d e1_new = move_to - vertices[vj];
-  vec3d normal_prev = cross(e0, e1_prev);
-  double normal_prev_mag = magnitude(normal_prev);
-  vec3d normal_new = cross(e0, e1_new);
-  double normal_new_mag = magnitude(normal_new);
-  if (normal_new_mag == 0) return true;
-  normal_prev /= normal_prev_mag;
-  normal_new /= normal_new_mag;
-  double cos = dot(normal_prev, normal_new);
+bool is_face_folded(const V &vertices, const F &faces, const Face &face,
+                    order moved, const vec3d &position, double angle) {
+  const idx vk = face[moved];
+  const idx vi = face[next(moved)];
+  const idx vj = face[prev(moved)];
+  const vec3d vec_ij = vertices[vj] - vertices[vi];
+  const vec3d vec_jk_prv = vertices[vk] - vertices[vj];
+  const vec3d vec_jk_new = position - vertices[vj];
+  vec3d normal_prv = cross(vec_ij, vec_jk_prv);
+  double mag_prv = magnitude(normal_prv);
+  assert(mag_prv != 0);
+  vec3d normal_new = cross(vec_ij, vec_jk_new);
+  double mag_new = magnitude(normal_new);
+  if (mag_new == 0) return true;
+  normal_prv /= mag_prv;
+  normal_new /= mag_new;
+  double cos = dot(normal_prv, normal_new);
   return cos < angle;
 }
 
-bool extremely_elongated(const V &vertices, const F &faces, const Neighbor &nb,
-                         const vec3d &center_pos, double ratio) {
-  const vec3d edge_ij =
-      vertices[faces[nb.f()][nb.j()]] - vertices[faces[nb.f()][nb.i()]];
-  const vec3d edge_ik = center_pos - vertices[faces[nb.f()][nb.i()]];
-  const vec3d edge_jk = center_pos - vertices[faces[nb.f()][nb.j()]];
-  const double a = magnitude(edge_ij);
-  const double b = magnitude(edge_ik);
-  const double c = magnitude(edge_jk);
+bool is_face_elongated(const vec3d &pos0, const vec3d &pos1, const vec3d &pos2,
+                       double ratio) {
+  const vec3d vec01 = pos1 - pos0;
+  const vec3d vec02 = pos2 - pos0;
+  const vec3d vec12 = pos2 - pos1;
+  const double a = magnitude(vec01);
+  const double b = magnitude(vec12);
+  const double c = magnitude(vec02);
   const double s = (a + b + c) / 2.0;
   const double aspect_ratio = 8.0 * (s - a) * (s - b) * (s - c) / (a * b * c);
   return aspect_ratio < ratio;

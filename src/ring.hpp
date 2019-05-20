@@ -18,7 +18,7 @@ namespace Internal {
 class Ring {
  private:
   bool ccw_when_collect() const {
-    return edge.ord_in_face(0) != (faces[edge.face(0)].v_order(v_del) + 1) % 3;
+    return edge.ord_in_face(0) != next(faces[edge.face(0)].v_order(v_del));
   }
 
  protected:

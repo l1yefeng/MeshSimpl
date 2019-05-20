@@ -80,13 +80,13 @@ void compute_quadrics(const V &vertices, Q &quadrics, F &faces, E &edges,
         else
           continue;
 
-        const double d = -dot(normal, vertices[face[(k + 1) % 3]]);
+        const double d = -dot(normal, vertices[face[next(k)]]);
         Quadric q = make_quadric(normal, d);
         q *= options.border_constraint;
         weight_quadric(q, magnitude(n_face), options.weighting);
 
-        quadrics[face[(k + 1) % 3]] += q;
-        quadrics[face[(k + 2) % 3]] += q;
+        quadrics[face[next(k)]] += q;
+        quadrics[face[prev(k)]] += q;
       }
     }
   }
@@ -97,8 +97,8 @@ bool edge_topo_correctness(const F &faces, const E &edges) {
     for (order ord = 0; ord < 3; ++ord) {
       auto &vv = face.edge(ord)->vertices();
       assert(vv[0] < vv[1]);
-      idx v_smaller = face[(ord + 1) % 3];
-      idx v_larger = face[(ord + 2) % 3];
+      idx v_smaller = face[next(ord)];
+      idx v_larger = face[prev(ord)];
       if (v_smaller > v_larger) std::swap(v_smaller, v_larger);
 
       // edge vertices should match face corners
@@ -118,8 +118,8 @@ void construct_edges(const V &vertices, F &faces, E &edges) {
     for (order k = 0; k < 3; ++k) {
       // construct edge (v[i], v[j]);
       // edge local index will be k (= that of the 3rd vertex)
-      const order i = (k + 1) % 3;
-      const order j = (k + 2) % 3;
+      const order i = next(k);
+      const order j = prev(k);
       idx v0 = face[i];
       idx v1 = face[j];
       if (v0 > v1) std::swap(v0, v1);

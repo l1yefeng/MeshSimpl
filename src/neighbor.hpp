@@ -7,7 +7,7 @@
 
 #include "edge.hpp"
 #include "face.hpp"
-#include "types.hpp"
+#include "util.hpp"
 
 namespace MeshSimpl {
 namespace Internal {
@@ -29,7 +29,7 @@ class Neighbor {
   order vi;  // i = (j + 1) % 3 if clockwise
   order vj;  // j = (center + 1) % 3 if clockwise
 
-  order get_i_from_j(order j) { return ccw ? (j + 2) % 3 : (j + 1) % 3; }
+  order get_i_from_j(order j) { return ccw ? prev(j) : next(j); }
 
  public:
   Neighbor(idx face, order vj, bool ccw)
@@ -66,6 +66,10 @@ class Neighbor {
   idx first_v(const F& faces) const { return faces[f()][vi]; }
 
   idx second_v(const F& faces) const { return faces[f()][vj]; }
+
+  const Face& f(const F& faces) const { return faces[face]; }
+
+  idx center_v(const F& faces) const { return f(faces)[center()]; }
 };
 
 }  // namespace Internal
