@@ -9,7 +9,6 @@ Mesh simplification implementation
     - Not able to change topology
 
 - To-do-next:
-    - Use OOP to improve program
+    - Use OOP better to improve program
         - neighborhood
-    - Fix bug
-        - not stable at all!!!
+    - Topo-change simplify
