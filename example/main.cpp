@@ -92,6 +92,7 @@ void load_obj(const string& filename, vector<vec3d>& vertices,
   for (string line; getline(ifs, line);) {
     if (line[0] == '#') continue;
 
+    lead = "";
     stringstream ss(line);
     ss >> lead;
 

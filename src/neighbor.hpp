@@ -43,8 +43,8 @@ class Neighbor {
 
   order center() const { return 3 - vi - vj; }
 
-  void rotate(const F &faces) {
-    const Edge *curr_edge = faces[face].edge(vi);
+  void rotate(const F& faces) {
+    const Edge* curr_edge = second_edge(faces);
     assert(!curr_edge->on_boundary());
 
     const idx prev_center = faces[face][center()];
@@ -58,6 +58,14 @@ class Neighbor {
 
     assert(faces[face][center()] == prev_center);
   }
+
+  Edge* first_edge(const F& faces) const { return faces[f()].edge(vj); }
+
+  Edge* second_edge(const F& faces) const { return faces[f()].edge(vi); }
+
+  idx first_v(const F& faces) const { return faces[f()][vi]; }
+
+  idx second_v(const F& faces) const { return faces[f()][vj]; }
 };
 
 }  // namespace Internal

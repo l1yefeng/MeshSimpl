@@ -4,6 +4,7 @@
 
 #include "pre_proc.hpp"
 #include <map>
+#include <sstream>
 #include "face.hpp"
 #include "util.hpp"
 
@@ -122,15 +123,23 @@ void construct_edges(const V &vertices, F &faces, E &edges) {
       idx v0 = face[i];
       idx v1 = face[j];
       if (v0 > v1) std::swap(v0, v1);
-      Edge edge(v0, v1);
-      edge.attach_1st_face(f, k);
-      auto it_and_inserted = edge_set.emplace(std::make_pair(v0, v1), edge);
-      auto it = it_and_inserted.first;
+      auto res = edge_set.emplace(std::make_pair(v0, v1), Edge(v0, v1));
+      auto inserted = res.second;
+      auto &edge = res.first->second;
 
-      if (!it_and_inserted.second) {
-        if (!it->second.attach_2nd_face(f, k)) {
-          throw std::invalid_argument(
-              "ERROR::INPUT_MESH: detected non-manifold edge");
+      if (inserted) {
+        edge.attach_1st_face(f, k);
+      } else {
+        bool ok = edge.attach_2nd_face(f, k);
+        if (!ok) {
+          std::stringstream ss;
+          ss << "ERROR::INPUT_MESH: found non-manifold edge" << std::endl;
+          for (idx _f : {edge.face(0), edge.face(1), f}) {
+            ss << "                   face #" << _f << ":";
+            for (int _i = 0; _i < 3; ++_i) ss << "\t" << faces[_f][_i] + 1;
+            ss << std::endl;
+          }
+          throw std::invalid_argument(ss.str());
         }
       }
     }

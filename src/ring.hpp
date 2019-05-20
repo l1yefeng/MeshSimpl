@@ -22,11 +22,12 @@ class Ring {
   }
 
  protected:
+  static const size_t ESTIMATE_VALENCE = 8;
+
   // keep some references internally
   V &vertices;
   F &faces;
   std::vector<idx> v_del_twins, v_kept_twins;
-  std::vector<Edge *> v_kept_neighbor_edges;
 
   // in the center of the ring
   const Edge &edge;
@@ -43,6 +44,13 @@ class Ring {
         v_kept(edge[1 - edge.v_del_order()]),
         v_del(edge[edge.v_del_order()]),
         ccw(ccw_when_collect()) {}
+
+  void reserve(size_t sz) {
+    v_del_neighbors.reserve(sz);
+    v_kept_neighbors.reserve(sz);
+    v_del_twins.reserve(sz);
+    v_kept_twins.reserve(sz);
+  }
 
  public:
   virtual ~Ring() = default;
@@ -63,17 +71,10 @@ class Ring {
 };
 
 class InteriorRing : public Ring {
- private:
-  static const size_t ESTIMATE_VALENCE = 8;
-
  public:
   InteriorRing(V &vertices, F &faces, const Edge &edge)
       : Ring(vertices, faces, edge) {
-    v_del_neighbors.reserve(ESTIMATE_VALENCE);
-    v_kept_neighbors.reserve(ESTIMATE_VALENCE);
-    v_del_twins.reserve(ESTIMATE_VALENCE);
-    v_kept_twins.reserve(ESTIMATE_VALENCE);
-    v_kept_neighbor_edges.reserve(ESTIMATE_VALENCE);
+    reserve(ESTIMATE_VALENCE);
   }
 
   void collect() override;
@@ -84,17 +85,10 @@ class InteriorRing : public Ring {
 };
 
 class BoundaryRing : public Ring {
- private:
-  static const size_t ESTIMATE_VALENCE = 4;
-
  public:
   BoundaryRing(V &vertices, F &faces, const Edge &edge)
       : Ring(vertices, faces, edge) {
-    v_del_neighbors.reserve(ESTIMATE_VALENCE);
-    v_kept_neighbors.reserve(ESTIMATE_VALENCE);
-    v_del_twins.reserve(ESTIMATE_VALENCE);
-    v_kept_twins.reserve(ESTIMATE_VALENCE);
-    v_kept_neighbor_edges.reserve(ESTIMATE_VALENCE);
+    reserve(ESTIMATE_VALENCE / 2);
   }
 
   void collect() override;

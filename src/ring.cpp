@@ -45,17 +45,14 @@ void InteriorRing::collect() {
     nb.rotate(faces);
     if (nb.f() == f1) break;
     v_del_neighbors.push_back(nb);
-    v_del_twins.push_back(faces[nb.f()][nb.i()]);
+    v_del_twins.push_back(nb.first_v(faces));
   }
 
   bool boundary_hit = false;  // useful in case v_kept is on boundary
   nb = Neighbor(f1, edge.ord_in_face(1), ccw);
   while (true) {
-    const Edge *next_edge = faces[nb.f()].edge(nb.i());
-
-    if (next_edge->on_boundary()) {
-      v_kept_twins.push_back(faces[nb.f()][nb.j()]);
-      v_kept_neighbor_edges.push_back(faces[nb.f()].edge(nb.i()));
+    if (nb.second_edge(faces)->on_boundary()) {
+      v_kept_twins.push_back(nb.second_v(faces));
       if (boundary_hit)
         break;  // while-loop breaks here if one v_kept is on boundary
       boundary_hit = true;
@@ -64,8 +61,7 @@ void InteriorRing::collect() {
     }
 
     nb.rotate(faces);
-    v_kept_neighbor_edges.push_back(faces[nb.f()].edge(nb.j()));
-    v_kept_twins.push_back(faces[nb.f()][nb.i()]);
+    v_kept_twins.push_back(nb.first_v(faces));
 
     // this face is deleted thus unnecessary to check fold-over if f == f0
     if (nb.f() == f0) {
@@ -140,9 +136,15 @@ void InteriorRing::collapse(Q &quadrics, QEMHeap &heap, bool fix_boundary) {
   dirty_edge_ptr->replace_f(f1, it->f(), it->i());
 
   // every edge centered around the kept vertex
-  for (Edge *e_dirty : v_kept_neighbor_edges) {
-    if (fix_boundary && e_dirty->both_v_on_border()) continue;
-    update_error_and_center(vertices, quadrics, heap, e_dirty, fix_boundary);
+  for (auto nb : v_kept_neighbors) {
+    dirty_edge_ptr = nb.first_edge(faces);
+    if (fix_boundary && dirty_edge_ptr->both_v_on_border()) continue;
+    update_error_and_center(vertices, quadrics, heap, dirty_edge_ptr,
+                            fix_boundary);
+  }
+
+  if (!(fix_boundary && edge_kept0->both_v_on_border())) {
+    update_error_and_center(vertices, quadrics, heap, edge_kept0, fix_boundary);
   }
 }
 
@@ -151,25 +153,24 @@ void BoundaryRing::collect() {
 
   Neighbor nb(f, edge.ord_in_face(0), ccw);
   while (true) {
-    const Edge *next_edge = faces[nb.f()].edge(nb.i());
+    const Edge *next_edge = nb.second_edge(faces);
 
     if (next_edge->on_boundary()) break;
 
     nb.rotate(faces);
     v_del_neighbors.push_back(nb);
-    v_del_twins.push_back(faces[nb.f()][nb.j()]);
+    v_del_twins.push_back(nb.second_v(faces));
   }
 
   nb = Neighbor(f, edge.ord_in_face(0), !ccw);
   while (true) {
-    const Edge *next_edge = faces[nb.f()].edge(nb.i());
-    v_kept_neighbor_edges.push_back(faces[nb.f()].edge(nb.i()));
+    const Edge *next_edge = nb.second_edge(faces);
 
     if (next_edge->on_boundary()) break;
 
     nb.rotate(faces);
     v_kept_neighbors.push_back(nb);
-    v_kept_twins.push_back(faces[nb.f()][nb.j()]);
+    v_kept_twins.push_back(nb.second_v(faces));
   }
 }
 
@@ -203,7 +204,7 @@ void BoundaryRing::collapse(Q &quadrics, QEMHeap &heap, bool) {
   // every face centered around deleted vertex
   for (const auto &nb : v_del_neighbors) {
     faces[nb.f()].replace_v(nb.center(), v_kept);
-    dirty_edge_ptr = faces[nb.f()].edge(nb.i());
+    dirty_edge_ptr = nb.second_edge(faces);
 
     dirty_edge_ptr->replace_v(v_del, v_kept, true);
 
@@ -211,9 +212,10 @@ void BoundaryRing::collapse(Q &quadrics, QEMHeap &heap, bool) {
     update_error_and_center(vertices, quadrics, heap, dirty_edge_ptr, false);
   }
 
-  assert(!v_kept_neighbor_edges.empty());
-  for (Edge *e_dirty : v_kept_neighbor_edges) {
-    update_error_and_center(vertices, quadrics, heap, e_dirty, false);
+  update_error_and_center(vertices, quadrics, heap, edge_kept, false);
+  for (auto nb : v_kept_neighbors) {
+    dirty_edge_ptr = nb.second_edge(faces);
+    update_error_and_center(vertices, quadrics, heap, dirty_edge_ptr, false);
   }
 }
 
