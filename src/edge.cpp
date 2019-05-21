@@ -84,6 +84,12 @@ void Edge::replace_v(idx prev_v, idx new_v, bool new_v_on_border) {
   order ord = v_order(prev_v);
   vv[ord] = new_v;
   if (new_v_on_border) v_on_border[ord] = true;
+
+  assert(vv[0] != vv[1]);
+  if (vv[0] > vv[1]) {
+    std::swap(vv[0], vv[1]);
+    std::swap(v_on_border[0], v_on_border[1]);
+  }
 }
 
 void Edge::drop_f(idx face) {
