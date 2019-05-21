@@ -1,6 +1,7 @@
 #ifndef MESH_SIMPL_ECOL_HPP
 #define MESH_SIMPL_ECOL_HPP
 
+#include "marker.hpp"
 #include "qem_heap.hpp"
 #include "types.hpp"
 
@@ -20,8 +21,9 @@ bool is_face_elongated(const vec3d &pos0, const vec3d &pos1, const vec3d &pos2,
                        double ratio);
 
 // Returns true if edge is collapsed
-bool edge_collapse(V &vertices, F &faces, Q &quadrics, QEMHeap &heap,
-                   Edge &target, const SimplifyOptions &options);
+int edge_collapse(V &vertices, F &faces, Q &quadrics, QEMHeap &heap,
+                  MeshSimpl::Internal::Marker &marker, Edge &target,
+                  const SimplifyOptions &options);
 
 }  // namespace Internal
 }  // namespace MeshSimpl

@@ -3,10 +3,39 @@
 //
 
 #include "ring.hpp"
+#include <algorithm>
 #include "ecol.hpp"
+#include "marker.hpp"
 
 namespace MeshSimpl {
 namespace Internal {
+
+bool Ring::check_topo() {
+  std::vector<const Neighbor *> star_del, star_kept;
+  star_del.reserve(v_del_neighbors.size());
+  star_kept.reserve(v_kept_neighbors.size());
+
+  for (const auto &nb : v_del_neighbors) star_del.push_back(&nb);
+  for (const auto &nb : v_kept_neighbors) star_kept.push_back(&nb);
+
+  const auto cmp = [&](const Neighbor *nb0, const Neighbor *nb1) -> bool {
+    return nb0->second_v(faces) < nb1->second_v(faces);
+  };
+  std::sort(star_del.begin(), star_del.end(), cmp);
+  std::sort(star_kept.begin(), star_kept.end(), cmp);
+  for (auto itd = star_del.begin(), itk = star_kept.begin();
+       itd != star_del.end() && itk != star_kept.end();) {
+    if (cmp(*itd, *itk)) {
+      ++itd;
+    } else if (cmp(*itk, *itd)) {
+      ++itk;
+    } else {
+      return false;
+    }
+  }
+
+  return true;
+}
 
 bool Ring::check_geom(double foldover_angle) const {
   for (const auto &nb : v_del_neighbors) {
@@ -45,14 +74,12 @@ void InteriorRing::collect() {
     nb.rotate(faces);
     if (nb.f() == f1) break;
     v_del_neighbors.push_back(nb);
-    v_del_twins.push_back(nb.first_v(faces));
   }
 
   bool boundary_hit = false;  // useful in case v_kept is on boundary
   nb = Neighbor(f1, edge.ord_in_face(1), ccw);
   while (true) {
     if (nb.second_edge(faces)->on_boundary()) {
-      v_kept_twins.push_back(nb.second_v(faces));
       if (boundary_hit)
         break;  // while-loop breaks here if one v_kept is on boundary
       boundary_hit = true;
@@ -61,7 +88,6 @@ void InteriorRing::collect() {
     }
 
     nb.rotate(faces);
-    v_kept_twins.push_back(nb.first_v(faces));
 
     // this face is deleted thus unnecessary to check fold-over if f == f0
     if (nb.f() == f0) {
@@ -78,15 +104,11 @@ bool InteriorRing::check_env() {
   // special case: there are 2 faces, 3 vertices in current component
   // this happens if input contains such component because
   // this edge collapse implementation avoid generating them
-  if (v_del_twins.empty()) {
+  if (v_del_neighbors.empty()) {
     assert(faces[edge.face(0)][edge.ord_in_face(0)] ==
            faces[edge.face(1)][edge.ord_in_face(1)]);
     return false;
   }
-
-  // we actually want to check intersection
-  // on items starting from `v_del_twins[1]` with those in `v_kept_twins`
-  v_del_twins.erase(v_del_twins.begin());
 
   // special case: avoid collapsing a tetrahedron into folded faces
   if (v_del_neighbors.size() == 1 && v_kept_neighbors.size() == 1) return false;
@@ -95,7 +117,8 @@ bool InteriorRing::check_env() {
   return true;
 }
 
-void InteriorRing::collapse(Q &quadrics, QEMHeap &heap, bool fix_boundary) {
+void InteriorRing::collapse(Q &quadrics, QEMHeap &heap, Marker &marker,
+                            bool fix_boundary) {
   const idx f0 = edge.face(0);
   const idx f1 = edge.face(1);
 
@@ -116,6 +139,7 @@ void InteriorRing::collapse(Q &quadrics, QEMHeap &heap, bool fix_boundary) {
 
   faces[it->f()].replace_edge(it->j(), edge_kept0);
   dirty_edge_ptr->replace_f(f0, it->f(), it->j());
+  marker.mark_f(f0);
 
   // every face centered around deleted vertex
   for (++it; it != v_del_neighbors.end(); ++it) {
@@ -134,6 +158,9 @@ void InteriorRing::collapse(Q &quadrics, QEMHeap &heap, bool fix_boundary) {
   faces[it->f()].replace_edge(it->i(), edge_kept1);
   dirty_edge_ptr = edge_kept1;
   dirty_edge_ptr->replace_f(f1, it->f(), it->i());
+  marker.mark_f(f1);
+
+  marker.mark_v(v_del);
 
   // every edge centered around the kept vertex
   for (auto nb : v_kept_neighbors) {
@@ -159,7 +186,6 @@ void BoundaryRing::collect() {
 
     nb.rotate(faces);
     v_del_neighbors.push_back(nb);
-    v_del_twins.push_back(nb.second_v(faces));
   }
 
   nb = Neighbor(f, edge.ord_in_face(0), !ccw);
@@ -170,7 +196,6 @@ void BoundaryRing::collect() {
 
     nb.rotate(faces);
     v_kept_neighbors.push_back(nb);
-    v_kept_twins.push_back(nb.second_v(faces));
   }
 }
 
@@ -181,7 +206,7 @@ bool BoundaryRing::check_env() {
   return true;
 }
 
-void BoundaryRing::collapse(Q &quadrics, QEMHeap &heap, bool) {
+void BoundaryRing::collapse(Q &quadrics, QEMHeap &heap, Marker &marker, bool) {
   const idx f = edge.face(0);
 
   // update vertex position and quadric
@@ -201,6 +226,8 @@ void BoundaryRing::collapse(Q &quadrics, QEMHeap &heap, bool) {
     dirty_edge_ptr->replace_f(f, it->f(), it->j());
   }
 
+  marker.mark_f(f);
+
   // every face centered around deleted vertex
   for (const auto &nb : v_del_neighbors) {
     faces[nb.f()].replace_v(nb.center(), v_kept);
@@ -211,6 +238,8 @@ void BoundaryRing::collapse(Q &quadrics, QEMHeap &heap, bool) {
     assert(!dirty_edge_ptr->neither_v_on_border());
     update_error_and_center(vertices, quadrics, heap, dirty_edge_ptr, false);
   }
+
+  marker.mark_v(v_del);
 
   update_error_and_center(vertices, quadrics, heap, edge_kept, false);
   for (auto nb : v_kept_neighbors) {

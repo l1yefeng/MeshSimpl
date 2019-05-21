@@ -4,6 +4,7 @@
 
 #include "ecol.hpp"
 #include <memory>
+#include "marker.hpp"
 #include "ring.hpp"
 
 namespace MeshSimpl {
@@ -56,13 +57,14 @@ bool is_face_elongated(const vec3d &pos0, const vec3d &pos1, const vec3d &pos2,
   return aspect_ratio < ratio;
 }
 
-bool edge_collapse(V &vertices, F &faces, Q &quadrics, QEMHeap &heap,
-                   Edge &target, const SimplifyOptions &options) {
+int edge_collapse(V &vertices, F &faces, Q &quadrics, QEMHeap &heap,
+                  Marker &marker, Edge &target,
+                  const SimplifyOptions &options) {
   // if non-boundary edge has two endpoints on boundary, we avoid collapsing it
   // because it is possible to produce non-manifold vertex
   if (target.both_v_on_border() && !target.on_boundary()) {
     heap.penalize(&target);
-    return false;
+    return 0;
   }
 
   std::unique_ptr<Ring> ring;
@@ -73,19 +75,17 @@ bool edge_collapse(V &vertices, F &faces, Q &quadrics, QEMHeap &heap,
 
   ring->collect();
 
-  if (!(ring->check_env() && ring->check_topo() &&
-        ring->check_geom(options.fold_over_angle_threshold) &&
-        ring->check_quality(options.aspect_ratio_at_least))) {
+  if (!ring->check(options)) {
     heap.penalize(&target);
-    return false;
+    return 0;
   }
 
   // now that we are certain this edge is to be collapsed, remove it from heap
   heap.pop();
 
-  ring->collapse(quadrics, heap, options.fix_boundary);
+  ring->collapse(quadrics, heap, marker, options.fix_boundary);
 
-  return true;
+  return 1;
 }
 
 }  // namespace Internal

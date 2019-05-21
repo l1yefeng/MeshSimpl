@@ -7,24 +7,6 @@
 
 namespace MeshSimpl {
 
-// Reference: en.cppreference.com/w/cpp/algorithm/set_intersection.html
-bool Internal::sort_and_find_intersection(std::vector<idx> &values0,
-                                          std::vector<idx> &values1) {
-  std::sort(values0.begin(), values0.end());
-  std::sort(values1.begin(), values1.end());
-  for (auto i0 = values0.begin(), i1 = values1.begin();
-       i0 != values0.end() && i1 != values1.end();) {
-    if (*i0 < *i1)
-      ++i0;
-    else if (*i0 > *i1)
-      ++i1;
-    else
-      return true;
-  }
-
-  return false;
-}
-
 Internal::Quadric &operator+=(Internal::Quadric &lfs,
                               const Internal::Quadric &rhs) {
   for (unsigned int i = 0; i < 10; ++i) lfs[i] += rhs[i];

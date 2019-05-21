@@ -5,6 +5,7 @@
 #ifndef MESH_SIMPL_RING_HPP
 #define MESH_SIMPL_RING_HPP
 
+#include "marker.hpp"
 #include "neighbor.hpp"
 #include "qem_heap.hpp"
 #include "types.hpp"
@@ -27,7 +28,6 @@ class Ring {
   // keep some references internally
   V &vertices;
   F &faces;
-  std::vector<idx> v_del_twins, v_kept_twins;
 
   // in the center of the ring
   const Edge &edge;
@@ -48,26 +48,29 @@ class Ring {
   void reserve(size_t sz) {
     v_del_neighbors.reserve(sz);
     v_kept_neighbors.reserve(sz);
-    v_del_twins.reserve(sz);
-    v_kept_twins.reserve(sz);
   }
+
+  virtual bool check_env() = 0;
+
+  bool check_topo();
+
+  bool check_geom(double foldover_angle) const;
+
+  bool check_quality(double aspect_ratio) const;
 
  public:
   virtual ~Ring() = default;
 
   virtual void collect() = 0;
 
-  virtual bool check_env() = 0;
-
-  bool check_topo() {
-    return !sort_and_find_intersection(v_del_twins, v_kept_twins);
+  bool check(const SimplifyOptions &options) {
+    return check_env() && check_topo() &&
+           check_geom(options.fold_over_angle_threshold) &&
+           check_quality(options.aspect_ratio_at_least);
   }
 
-  bool check_geom(double foldover_angle) const;
-
-  bool check_quality(double aspect_ratio) const;
-
-  virtual void collapse(Q &quadrics, QEMHeap &heap, bool fix_boundary) = 0;
+  virtual void collapse(Q &quadrics, QEMHeap &heap, Marker &marker,
+                        bool fix_boundary) = 0;
 };
 
 class InteriorRing : public Ring {
@@ -81,7 +84,8 @@ class InteriorRing : public Ring {
 
   bool check_env() override;
 
-  void collapse(Q &quadrics, QEMHeap &heap, bool fix_boundary) override;
+  void collapse(Q &quadrics, QEMHeap &heap, Marker &marker,
+                bool fix_boundary) override;
 };
 
 class BoundaryRing : public Ring {
@@ -95,7 +99,8 @@ class BoundaryRing : public Ring {
 
   bool check_env() override;
 
-  void collapse(Q &quadrics, QEMHeap &heap, bool fix_boundary) override;
+  void collapse(Q &quadrics, QEMHeap &heap, Marker &marker,
+                bool fix_boundary) override;
 };
 
 }  // namespace Internal

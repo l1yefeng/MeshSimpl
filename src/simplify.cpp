@@ -83,25 +83,10 @@ void simplify(std::vector<vec3d> &vertices, std::vector<vec3i> &indices,
     assert(is_valid_edge_target(*edge, marker, options.fix_boundary));
 
     // [5] collapse the least-error edge until mesh is simplified enough
-    order del_ord = edge->v_del_order();
-    bool collapsed =
-        edge_collapse(vertices, faces, quadrics, heap, *edge, options);
-    if (!collapsed) continue;
+    int collapsed =
+        edge_collapse(vertices, faces, quadrics, heap, marker, *edge, options);
 
-    // mark adjacent faces deleted
-    marker.mark_f(edge->face(0));
-    if (!edge->both_v_on_border())
-      marker.mark_f(edge->face(1));
-    else
-      assert(edge->on_boundary());
-
-    // mark one (chosen) endpoint deleted
-    marker.mark_v((*edge)[del_ord]);
-
-    // of course there might have been edges deleted,
-    // they were removed from heap during `edge_collapse`
-
-    --nv;
+    nv -= collapsed;
   }
 
   // edges are pointless from this point on, but need to fix vertices and

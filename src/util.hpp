@@ -65,9 +65,6 @@ inline order next(order ord) { return (ord + 1) % 3; }
 
 inline order prev(order ord) { return (ord + 2) % 3; }
 
-bool sort_and_find_intersection(std::vector<idx> &values0,
-                                std::vector<idx> &values1);
-
 }  // namespace Internal
 
 }  // namespace MeshSimpl
