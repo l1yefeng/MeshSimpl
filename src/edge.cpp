@@ -4,6 +4,7 @@
 
 #include "edge.hpp"
 #include "util.hpp"
+#include "vertices.hpp"
 
 namespace MeshSimpl {
 namespace Internal {
@@ -29,9 +30,8 @@ void Edge::set_v_on_border(bool v0_on_border, bool v1_on_border) {
   v_on_border[1] = v1_on_border;
 }
 
-void Edge::plan_collapse(const V &vertices, const Q &quadrics,
-                         bool fix_boundary) {
-  q = quadrics[vv[0]] + quadrics[vv[1]];
+void Edge::plan_collapse(const Vertices &vertices, bool fix_boundary) {
+  q = vertices.q(vv[0]) + vertices.q(vv[1]);
 
   if (fix_boundary && both_v_on_border()) {
     // the plan is: no plan is needed because it will never by modified

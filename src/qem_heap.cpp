@@ -3,7 +3,11 @@
 //
 
 #include "qem_heap.hpp"
-#include "edge.hpp"
+#include <cassert>   // for assert
+#include <cmath>     // for isnan
+#include <memory>    // for allocator_traits<>::value_type
+#include <utility>   // for swap
+#include "edge.hpp"  // for Edge
 
 namespace MeshSimpl {
 namespace Internal {

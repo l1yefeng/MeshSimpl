@@ -3,10 +3,19 @@
 //
 
 #include "pre_proc.hpp"
-#include <map>
-#include <sstream>
-#include "face.hpp"
-#include "util.hpp"
+#include <array>             // for array
+#include <cassert>           // for assert
+#include <initializer_list>  // for initializer_list
+#include <limits>            // for numeric_limits
+#include <map>               // for map, _Rb_tree_iterator
+#include <sstream>           // for operator<<, basic_ostream, stringstream
+#include <stdexcept>         // for invalid_argument
+#include <utility>           // for pair, swap, make_pair
+#include <vector>            // for vector, vector<>::reference, _Bit_reference
+#include "edge.hpp"          // for Edge
+#include "faces.hpp"         // for Faces
+#include "util.hpp"          // for operator*=, next, cross, magnitude, prev
+#include "vertices.hpp"      // for Vertices
 
 namespace MeshSimpl {
 namespace Internal {
@@ -30,16 +39,13 @@ void weight_quadric(Quadric &quadric, double face_area, WEIGHTING strategy) {
   }
 }
 
-void compute_quadrics(const V &vertices, Q &quadrics, F &faces, E &edges,
+void compute_quadrics(Vertices &vertices, Faces &faces, E &edges,
                       const SimplifyOptions &options) {
-  // quadrics are initialized with all zeros
-  quadrics.resize(vertices.size());
-
-  for (const auto &face : faces) {
+  for (idx f = 0; f < faces.size(); ++f) {
     // calculate the plane of this face (n and d: n'v+d=0 defines the plane)
-    const vec3d edge01 = vertices[face[1]] - vertices[face[0]];
-    const vec3d edge02 = vertices[face[2]] - vertices[face[0]];
-    vec3d normal = cross(edge01, edge02);
+    const vec3d edgeVec2 = faces.edgeVec(f, 2, vertices);
+    const vec3d edgeVec1 = faces.edgeVec(f, 1, vertices);
+    vec3d normal = cross(edgeVec2, edgeVec1);
     // |normal| = area, used for normalization and weighting quadrics
     const double area = magnitude(normal);
     if (area != 0)
@@ -48,30 +54,26 @@ void compute_quadrics(const V &vertices, Q &quadrics, F &faces, E &edges,
       continue;
 
     // d = -n*v0
-    const double d = -dot(normal, vertices[face[0]]);
+    const double d = -dot(normal, faces.vPos(f, 0, vertices));
 
     // calculate quadric Q = (A, b, c) = (nn', dn, d*d)
     Quadric q = make_quadric(normal, d);
     weight_quadric(q, area, options.weighting);
 
-    for (const auto &v : face.vertices()) quadrics[v] += q;
+    for (order k : {0, 1, 2}) vertices.increaseQ(faces.v(f, k), q);
   }
 
   if (!options.fix_boundary) {
-    for (auto &face : faces) {
-      order k;
-      for (k = 0; k < 3; ++k)
-        if (face.edge(k)->on_boundary()) break;
+    for (idx f = 0; f < faces.size(); ++f) {
+      if (!faces.onBoundary(f)) continue;
 
-      if (k == 3) continue;
-
-      const std::array<vec3d, 3> e{vertices[face[2]] - vertices[face[1]],
-                                   vertices[face[0]] - vertices[face[2]],
-                                   vertices[face[1]] - vertices[face[0]]};
+      const std::array<vec3d, 3> e{faces.edgeVec(f, 0, vertices),
+                                   faces.edgeVec(f, 1, vertices),
+                                   faces.edgeVec(f, 2, vertices)};
       const vec3d n_face = cross(e[0], e[1]);
 
-      for (k = 0; k < 3; ++k) {
-        if (!face.edge(k)->on_boundary()) continue;
+      for (order k : {0, 1, 2}) {
+        if (!faces.side(f, k)->on_boundary()) continue;
 
         vec3d normal = cross(n_face, e[k]);
         const double normal_mag = magnitude(normal);
@@ -80,25 +82,25 @@ void compute_quadrics(const V &vertices, Q &quadrics, F &faces, E &edges,
         else
           continue;
 
-        const double d = -dot(normal, vertices[face[next(k)]]);
+        const double d = -dot(normal, faces.vPos(f, next(k), vertices));
         Quadric q = make_quadric(normal, d);
         q *= options.border_constraint;
         weight_quadric(q, magnitude(n_face), options.weighting);
 
-        quadrics[face[next(k)]] += q;
-        quadrics[face[prev(k)]] += q;
+        vertices.increaseQ(faces.v(f, next(k)), q);
+        vertices.increaseQ(faces.v(f, prev(k)), q);
       }
     }
   }
 }
 
-bool edge_topo_correctness(const F &faces, const E &edges) {
-  for (const auto &face : faces) {
+bool edge_topo_correctness(const Faces &faces, const E &edges) {
+  for (idx f = 0; f < faces.size(); ++f) {
     for (order ord = 0; ord < 3; ++ord) {
-      auto &vv = face.edge(ord)->vertices();
+      auto &vv = faces.side(f, ord)->vertices();
       assert(vv[0] < vv[1]);
-      idx v_smaller = face[next(ord)];
-      idx v_larger = face[prev(ord)];
+      idx v_smaller = faces.v(f, next(ord));
+      idx v_larger = faces.v(f, prev(ord));
       if (v_smaller > v_larger) std::swap(v_smaller, v_larger);
 
       // edge vertices should match face corners
@@ -109,7 +111,7 @@ bool edge_topo_correctness(const F &faces, const E &edges) {
   return true;
 }
 
-void construct_edges(const V &vertices, F &faces, E &edges) {
+void construct_edges(Vertices &vertices, Faces &faces, E &edges) {
   std::map<std::pair<idx, idx>, Edge> edge_set;
 
   // insert all edges into edge_set and find out if it is on boundary
@@ -159,9 +161,9 @@ void construct_edges(const V &vertices, F &faces, E &edges) {
     }
 
     // populate face2edge references
-    faces[edge.face(0)].attach_edge(&edge, edge.ord_in_face(0));
+    faces.setSide(edge.face(0), edge.ord_in_face(0), &edge);
     if (!edge.both_v_on_border())
-      faces[edge.face(1)].attach_edge(&edge, edge.ord_in_face(1));
+      faces.setSide(edge.face(1), edge.ord_in_face(1), &edge);
   }
 
   // non-boundary edges may have one vertex on boundary, find them in this loop

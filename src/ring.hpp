@@ -5,29 +5,34 @@
 #ifndef MESH_SIMPL_RING_HPP
 #define MESH_SIMPL_RING_HPP
 
-#include "marker.hpp"
-#include "neighbor.hpp"
-#include "qem_heap.hpp"
-#include "types.hpp"
-#include "util.hpp"
+#include <cstddef>       // for size_t
+#include <vector>        // for vector
+#include "edge.hpp"      // for Edge
+#include "faces.hpp"     // for Faces
+#include "neighbor.hpp"  // for Neighbor
+#include "types.hpp"     // for SimplifyOptions, idx
+#include "util.hpp"      // for next
 
 namespace MeshSimpl {
 namespace Internal {
+
+class QEMHeap;
+class Vertices;
 
 // 1-ring neighborhood of edge of interest, i.e., the union of 1-ring
 // neighborhood of the endpoints of this edge.
 class Ring {
  private:
   bool ccw_when_collect() const {
-    return edge.ord_in_face(0) != next(faces[edge.face(0)].v_order(v_del));
+    return edge.ord_in_face(0) != next(faces.orderOf(edge.face(0), v_del));
   }
 
  protected:
   static const size_t ESTIMATE_VALENCE = 8;
 
   // keep some references internally
-  V &vertices;
-  F &faces;
+  Vertices &vertices;
+  Faces &faces;
 
   // in the center of the ring
   const Edge &edge;
@@ -37,7 +42,7 @@ class Ring {
   bool ccw;
   std::vector<Neighbor> v_del_neighbors, v_kept_neighbors;
 
-  Ring(V &vertices, F &faces, const Edge &edge)
+  Ring(Vertices &vertices, Faces &faces, const Edge &edge)
       : vertices(vertices),
         faces(faces),
         edge(edge),
@@ -69,13 +74,12 @@ class Ring {
            check_quality(options.aspect_ratio_at_least);
   }
 
-  virtual void collapse(Q &quadrics, QEMHeap &heap, Marker &marker,
-                        bool fix_boundary) = 0;
+  virtual void collapse(QEMHeap &heap, bool fix_boundary) = 0;
 };
 
 class InteriorRing : public Ring {
  public:
-  InteriorRing(V &vertices, F &faces, const Edge &edge)
+  InteriorRing(Vertices &vertices, Faces &faces, const Edge &edge)
       : Ring(vertices, faces, edge) {
     reserve(ESTIMATE_VALENCE);
   }
@@ -84,13 +88,12 @@ class InteriorRing : public Ring {
 
   bool check_env() override;
 
-  void collapse(Q &quadrics, QEMHeap &heap, Marker &marker,
-                bool fix_boundary) override;
+  void collapse(QEMHeap &heap, bool fix_boundary) override;
 };
 
 class BoundaryRing : public Ring {
  public:
-  BoundaryRing(V &vertices, F &faces, const Edge &edge)
+  BoundaryRing(Vertices &vertices, Faces &faces, const Edge &edge)
       : Ring(vertices, faces, edge) {
     reserve(ESTIMATE_VALENCE / 2);
   }
@@ -99,8 +102,7 @@ class BoundaryRing : public Ring {
 
   bool check_env() override;
 
-  void collapse(Q &quadrics, QEMHeap &heap, Marker &marker,
-                bool fix_boundary) override;
+  void collapse(QEMHeap &heap, bool fix_boundary) override;
 };
 
 }  // namespace Internal

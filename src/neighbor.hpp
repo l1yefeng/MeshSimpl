@@ -6,7 +6,6 @@
 #define MESH_SIMPL_NEIGHBOR_HPP
 
 #include "edge.hpp"
-#include "face.hpp"
 #include "util.hpp"
 
 namespace MeshSimpl {
@@ -43,7 +42,7 @@ class Neighbor {
 
   order center() const { return 3 - vi - vj; }
 
-  void rotate(const F& faces) {
+  void rotate(const Faces& faces) {
     const Edge* curr_edge = second_edge(faces);
     assert(!curr_edge->on_boundary());
 
@@ -59,17 +58,13 @@ class Neighbor {
     assert(faces[face][center()] == prev_center);
   }
 
-  Edge* first_edge(const F& faces) const { return faces[f()].edge(vj); }
+  Edge* first_edge(const Faces& faces) const { return faces.side(f(), vj); }
 
-  Edge* second_edge(const F& faces) const { return faces[f()].edge(vi); }
+  Edge* second_edge(const Faces& faces) const { return faces.side(f(), vi); }
 
-  idx first_v(const F& faces) const { return faces[f()][vi]; }
+  idx first_v(const Faces& faces) const { return faces[f()][vi]; }
 
-  idx second_v(const F& faces) const { return faces[f()][vj]; }
-
-  const Face& f(const F& faces) const { return faces[face]; }
-
-  idx center_v(const F& faces) const { return f(faces)[center()]; }
+  idx second_v(const Faces& faces) const { return faces[f()][vj]; }
 };
 
 }  // namespace Internal

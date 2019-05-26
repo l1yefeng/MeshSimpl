@@ -11,7 +11,7 @@ namespace MeshSimpl {
 
 void options_validation(const SimplifyOptions& options);
 
-void simplify(std::vector<vec3d>& vertices, std::vector<vec3i>& indices,
+void simplify(Positions& positions, Indices& indices,
               const SimplifyOptions& options = {});
 
 }  // namespace MeshSimpl

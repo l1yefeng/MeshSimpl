@@ -3,9 +3,11 @@
 //
 
 #include "ring.hpp"
-#include <algorithm>
-#include "ecol.hpp"
-#include "marker.hpp"
+#include <algorithm>     // for sort
+#include <cassert>       // for assert
+#include "ecol.hpp"      // for update_error_and_center, is_face_elongated
+#include "qem_heap.hpp"  // for QEMHeap
+#include "vertices.hpp"  // for Vertices
 
 namespace MeshSimpl {
 namespace Internal {
@@ -39,13 +41,13 @@ bool Ring::check_topo() {
 
 bool Ring::check_geom(double foldover_angle) const {
   for (const auto &nb : v_del_neighbors) {
-    if (is_face_folded(vertices, faces, nb.f(faces), nb.center(),
-                       edge.col_center(), foldover_angle))
+    if (is_face_folded(vertices, faces, nb.f(), nb.center(), edge.col_center(),
+                       foldover_angle))
       return false;
   }
   for (const auto &nb : v_kept_neighbors) {
-    if (is_face_folded(vertices, faces, nb.f(faces), nb.center(),
-                       edge.col_center(), foldover_angle))
+    if (is_face_folded(vertices, faces, nb.f(), nb.center(), edge.col_center(),
+                       foldover_angle))
       return false;
   }
   return true;
@@ -117,61 +119,59 @@ bool InteriorRing::check_env() {
   return true;
 }
 
-void InteriorRing::collapse(Q &quadrics, QEMHeap &heap, Marker &marker,
-                            bool fix_boundary) {
+void InteriorRing::collapse(QEMHeap &heap, bool fix_boundary) {
   const idx f0 = edge.face(0);
   const idx f1 = edge.face(1);
 
   // update vertex position and quadric
-  if (edge.neither_v_on_border()) vertices[v_kept] = edge.col_center();
-  quadrics[v_kept] = edge.col_q();
+  if (edge.neither_v_on_border())
+    vertices.setPosition(v_kept, edge.col_center());
+  vertices.setQ(v_kept, edge.col_q());
 
   // two kept edges in two deleted faces
-  Edge *edge_kept0 = faces[f0].edge_across_from(v_del);
-  Edge *edge_kept1 = faces[f1].edge_across_from(v_del);
+  Edge *edge_kept0 = faces.edgeAcrossFrom(f0, v_del);
+  Edge *edge_kept1 = faces.edgeAcrossFrom(f1, v_del);
 
   auto it = v_del_neighbors.begin();
   Edge *dirty_edge_ptr = edge_kept0;
 
   // first face to process: deleted face 0
-  faces[it->f()].replace_v(it->center(), v_kept);
-  heap.erase(faces[it->f()].edge(it->j()));
+  faces.setV(it->f(), it->center(), v_kept);
+  heap.erase(faces.side(it->f(), it->j()));
 
-  faces[it->f()].replace_edge(it->j(), edge_kept0);
+  faces.setSide(it->f(), it->j(), edge_kept0);
   dirty_edge_ptr->replace_f(f0, it->f(), it->j());
-  marker.mark_f(f0);
+  faces.erase(f0);
 
   // every face centered around deleted vertex
   for (++it; it != v_del_neighbors.end(); ++it) {
-    faces[it->f()].replace_v(it->center(), v_kept);
-    dirty_edge_ptr = faces[it->f()].edge(it->j());
+    faces.setV(it->f(), it->center(), v_kept);
+    dirty_edge_ptr = faces.side(it->f(), it->j());
 
     dirty_edge_ptr->replace_v(v_del, v_kept, edge.one_v_on_border());
 
-    update_error_and_center(vertices, quadrics, heap, dirty_edge_ptr,
-                            fix_boundary);
+    update_error_and_center(vertices, heap, dirty_edge_ptr, fix_boundary);
   }
 
   // the deleted face 1
   --it;
-  heap.erase(faces[it->f()].edge(it->i()));
-  faces[it->f()].replace_edge(it->i(), edge_kept1);
+  heap.erase(faces.side(it->f(), it->i()));
+  faces.setSide(it->f(), it->i(), edge_kept1);
   dirty_edge_ptr = edge_kept1;
   dirty_edge_ptr->replace_f(f1, it->f(), it->i());
-  marker.mark_f(f1);
+  faces.erase(f1);
 
-  marker.mark_v(v_del);
+  vertices.erase(v_del);
 
   // every edge centered around the kept vertex
   for (auto nb : v_kept_neighbors) {
     dirty_edge_ptr = nb.first_edge(faces);
     if (fix_boundary && dirty_edge_ptr->both_v_on_border()) continue;
-    update_error_and_center(vertices, quadrics, heap, dirty_edge_ptr,
-                            fix_boundary);
+    update_error_and_center(vertices, heap, dirty_edge_ptr, fix_boundary);
   }
 
   if (!(fix_boundary && edge_kept0->both_v_on_border())) {
-    update_error_and_center(vertices, quadrics, heap, edge_kept0, fix_boundary);
+    update_error_and_center(vertices, heap, edge_kept0, fix_boundary);
   }
 }
 
@@ -206,45 +206,45 @@ bool BoundaryRing::check_env() {
   return true;
 }
 
-void BoundaryRing::collapse(Q &quadrics, QEMHeap &heap, Marker &marker, bool) {
+void BoundaryRing::collapse(QEMHeap &heap, bool fix_boundary) {
   const idx f = edge.face(0);
 
   // update vertex position and quadric
-  vertices[v_kept] = edge.col_center();
-  quadrics[v_kept] = edge.col_q();
+  vertices.setPosition(v_kept, edge.col_center());
+  vertices.setQ(v_kept, edge.col_q());
 
-  Edge *edge_kept = faces[f].edge_across_from(v_del);
+  Edge *edge_kept = faces.edgeAcrossFrom(f, v_del);
   Edge *dirty_edge_ptr = edge_kept;
 
   // it is possible that v_del_neighbors is empty
-  heap.erase(faces[f].edge_across_from(v_kept));
+  heap.erase(faces.edgeAcrossFrom(f, v_kept));
   if (v_del_neighbors.empty()) {
     dirty_edge_ptr->drop_f(f);
   } else {
     auto it = v_del_neighbors.begin();
-    faces[it->f()].replace_edge(it->j(), edge_kept);
+    faces.setSide(it->f(), it->j(), edge_kept);
     dirty_edge_ptr->replace_f(f, it->f(), it->j());
   }
 
-  marker.mark_f(f);
+  faces.erase(f);
 
   // every face centered around deleted vertex
   for (const auto &nb : v_del_neighbors) {
-    faces[nb.f()].replace_v(nb.center(), v_kept);
+    faces.setV(nb.f(), nb.center(), v_kept);
     dirty_edge_ptr = nb.second_edge(faces);
 
     dirty_edge_ptr->replace_v(v_del, v_kept, true);
 
     assert(!dirty_edge_ptr->neither_v_on_border());
-    update_error_and_center(vertices, quadrics, heap, dirty_edge_ptr, false);
+    update_error_and_center(vertices, heap, dirty_edge_ptr, false);
   }
 
-  marker.mark_v(v_del);
+  vertices.erase(v_del);
 
-  update_error_and_center(vertices, quadrics, heap, edge_kept, false);
+  update_error_and_center(vertices, heap, edge_kept, false);
   for (auto nb : v_kept_neighbors) {
     dirty_edge_ptr = nb.second_edge(faces);
-    update_error_and_center(vertices, quadrics, heap, dirty_edge_ptr, false);
+    update_error_and_center(vertices, heap, dirty_edge_ptr, false);
   }
 }
 

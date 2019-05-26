@@ -12,3 +12,21 @@ Mesh simplification implementation
     - Use OOP better to improve program
         - neighborhood
     - Topo-change simplify
+    - SoA structure
+
+
+Naming
+    class:          Erasable
+    typedef:        Indices
+    member:         Faces.replaceSide(1)
+    private member: _indices
+    file name:      for class Indices:  Indices.{ch}pp
+                    for non class:      utils.{ch}pp
+
+Terms
+    faces incident to some edge are its wings
+    edges around a face are its sides
+    vertices of an edge are its endpoints
+    edges of a vertex are its ???
+    faces of a vertex are its ???
+    vertices of a face are its corners

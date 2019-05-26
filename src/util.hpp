@@ -5,6 +5,7 @@
 #ifndef MESH_SIMPL_UTIL_HPP
 #define MESH_SIMPL_UTIL_HPP
 
+#include <cmath>
 #include "types.hpp"
 
 namespace MeshSimpl {

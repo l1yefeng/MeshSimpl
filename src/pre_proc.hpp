@@ -10,11 +10,14 @@
 namespace MeshSimpl {
 namespace Internal {
 
+class Faces;
+class Vertices;
+
 void weight_quadric(Quadric &quadric, double face_area, WEIGHTING strategy);
 
 // Compute quadrics Q for every vertex
 // Output `quadrics`: one quadric for each vertex
-void compute_quadrics(const V &vertices, Q &quadrics, F &faces, E &edges,
+void compute_quadrics(Vertices &vertices, Faces &faces, E &edges,
                       const SimplifyOptions &options);
 
 // Build connectivity from `conn.indices`
@@ -26,7 +29,7 @@ void compute_quadrics(const V &vertices, Q &quadrics, F &faces, E &edges,
 // non-manifold edges)
 //
 // This method does not initialize members optimal_pos and error in struct Edge.
-void construct_edges(const V &vertices, F &faces, E &edges);
+void construct_edges(Vertices &vertices, Faces &faces, E &edges);
 
 }  // namespace Internal
 }  // namespace MeshSimpl

@@ -5,10 +5,14 @@
 #ifndef MESH_SIMPL_QEM_HEAP_HPP
 #define MESH_SIMPL_QEM_HEAP_HPP
 
-#include "types.hpp"
+#include <cstddef>    // for size_t
+#include <vector>     // for vector
+#include "types.hpp"  // for E, idx
 
 namespace MeshSimpl {
 namespace Internal {
+
+class Edge;
 
 // Reference: https://algs4.cs.princeton.edu/24pq/MinPQ.java
 class QEMHeap {
@@ -41,7 +45,7 @@ class QEMHeap {
  private:
   std::vector<idx> keys;        // binary heap array, indexed from 1
   E &edges;                     // a reference to `edges`
-  std::vector<size_t> handles;  // handles[e] is the position of edge in keys
+  std::vector<size_t> handles;  // handles[e] is the position of e in keys
   size_t n;                     // = heap.size() = keys.size() - 1
 
   // Compare function: larger error --> lower priority

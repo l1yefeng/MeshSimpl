@@ -5,12 +5,16 @@
 #ifndef MESH_SIMPL_EDGE_HPP
 #define MESH_SIMPL_EDGE_HPP
 
-#include <cassert>
-#include <limits>
-#include "types.hpp"
+#include <array>      // for array
+#include <cassert>    // for assert
+#include <limits>     // for numeric_limits
+#include <utility>    // for swap
+#include "types.hpp"  // for order, vec2i, idx, Quadric, vec3d
 
 namespace MeshSimpl {
 namespace Internal {
+
+class Vertices;
 
 // Edge defines the struct of an edge
 //
@@ -19,8 +23,6 @@ namespace Internal {
 // provided.
 class Edge {
  private:
-  static const order INVALID = -1;
-
   // sum of quadrics of two endpoints
   Quadric q = {};
 
@@ -136,7 +138,7 @@ class Edge {
   //  - what is current sum of endpoints quadrics
   //  - which position to collapse into (center)
   //  - what will be the error
-  void plan_collapse(const V &vertices, const Q &quadrics, bool fix_boundary);
+  void plan_collapse(const Vertices &vertices, bool fix_boundary);
 
   void set_infty_error() { error = std::numeric_limits<double>::max(); }
 

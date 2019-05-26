@@ -16,7 +16,11 @@ typedef char order;                   // edge/vertex local order to face; [0, 3)
 typedef std::array<double, 3> vec3d;  // double
 typedef std::array<idx, 3> vec3i;     // idx
 typedef std::array<idx, 2> vec2i;     // idx
-typedef std::vector<vec3d> V;         // input/output vertex positions
+
+typedef std::vector<vec3i> Indices;
+typedef std::vector<vec3d> Positions;
+
+static const order INVALID = -1;
 
 enum WEIGHTING { UNIFORM, BY_AREA, BY_AREA_INV };
 
@@ -62,12 +66,7 @@ typedef std::array<double, 10> Quadric;
 // Defined in edge.hpp
 class Edge;
 
-// Defined in face.hpp
-class Face;
-
 typedef std::vector<Edge> E;
-typedef std::vector<Quadric> Q;
-typedef std::vector<Face> F;
 
 }  // namespace Internal
 

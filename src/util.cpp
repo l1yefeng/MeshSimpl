@@ -3,7 +3,6 @@
 //
 
 #include "util.hpp"
-#include <algorithm>
 
 namespace MeshSimpl {
 

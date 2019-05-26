@@ -3,12 +3,15 @@
 //
 
 #include "simplify.hpp"
-#include <limits>
-#include "ecol.hpp"
-#include "face.hpp"
-#include "marker.hpp"
-#include "post_proc.hpp"
-#include "pre_proc.hpp"
+#include <cstddef>       // for size_t
+#include <limits>        // for numeric_limits
+#include <stdexcept>     // for invalid_argument
+#include "ecol.hpp"      // for edge_collapse
+#include "edge.hpp"      // for Edge
+#include "faces.hpp"     // for Faces
+#include "pre_proc.hpp"  // for compute_quadrics, construct_edges
+#include "qem_heap.hpp"  // for QEMHeap
+#include "vertices.hpp"  // for Vertices
 
 namespace MeshSimpl {
 
@@ -21,54 +24,29 @@ void options_validation(const SimplifyOptions &options) {
     throw std::invalid_argument("ERROR::INVALID_OPTION: strength < 0");
 }
 
-bool is_valid_edge_target(const Edge &edge, const Marker &marker,
-                          bool fix_boundary) {
-  assert(edge[0] != edge[1]);
-  assert(marker.exist_v(edge[0]) && marker.exist_v(edge[1]));
-  if (fix_boundary) {
-    assert(!edge.both_v_on_border());
-  }
-
-  if (edge.on_boundary()) {
-    assert(marker.exist_f(edge.face(0)));
-    assert(edge.both_v_on_border());
-  } else {
-    assert(edge.face(0) != edge.face(1));
-    assert(marker.exist_f(edge.face(0)) && marker.exist_f(edge.face(1)));
-  }
-  return true;
-}
-
-void simplify(std::vector<vec3d> &vertices, std::vector<vec3i> &indices,
+void simplify(Positions &positions, Indices &indices,
               const SimplifyOptions &options) {
   options_validation(options);
 
+  // construct vertices and faces from positions and indices
+  // positions and indices are moved and no longer hold data
+  Vertices vertices(positions);
+  Faces faces(indices);
+
   const size_t NV = vertices.size();
-  const size_t nv_to_decimate =
-      NV -
-      std::max(static_cast<int>(std::lround((1 - options.strength) * NV)), 3);
+  const size_t nv_to_decimate = std::lround(options.strength * NV);
 
   if (nv_to_decimate == 0) return;
-
-  F faces;
-  faces.reserve(indices.size());
-  for (auto &face : indices) faces.emplace_back(face);
-
-  // marker keeps track of face/vertex state: exist or deleted
-  Marker marker(NV, indices.size());
-  marker.mark_unref_v(indices);
 
   // [1] find out information of edges (endpoints, incident faces) and face2edge
   E edges;
   construct_edges(vertices, faces, edges);
 
   // [2] compute quadrics of vertices
-  Q quadrics;
-  compute_quadrics(vertices, quadrics, faces, edges, options);
+  compute_quadrics(vertices, faces, edges, options);
 
   // [3] assigning edge errors using quadrics
-  for (auto &edge : edges)
-    edge.plan_collapse(vertices, quadrics, options.fix_boundary);
+  for (auto &edge : edges) edge.plan_collapse(vertices, options.fix_boundary);
 
   // [4] create priority queue on quadric error
   QEMHeap heap(edges, !options.fix_boundary);
@@ -80,18 +58,17 @@ void simplify(std::vector<vec3d> &vertices, std::vector<vec3i> &indices,
     Edge *const edge = heap.top();
     if (edge->col_error() >= std::numeric_limits<double>::max()) break;
 
-    assert(is_valid_edge_target(*edge, marker, options.fix_boundary));
-
     // [5] collapse the least-error edge until mesh is simplified enough
-    int collapsed =
-        edge_collapse(vertices, faces, quadrics, heap, marker, *edge, options);
+    int collapsed = edge_collapse(vertices, faces, heap, *edge, options);
 
     nv -= collapsed;
   }
 
-  // edges are pointless from this point on, but need to fix vertices and
-  // indices
-  compact_data(vertices, indices, marker);
+  // edges are useless
+  // faces and vertices will be used to generate indices and positions
+  // then they are useless as well
+  faces.compactIndicesAndDie(indices);
+  vertices.compactPositionsAndDie(positions, indices);
 }
 
 }  // namespace MeshSimpl

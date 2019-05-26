@@ -3,39 +3,39 @@
 //
 
 #include "ecol.hpp"
-#include <memory>
-#include "marker.hpp"
-#include "ring.hpp"
+#include <cassert>       // for assert
+#include <memory>        // for unique_ptr
+#include "edge.hpp"      // for Edge
+#include "faces.hpp"     // for Faces
+#include "qem_heap.hpp"  // for QEMHeap
+#include "ring.hpp"      // for Ring, BoundaryRing, InteriorRing
+#include "util.hpp"      // for operator-, magnitude, cross, operator/=, dot
 
 namespace MeshSimpl {
 namespace Internal {
 
-void update_error_and_center(const V &vertices, const Q &quadrics,
-                             QEMHeap &heap, Edge *const edge_ptr,
-                             bool fix_boundary) {
+void update_error_and_center(Vertices &vertices, QEMHeap &heap,
+                             Edge *const edge_ptr, bool fix_boundary) {
   if (fix_boundary && edge_ptr->both_v_on_border()) {
     // this handles the case when non-boundary edge becomes boundary edge cannot
     // erase if given edge was on boundary, since then it would not be in heap
     heap.erase(edge_ptr);
   } else {
     const double error_prev = edge_ptr->col_error();
-    edge_ptr->plan_collapse(vertices, quadrics, fix_boundary);
+    edge_ptr->plan_collapse(vertices, fix_boundary);
     heap.fix(edge_ptr, error_prev);
   }
 }
 
-bool is_face_folded(const V &vertices, const F &faces, const Face &face,
+bool is_face_folded(const Vertices &vertices, const Faces &faces, idx f,
                     order moved, const vec3d &position, double angle) {
-  const idx vk = face[moved];
-  const idx vi = face[next(moved)];
-  const idx vj = face[prev(moved)];
-  const vec3d vec_ij = vertices[vj] - vertices[vi];
-  const vec3d vec_jk_prv = vertices[vk] - vertices[vj];
-  const vec3d vec_jk_new = position - vertices[vj];
-  vec3d normal_prv = cross(vec_ij, vec_jk_prv);
+  const vec3d edgeVec0 = faces.edgeVec(f, moved, vertices);
+  const vec3d edgeVec1 = faces.edgeVec(f, next(moved), vertices);
+  const vec3d edgeVec1New = position - faces.vPos(f, prev(moved), vertices);
+  vec3d normal_prv = cross(edgeVec0, edgeVec1);
   double mag_prv = magnitude(normal_prv);
   assert(mag_prv != 0);
-  vec3d normal_new = cross(vec_ij, vec_jk_new);
+  vec3d normal_new = cross(edgeVec0, edgeVec1New);
   double mag_new = magnitude(normal_new);
   if (mag_new == 0) return true;
   normal_prv /= mag_prv;
@@ -57,8 +57,7 @@ bool is_face_elongated(const vec3d &pos0, const vec3d &pos1, const vec3d &pos2,
   return aspect_ratio < ratio;
 }
 
-int edge_collapse(V &vertices, F &faces, Q &quadrics, QEMHeap &heap,
-                  Marker &marker, Edge &target,
+int edge_collapse(Vertices &vertices, Faces &faces, QEMHeap &heap, Edge &target,
                   const SimplifyOptions &options) {
   // if non-boundary edge has two endpoints on boundary, we avoid collapsing it
   // because it is possible to produce non-manifold vertex
@@ -83,7 +82,7 @@ int edge_collapse(V &vertices, F &faces, Q &quadrics, QEMHeap &heap,
   // now that we are certain this edge is to be collapsed, remove it from heap
   heap.pop();
 
-  ring->collapse(quadrics, heap, marker, options.fix_boundary);
+  ring->collapse(heap, options.fix_boundary);
 
   return 1;
 }
