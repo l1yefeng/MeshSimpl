@@ -4,18 +4,16 @@ project(MeshSimpl VERSION ${MESH_SIMPL_VERSION} LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 11)
 
 add_library(${PROJECT_NAME}
-            ecol.cpp
-            ecol.hpp
             edge.cpp
             edge.hpp
             erasable.hpp
             faces.cpp
             faces.hpp
             neighbor.hpp
-            pre_proc.cpp
-            pre_proc.hpp
-            qem_heap.cpp
-            qem_heap.hpp
+            proc.cpp
+            proc.hpp
+            qemheap.cpp
+            qemheap.hpp
             ring.cpp
             ring.hpp
             simplify.cpp

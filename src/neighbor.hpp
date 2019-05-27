@@ -23,48 +23,48 @@ namespace Internal {
 // order
 class Neighbor {
  private:
-  idx face;  // face index in indices
-  bool ccw;  // determines the direction of rotation
-  order vi;  // i = (j + 1) % 3 if clockwise
-  order vj;  // j = (center + 1) % 3 if clockwise
+  idx _f;  // face index in indices
+  bool _ccw;  // determines the direction of rotation
+  order _i;  // i = (j + 1) % 3 if clockwise
+  order _j;  // j = (center + 1) % 3 if clockwise
 
-  order get_i_from_j(order j) { return ccw ? prev(j) : next(j); }
+  order iFromJ(order j) { return _ccw ? prev(j) : next(j); }
 
  public:
-  Neighbor(idx face, order vj, bool ccw)
-      : face(face), ccw(ccw), vi(get_i_from_j(vj)), vj(vj) {}
+  Neighbor(idx face, order j, bool ccw)
+      : _f(face), _ccw(ccw), _i(iFromJ(j)), _j(j) {}
 
-  idx f() const { return face; }
+  idx f() const { return _f; }
 
-  order i() const { return vi; }
+  order i() const { return _i; }
 
-  order j() const { return vj; }
+  order j() const { return _j; }
 
-  order center() const { return 3 - vi - vj; }
+  order center() const { return 3 - _i - _j; }
 
   void rotate(const Faces& faces) {
-    const Edge* curr_edge = second_edge(faces);
-    assert(!curr_edge->on_boundary());
+    const Edge* currEdge = secondEdge(faces);
+    assert(!currEdge->onBoundary());
 
-    const idx prev_center = faces[face][center()];
+    const idx prevCenter = faces[_f][center()];
 
-    const order ford = curr_edge->f_order(face);
-    const idx next_face = curr_edge->face(1 - ford);
-    assert(face != next_face);
-    face = next_face;
-    vj = curr_edge->ord_in_face(1 - ford);
-    vi = get_i_from_j(vj);
+    const order ford = currEdge->wingOrder(_f);
+    const idx nextFace = currEdge->face(1 - ford);
+    assert(_f != nextFace);
+    _f = nextFace;
+    _j = currEdge->ordInF(1 - ford);
+    _i = iFromJ(_j);
 
-    assert(faces[face][center()] == prev_center);
+    assert(faces[_f][center()] == prevCenter);
   }
 
-  Edge* first_edge(const Faces& faces) const { return faces.side(f(), vj); }
+  Edge* firstEdge(const Faces& faces) const { return faces.side(f(), _j); }
 
-  Edge* second_edge(const Faces& faces) const { return faces.side(f(), vi); }
+  Edge* secondEdge(const Faces& faces) const { return faces.side(f(), _i); }
 
-  idx first_v(const Faces& faces) const { return faces[f()][vi]; }
+  idx firstV(const Faces& faces) const { return faces[f()][_i]; }
 
-  idx second_v(const Faces& faces) const { return faces[f()][vj]; }
+  idx secondV(const Faces& faces) const { return faces[f()][_j]; }
 };
 
 }  // namespace Internal

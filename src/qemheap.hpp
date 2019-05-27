@@ -2,8 +2,8 @@
 // Created by nickl on 1/8/19.
 //
 
-#ifndef MESH_SIMPL_QEM_HEAP_HPP
-#define MESH_SIMPL_QEM_HEAP_HPP
+#ifndef MESH_SIMPL_QEMHEAP_HPP
+#define MESH_SIMPL_QEMHEAP_HPP
 
 #include <cassert>
 #include <cstddef>    // for size_t
@@ -20,14 +20,14 @@ class QEMHeap {
  public:
   // Construct a min-binary-heap with edge ecol errors as keys;
   // store a reference of the list of edges and store all handles
-  explicit QEMHeap(E &edges /*, bool include_boundary*/);
+  explicit QEMHeap(Edges &edges);
 
   void push(idx e) { keys[handles[e] = ++n] = e; }
 
   void heapilize() {
     keys.resize(n + 1);
     for (size_t k = n / 2; k >= 1; --k) sink(k);
-    assert(is_min_heap());
+    assert(isMinHeap());
   }
 
   // Returns the edge id with minimum ecol error
@@ -37,8 +37,8 @@ class QEMHeap {
   void pop();
 
   // Fix the priority of an edge after the error value is modified;
-  // Param `error_prev` is used to determine the direction of priority change
-  void fix(const Edge *ptr, double error_prev);
+  // Param `errorPrev` is used to determine the direction of priority change
+  void fix(const Edge *ptr, double errorPrev);
 
   // Suppress this edge until it is, if ever, updated next time
   void penalize(Edge *edge);
@@ -53,7 +53,7 @@ class QEMHeap {
 
  private:
   std::vector<idx> keys;        // binary heap array, indexed from 1
-  E &edges;                     // a reference to `edges`
+  Edges &edges;                 // a reference to `edges`
   std::vector<size_t> handles;  // handles[e] is the position of e in keys
   size_t n;                     // = heap.size() = keys.size() - 1
 
@@ -64,9 +64,9 @@ class QEMHeap {
   void exchange(size_t i, size_t j);
 
   // For assertion purposes
-  bool is_min_heap() const { return is_min_heap(1); }
+  bool isMinHeap() const { return isMinHeap(1); }
 
-  bool is_min_heap(size_t k) const;
+  bool isMinHeap(size_t k) const;
 
   // Adjust the priority of node k: direction is towards higher priority
   void swim(size_t k);
@@ -78,4 +78,4 @@ class QEMHeap {
 }  // namespace Internal
 }  // namespace MeshSimpl
 
-#endif  // MESH_SIMPL_QEM_HEAP_HPP
+#endif  // MESH_SIMPL_QEMHEAP_HPP

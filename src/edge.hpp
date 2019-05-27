@@ -15,7 +15,10 @@
 namespace MeshSimpl {
 namespace Internal {
 
-/*class Vertices;*/
+struct Wing {
+  idx f;
+  order ordInF;
+};
 
 // Edge defines the struct of an edge
 //
@@ -27,107 +30,91 @@ class Edge {
   static Vertices *_vertices;
 
   // sum of quadrics of two endpoints
-  Quadric q = {};
+  Quadric _q = {};
 
   // where this edge collapse into
-  vec3d center = {};
+  vec3d _center = {};
 
   // quadric error value
-  double error = 0;
+  double _error = 0;
 
   // index of two endpoints
-  vec2i vv;
+  vec2i _vv;
 
-  // index of two incident faces;
-  // boundary edges have faces[0] and ord_in_face[1] is INVALID;
-  // all edges have at least face[0] after edges are constructed in
-  // `construct_edges()`
-  vec2i ff = {};
-
-  // order of this edge in two incident faces, match the order to member "ff"
-  std::array<order, 2> ord_in_ff = {INVALID, INVALID};
-
-  /*// vertices on boundary
-  std::array<bool, 2> v_on_border;*/
+  std::array<Wing, 2> _wings = {{{0, INVALID}, {0, INVALID}}};
 
  public:
-  static void embedVertices(Vertices &vertices) { _vertices = &vertices; }
+  static void setVertices(Vertices &vertices) { _vertices = &vertices; }
 
   // Construct an edge with two endpoints indexes.
-  // After constructed this edge
-  //  - (Required) call attach_1st_face()
-  //  - (Optional) call attach_2nd_face()
-  //  - (Required) call set_v_on_border()
+  // After constructed this edge, call setWing() once or twice
   // Then this edge is correctly initialized
-  Edge(idx v0, idx v1) : vv({v0, v1}) /*, v_on_border({true, true})*/ {}
+  Edge(idx v0, idx v1) : _vv({v0, v1}) {}
 
   // Attach a face to edge.
   // No other modifier member functions should be called before this call
-  void attach_1st_face(idx face, order edge_order_in_face);
-
-  // Attach a second face to edge.
-  // Returns false if this is not the first time attach_2nd_face() being called.
-  // Must be called after attach_1st_face();
-  // No other modifier member functions should be called before this call
-  void attach_2nd_face(idx face, order edge_order_in_face);
+  void setWing(order wingOrd, idx f, order ordInF) {
+    _wings[wingOrd].f = f;
+    _wings[wingOrd].ordInF = ordInF;
+  }
 
   //
   // public methods for retrieval of information
   //
 
   // Returns the collapse center of next collapse
-  const vec3d &col_center() const { return center; }
+  const vec3d &center() const { return _center; }
 
   // Returns the error value made of next collapse
-  double col_error() const { return error; }
+  double error() const { return _error; }
 
   // Returns the sum of quadrics of two endpoints
-  const Quadric &col_q() const { return q; }
+  const Quadric &q() const { return _q; }
 
-  bool both_v_on_border() const {
-    return _vertices->isBoundary(vv[0]) && _vertices->isBoundary(vv[1]);
+  bool bothEndsOnBoundary() const {
+    return _vertices->isBoundary(_vv[0]) && _vertices->isBoundary(_vv[1]);
   }
 
-  bool neither_v_on_border() const {
-    return !_vertices->isBoundary(vv[0]) && !_vertices->isBoundary(vv[1]);
+  bool neitherEndOnBoundary() const {
+    return !_vertices->isBoundary(_vv[0]) && !_vertices->isBoundary(_vv[1]);
   }
 
-  bool one_v_on_border() const {
-    return !both_v_on_border() && !neither_v_on_border();
+  bool oneEndOnBoundary() const {
+    return !bothEndsOnBoundary() && !neitherEndOnBoundary();
   }
 
-  idx face(order ord) const { return ff[ord]; }
+  idx face(order ord) const { return _wings[ord].f; }
 
   // Returns the order of this edge in face(ord)
-  order ord_in_face(order ord) const { return ord_in_ff[ord]; }
+  order ordInF(order ord) const { return _wings[ord].ordInF; }
 
   // Returns true if egde is on border
   // NOTE: different from both endpoints on border
-  bool on_boundary() const { return ord_in_ff[1] == INVALID; }
+  bool onBoundary() const { return ordInF(1) == INVALID; }
 
   // Returns the order of face f on this edge
-  order f_order(idx f) const {
-    assert(ff[0] == f || (ff[1] == f && ord_in_ff[1] != INVALID));
-    return ff[0] == f ? 0 : 1;
+  order wingOrder(idx f) const {
+    assert(face(0) == f || (face(1) == f && ordInF(1) != INVALID));
+    return face(0) == f ? 0 : 1;
   }
 
   // Returns the order of endpoint v on this edge
-  order v_order(idx v) const {
-    assert(vv[0] == v || vv[1] == v);
-    return vv[0] == v ? 0 : 1;
+  order endpointOrder(idx v) const {
+    assert(_vv[0] == v || _vv[1] == v);
+    return _vv[0] == v ? 0 : 1;
   }
 
   // Returns the order of the endpoint next collapse should delete.
   // By keeping one endpoint and deleting the other, followed by update on the
   // kept endpoint (position, quadric, etc), the edge is collapsed into a new
   // vertex (the center)
-  order v_del_order() const { return _vertices->isBoundary(vv[0]) ? 1 : 0; }
+  order delEndpointOrder() const {
+    return _vertices->isBoundary(_vv[0]) ? 1 : 0;
+  }
 
-  const vec2i &faces() const { return ff; }
+  const vec2i &endpoints() const { return _vv; }
 
-  const vec2i &vertices() const { return vv; }
-
-  idx operator[](order ord) const { return vv[ord]; }
+  idx operator[](order ord) const { return _vv[ord]; }
 
   //
   // public methods for update
@@ -138,20 +125,17 @@ class Edge {
   //  - what is current sum of endpoints quadrics
   //  - which position to collapse into (center)
   //  - what will be the error
-  void plan_collapse(bool fix_boundary);
+  void planCollapse(bool fixBoundary);
 
-  void set_infty_error() { error = std::numeric_limits<double>::max(); }
+  void setErrorInfty() { _error = std::numeric_limits<double>::max(); }
 
-  void swap_faces() {
-    std::swap(ff[0], ff[1]);
-    std::swap(ord_in_ff[0], ord_in_ff[1]);
-  }
+  void swapWings() { std::swap(_wings[0], _wings[1]); }
 
-  void replace_v(idx prev_v, idx new_v);
+  void replaceEndpoint(idx prevV, idx newV);
 
-  void drop_f(idx face);
+  void dropWing(idx face);
 
-  void replace_f(idx prev_f, idx new_f, order new_ord_in_face);
+  void replaceWing(idx prevF, idx newF, order newOrdInFace);
 };
 
 }  // namespace Internal

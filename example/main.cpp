@@ -1,9 +1,16 @@
-#include <chrono>
+#include <algorithm>  // for max
+#include <array>      // for array
+#include <chrono>     // for milliseconds, duration_cast, operator-, stea...
+#include <cmath>      // for floor
 #include <fstream>
-#include <iomanip>
-#include <iostream>
-#include "clipp.h"
-#include "simplify.hpp"
+#include <iomanip>   // for operator<<, setw, setprecision
+#include <iostream>  // for operator<<, basic_ostream, endl, basic_ostre...
+#include <string>    // for string, operator==, operator<<, getline, ope...
+#include <vector>    // for vector
+
+#include "clipp.h"       // for operator%, operator,, group, parameter, option
+#include "simplify.hpp"  // for simplify
+#include "types.hpp"     // for vec3d, vec3i, SimplifyOptions, BY_AREA, BY_A...
 
 using namespace std;
 using namespace clipp;
@@ -23,22 +30,22 @@ int main(int argc, char* argv[]) {
   auto cli =
       ((value("input", in)) % "input .obj file path",
        (value("output", out)) % "output file path",
-       (option("-f", "--fix-boundary").set(options.fix_boundary)) %
+       (option("-f", "--fix-boundary").set(options.fixBoundary)) %
            "do not move vertices on boundary",
        (option("-w", "--weighting") & value("strategy", weighting)) %
            "one of { uniform, by-area, by-area-inv }",
        (option("-s", "--strength") & number("ratio", options.strength)) %
            "0.8 means remove 80% vertices",
        (option("--border-constraint") &
-        number("constant", options.border_constraint)) %
+        number("constant", options.borderConstraint)) %
            "default is 2, assign larger constant to make border more reluctant "
            "to shrink",
        (option("--fold-over") &
-        number("angle", options.fold_over_angle_threshold)) %
+        number("angle", options.foldOverAngleThreshold)) %
            "default is cos(160), change of angle of faces cannot be larger "
            "than this angle",
        (option("--triangle-quality") &
-        number("ratio", options.aspect_ratio_at_least)) %
+        number("ratio", options.aspectRatioAtLeast)) %
            "default is 0.02, aspect_ratio cannot be smaller than this value");
 
   if (!parse(argc, argv, cli)) {

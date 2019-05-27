@@ -23,45 +23,45 @@ class Vertices;
 // neighborhood of the endpoints of this edge.
 class Ring {
  private:
-  bool ccw_when_collect() const {
-    return edge.ord_in_face(0) != next(faces.orderOf(edge.face(0), v_del));
+  bool ccwWhenCollect() const {
+    return edge.ordInF(0) != next(_faces.orderOf(edge.face(0), vDel));
   }
 
  protected:
   static const size_t ESTIMATE_VALENCE = 8;
 
   // keep some references internally
-  Vertices &vertices;
-  Faces &faces;
+  Vertices &_vertices;
+  Faces &_faces;
 
   // in the center of the ring
   const Edge &edge;
-  idx v_kept, v_del;
+  idx vKept, vDel;
 
   // collections
   bool ccw;
-  std::vector<Neighbor> v_del_neighbors, v_kept_neighbors;
+  std::vector<Neighbor> vDelNeighbors, vKeptNeighbors;
 
   Ring(Vertices &vertices, Faces &faces, const Edge &edge)
-      : vertices(vertices),
-        faces(faces),
+      : _vertices(vertices),
+        _faces(faces),
         edge(edge),
-        v_kept(edge[1 - edge.v_del_order()]),
-        v_del(edge[edge.v_del_order()]),
-        ccw(ccw_when_collect()) {}
+        vKept(edge[1 - edge.delEndpointOrder()]),
+        vDel(edge[edge.delEndpointOrder()]),
+        ccw(ccwWhenCollect()) {}
 
   void reserve(size_t sz) {
-    v_del_neighbors.reserve(sz);
-    v_kept_neighbors.reserve(sz);
+    vDelNeighbors.reserve(sz);
+    vKeptNeighbors.reserve(sz);
   }
 
-  virtual bool check_env() = 0;
+  virtual bool checkEnv() = 0;
 
-  bool check_topo();
+  bool checkTopo();
 
-  bool check_geom(double foldover_angle) const;
+  bool checkGeom(double foldOverAngle) const;
 
-  bool check_quality(double aspect_ratio) const;
+  bool checkQuality(double aspectRatio) const;
 
  public:
   virtual ~Ring() = default;
@@ -69,12 +69,12 @@ class Ring {
   virtual void collect() = 0;
 
   bool check(const SimplifyOptions &options) {
-    return check_env() && check_topo() &&
-           check_geom(options.fold_over_angle_threshold) &&
-           check_quality(options.aspect_ratio_at_least);
+    return checkEnv() && checkTopo() &&
+           checkGeom(options.foldOverAngleThreshold) &&
+           checkQuality(options.aspectRatioAtLeast);
   }
 
-  virtual void collapse(QEMHeap &heap, bool fix_boundary) = 0;
+  virtual void collapse(QEMHeap &heap, bool fixBoundary) = 0;
 };
 
 class InteriorRing : public Ring {
@@ -86,9 +86,9 @@ class InteriorRing : public Ring {
 
   void collect() override;
 
-  bool check_env() override;
+  bool checkEnv() override;
 
-  void collapse(QEMHeap &heap, bool fix_boundary) override;
+  void collapse(QEMHeap &heap, bool fixBoundary) override;
 };
 
 class BoundaryRing : public Ring {
@@ -100,9 +100,9 @@ class BoundaryRing : public Ring {
 
   void collect() override;
 
-  bool check_env() override;
+  bool checkEnv() override;
 
-  void collapse(QEMHeap &heap, bool fix_boundary) override;
+  void collapse(QEMHeap &heap, bool fixBoundary) override;
 };
 
 }  // namespace Internal

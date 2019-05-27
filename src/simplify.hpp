@@ -9,7 +9,7 @@
 
 namespace MeshSimpl {
 
-void options_validation(const SimplifyOptions& options);
+void validateOptions(const SimplifyOptions& options);
 
 void simplify(Positions& positions, Indices& indices,
               const SimplifyOptions& options = {});

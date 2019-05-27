@@ -14,37 +14,37 @@ namespace Internal {
 
 class Erasable {
  protected:
-  bool erased;
+  bool _erased;
 
-  void checkExistence() const { assert(!erased); }
+  void checkExistence() const { assert(!_erased); }
 
  public:
   void erase() {
     checkExistence();
-    erased = true;
+    _erased = true;
   }
 
-  bool exists() const { return !erased; }
+  bool exists() const { return !_erased; }
 };
 
 class Erasables {
  protected:
-  std::vector<bool> erased;
+  std::vector<bool> _erased;
 
  public:
-  explicit Erasables(size_t sz) : erased(sz, false) {}
+  explicit Erasables(size_t sz) : _erased(sz, false) {}
 
   void erase(idx i) {
     assert(exists(i));
-    erased[i] = true;
+    _erased[i] = true;
   }
 
   bool exists(idx i) const {
     assert(i < size());
-    return !erased[i];
+    return !_erased[i];
   }
 
-  size_t size() const { return erased.size(); }
+  size_t size() const { return _erased.size(); }
 };
 
 }  // namespace Internal

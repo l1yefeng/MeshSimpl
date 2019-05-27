@@ -11,92 +11,80 @@ namespace Internal {
 
 Vertices* Edge::_vertices = nullptr;
 
-void Edge::attach_1st_face(idx face, order edge_order_in_face) {
-  ff[0] = face;
-  ord_in_ff[0] = edge_order_in_face;
-}
+void Edge::planCollapse(bool fixBoundary) {
+  _q = _vertices->q(_vv[0]) + _vertices->q(_vv[1]);
 
-void Edge::attach_2nd_face(idx face, order edge_order_in_face) {
-  ff[1] = face;
-  ord_in_ff[1] = edge_order_in_face;
-}
-
-void Edge::plan_collapse(bool fix_boundary) {
-  q = _vertices->q(vv[0]) + _vertices->q(vv[1]);
-
-  if (fix_boundary && both_v_on_border()) {
+  if (fixBoundary && bothEndsOnBoundary()) {
     // the plan is: no plan is needed because it will never by modified
     return;
-  } else if (fix_boundary && one_v_on_border()) {
+  } else if (fixBoundary && oneEndOnBoundary()) {
     // the plan is: new position is the position of the vertex on border
-    center = _vertices->position(_vertices->isBoundary(vv[0]) ? vv[0] : vv[1]);
-    error = q_error(q, center);
+    _center = _vertices->position(_vertices->isBoundary(_vv[0]) ? _vv[0] : _vv[1]);
+    _error = qError(_q, _center);
   } else {
     // the plan is: new position leads to the lowest error
-    const vec3d b{q[6], q[7], q[8]};
-    const double c = q[9];
+    const vec3d b{_q[6], _q[7], _q[8]};
+    const double c = _q[9];
 
     // computes the inverse of matrix A in quadric
-    const double a_det = q[0] * (q[3] * q[5] - q[4] * q[4]) -
-                         q[1] * (q[1] * q[5] - q[4] * q[2]) +
-                         q[2] * (q[1] * q[4] - q[3] * q[2]);
+    const double aDet = _q[0] * (_q[3] * _q[5] - _q[4] * _q[4]) -
+                         _q[1] * (_q[1] * _q[5] - _q[4] * _q[2]) +
+                         _q[2] * (_q[1] * _q[4] - _q[3] * _q[2]);
 
-    if (a_det != 0) {
+    if (aDet != 0) {
       // invertible, find position yielding minimal error
-      const double a_det_inv = 1.0 / a_det;
-      const std::array<double, 6> a_inv{
-          (q[3] * q[5] - q[4] * q[4]) * a_det_inv,
-          (q[2] * q[4] - q[1] * q[5]) * a_det_inv,
-          (q[1] * q[4] - q[2] * q[3]) * a_det_inv,
-          (q[0] * q[5] - q[2] * q[2]) * a_det_inv,
-          (q[1] * q[2] - q[0] * q[4]) * a_det_inv,
-          (q[0] * q[3] - q[1] * q[1]) * a_det_inv,
+      const double aDetInv = 1.0 / aDet;
+      const std::array<double, 6> aInv{
+          (_q[3] * _q[5] - _q[4] * _q[4]) * aDetInv,
+          (_q[2] * _q[4] - _q[1] * _q[5]) * aDetInv,
+          (_q[1] * _q[4] - _q[2] * _q[3]) * aDetInv,
+          (_q[0] * _q[5] - _q[2] * _q[2]) * aDetInv,
+          (_q[1] * _q[2] - _q[0] * _q[4]) * aDetInv,
+          (_q[0] * _q[3] - _q[1] * _q[1]) * aDetInv,
       };
-      center = {-dot({a_inv[0], a_inv[1], a_inv[2]}, b),
-                -dot({a_inv[1], a_inv[3], a_inv[4]}, b),
-                -dot({a_inv[2], a_inv[4], a_inv[5]}, b)};
-      error = dot(b, center) + c;
+      _center = {-dot({aInv[0], aInv[1], aInv[2]}, b),
+                -dot({aInv[1], aInv[3], aInv[4]}, b),
+                -dot({aInv[2], aInv[4], aInv[5]}, b)};
+      _error = dot(b, _center) + c;
     } else {
       // not invertible, choose from endpoints and midpoint
-      center = midpoint(_vertices->position(vv[0]), _vertices->position(vv[1]));
-      error = q_error(q, center);
-      for (const idx v : vv) {
-        const double err = q_error(q, _vertices->position(v));
-        if (err < error) {
-          center = _vertices->position(v);
-          error = err;
+      _center = midpoint(_vertices->position(_vv[0]), _vertices->position(_vv[1]));
+      _error = qError(_q, _center);
+      for (const idx v : _vv) {
+        const double err = qError(_q, _vertices->position(v));
+        if (err < _error) {
+          _center = _vertices->position(v);
+          _error = err;
         }
       }
     }
   }
 }
 
-void Edge::replace_v(idx prev_v, idx new_v) {
-  order ord = v_order(prev_v);
-  vv[ord] = new_v;
+void Edge::replaceEndpoint(idx prevV, idx newV) {
+  order ord = endpointOrder(prevV);
+  _vv[ord] = newV;
 
-  assert(vv[0] != vv[1]);
-  if (vv[0] > vv[1]) {
-    std::swap(vv[0], vv[1]);
+  assert(_vv[0] != _vv[1]);
+  if (_vv[0] > _vv[1]) {
+    std::swap(_vv[0], _vv[1]);
   }
 }
 
-void Edge::drop_f(idx face) {
-  assert(!on_boundary());
-  order ord = f_order(face);
-  ff[ord] = 0;
-  ord_in_ff[ord] = INVALID;
-  if (ord == 0) swap_faces();
+void Edge::dropWing(idx face) {
+  assert(!onBoundary());
+  order ord = wingOrder(face);
+  setWing(ord, 0, INVALID);
+  if (ord == 0) swapWings();
 
-  assert(ord_in_ff[0] != INVALID);
+  assert(ordInF(0) != INVALID);
 }
 
-void Edge::replace_f(idx prev_f, idx new_f, order new_ord_in_face) {
-  order ord = f_order(prev_f);
-  assert(ord_in_ff[ord] != INVALID);
+void Edge::replaceWing(idx prevF, idx newF, order newOrdInFace) {
+  order ord = wingOrder(prevF);
+  assert(ordInF(ord) != INVALID);
 
-  ff[ord] = new_f;
-  ord_in_ff[ord] = new_ord_in_face;
+  setWing(ord, newF, newOrdInFace);
 }
 
 }  // namespace Internal

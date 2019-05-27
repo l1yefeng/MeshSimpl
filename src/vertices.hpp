@@ -57,9 +57,9 @@ class Vertices : public Erasables {
 
   // Erase unreferenced vertices
   void eraseUnref(const Faces& faces) {
-    erased = std::vector<bool>(size(), true);
+    _erased = std::vector<bool>(size(), true);
     for (idx f = 0; f < faces.size(); ++f) {
-      for (idx v : faces[f]) erased[v] = false;
+      for (idx v : faces[f]) _erased[v] = false;
     }
   }
 

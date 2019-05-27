@@ -37,25 +37,25 @@ struct SimplifyOptions {
   //  - BY_AREA_INV: larger face -> smaller error
   WEIGHTING weighting = UNIFORM;
 
-  // when "fix_boundary" is true, we completely do not collapse anything on
+  // when "fixBoundary" is true, we completely do not collapse anything on
   // boundary; otherwise, we add a "constraint plane" that is perpendicular to
   // boundary face to increase the quadric/error of boundary vertices ref:
   // Simplifying Surfaces with Color and Texture using Quadric Error Metrics
-  bool fix_boundary = false;
+  bool fixBoundary = false;
 
   // the following are very fine grained configuration options
 
-  // the constant that decides the weight of constraint planes (if fix_boundary
-  // unset); larger border_constraint -> harder for boundary to deform
-  float border_constraint = 2.0f;
+  // the constant that decides the weight of constraint planes (if fixBoundary
+  // unset); larger borderConstraint -> harder for boundary to deform
+  float borderConstraint = 2.0f;
 
   // used to check if, during edge collapse, faces get folded;
-  double fold_over_angle_threshold = std::cos(160);
+  double foldOverAngleThreshold = std::cos(160);
 
   // used to check if, during edge collapse, faces become extremely elongated;
-  // aspect_ratio = 8(s-a)(s-b)(s-c)/abc, faces with lower aspect ratio -> lower
+  // aspect ratio = 8(s-a)(s-b)(s-c)/abc, faces with lower aspect ratio -> lower
   // quality
-  double aspect_ratio_at_least = 0.02;
+  double aspectRatioAtLeast = 0.02;
 };
 
 namespace Internal {
@@ -66,7 +66,7 @@ typedef std::array<double, 10> Quadric;
 // Defined in edge.hpp
 class Edge;
 
-typedef std::vector<Edge> E;
+typedef std::vector<Edge> Edges;
 
 }  // namespace Internal
 

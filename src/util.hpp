@@ -46,7 +46,7 @@ inline double magnitude(const vec3d &x) {
 }
 
 // Calculate quadric Q = (A, b, c) = (nn', dn, d*d)
-inline Quadric make_quadric(const vec3d &normal, double d) {
+inline Quadric makeQuadric(const vec3d &normal, double d) {
   return {normal[0] * normal[0], normal[0] * normal[1],
           normal[0] * normal[2], normal[1] * normal[1],
           normal[1] * normal[2], normal[2] * normal[2],
@@ -55,7 +55,7 @@ inline Quadric make_quadric(const vec3d &normal, double d) {
 }
 
 // Compute quadric error Q(v) = vAv + 2bv + c
-inline double q_error(const Quadric &q, const vec3d &v) {
+inline double qError(const Quadric &q, const vec3d &v) {
   return dot({dot({q[0], q[1], q[2]}, v), dot({q[1], q[3], q[4]}, v),
               dot({q[2], q[4], q[5]}, v)},
              v) +

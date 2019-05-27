@@ -14,7 +14,7 @@ namespace Internal {
 bool Faces::onBoundary(idx f) const {
   assert(exists(f));
   for (order k : {0, 1, 2})
-    if (side(f, k)->on_boundary()) return true;
+    if (side(f, k)->onBoundary()) return true;
   return false;
 }
 

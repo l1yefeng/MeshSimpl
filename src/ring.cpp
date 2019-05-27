@@ -5,28 +5,28 @@
 #include "ring.hpp"
 #include <algorithm>     // for sort
 #include <cassert>       // for assert
-#include "ecol.hpp"      // for update_error_and_center, is_face_elongated
-#include "qem_heap.hpp"  // for QEMHeap
+#include "proc.hpp"      // for updateError, isFaceElongated
+#include "qemheap.hpp"   // for QEMHeap
 #include "vertices.hpp"  // for Vertices
 
 namespace MeshSimpl {
 namespace Internal {
 
-bool Ring::check_topo() {
-  std::vector<const Neighbor *> star_del, star_kept;
-  star_del.reserve(v_del_neighbors.size());
-  star_kept.reserve(v_kept_neighbors.size());
+bool Ring::checkTopo() {
+  std::vector<const Neighbor *> starDel, starKept;
+  starDel.reserve(vDelNeighbors.size());
+  starKept.reserve(vKeptNeighbors.size());
 
-  for (const auto &nb : v_del_neighbors) star_del.push_back(&nb);
-  for (const auto &nb : v_kept_neighbors) star_kept.push_back(&nb);
+  for (const auto &nb : vDelNeighbors) starDel.push_back(&nb);
+  for (const auto &nb : vKeptNeighbors) starKept.push_back(&nb);
 
   const auto cmp = [&](const Neighbor *nb0, const Neighbor *nb1) -> bool {
-    return nb0->second_v(faces) < nb1->second_v(faces);
+    return nb0->secondV(_faces) < nb1->secondV(_faces);
   };
-  std::sort(star_del.begin(), star_del.end(), cmp);
-  std::sort(star_kept.begin(), star_kept.end(), cmp);
-  for (auto itd = star_del.begin(), itk = star_kept.begin();
-       itd != star_del.end() && itk != star_kept.end();) {
+  std::sort(starDel.begin(), starDel.end(), cmp);
+  std::sort(starKept.begin(), starKept.end(), cmp);
+  for (auto itd = starDel.begin(), itk = starKept.begin();
+       itd != starDel.end() && itk != starKept.end();) {
     if (cmp(*itd, *itk)) {
       ++itd;
     } else if (cmp(*itk, *itd)) {
@@ -39,29 +39,29 @@ bool Ring::check_topo() {
   return true;
 }
 
-bool Ring::check_geom(double foldover_angle) const {
-  for (const auto &nb : v_del_neighbors) {
-    if (is_face_folded(vertices, faces, nb.f(), nb.center(), edge.col_center(),
-                       foldover_angle))
+bool Ring::checkGeom(double foldOverAngle) const {
+  for (const auto &nb : vDelNeighbors) {
+    if (isFaceFolded(_vertices, _faces, nb.f(), nb.center(), edge.center(),
+                     foldOverAngle))
       return false;
   }
-  for (const auto &nb : v_kept_neighbors) {
-    if (is_face_folded(vertices, faces, nb.f(), nb.center(), edge.col_center(),
-                       foldover_angle))
+  for (const auto &nb : vKeptNeighbors) {
+    if (isFaceFolded(_vertices, _faces, nb.f(), nb.center(), edge.center(),
+                     foldOverAngle))
       return false;
   }
   return true;
 }
 
-bool Ring::check_quality(double aspect_ratio) const {
-  for (const auto &nb : v_del_neighbors) {
-    if (is_face_elongated(vertices[v_del], vertices[nb.first_v(faces)],
-                          vertices[nb.second_v(faces)], aspect_ratio))
+bool Ring::checkQuality(double aspectRatio) const {
+  for (const auto &nb : vDelNeighbors) {
+    if (isFaceElongated(_vertices[vDel], _vertices[nb.firstV(_faces)],
+                        _vertices[nb.secondV(_faces)], aspectRatio))
       return false;
   }
-  for (const auto &nb : v_del_neighbors) {
-    if (is_face_elongated(vertices[v_kept], vertices[nb.first_v(faces)],
-                          vertices[nb.second_v(faces)], aspect_ratio))
+  for (const auto &nb : vDelNeighbors) {
+    if (isFaceElongated(_vertices[vKept], _vertices[nb.firstV(_faces)],
+                        _vertices[nb.secondV(_faces)], aspectRatio))
       return false;
   }
   return true;
@@ -71,182 +71,181 @@ void InteriorRing::collect() {
   const idx f0 = edge.face(0);
   const idx f1 = edge.face(1);
 
-  Neighbor nb(f0, edge.ord_in_face(0), ccw);
+  Neighbor nb(f0, edge.ordInF(0), ccw);
   while (true) {
-    nb.rotate(faces);
+    nb.rotate(_faces);
     if (nb.f() == f1) break;
-    v_del_neighbors.push_back(nb);
+    vDelNeighbors.push_back(nb);
   }
 
-  bool boundary_hit = false;  // useful in case v_kept is on boundary
-  nb = Neighbor(f1, edge.ord_in_face(1), ccw);
+  bool boundaryHit = false;  // useful in case vKept is on boundary
+  nb = Neighbor(f1, edge.ordInF(1), ccw);
   while (true) {
-    if (nb.second_edge(faces)->on_boundary()) {
-      if (boundary_hit)
-        break;  // while-loop breaks here if one v_kept is on boundary
-      boundary_hit = true;
-      nb = Neighbor(f0, edge.ord_in_face(0), !ccw);
+    if (nb.secondEdge(_faces)->onBoundary()) {
+      if (boundaryHit)
+        break;  // while-loop breaks here if one vKept is on boundary
+      boundaryHit = true;
+      nb = Neighbor(f0, edge.ordInF(0), !ccw);
       continue;
     }
 
-    nb.rotate(faces);
+    nb.rotate(_faces);
 
     // this face is deleted thus unnecessary to check fold-over if f == f0
     if (nb.f() == f0) {
       // while-loop breaks here if there is no business of boundary
-      assert(!boundary_hit);
+      assert(!boundaryHit);
       break;
     }
 
-    v_kept_neighbors.push_back(nb);
+    vKeptNeighbors.push_back(nb);
   }
 }
 
-bool InteriorRing::check_env() {
+bool InteriorRing::checkEnv() {
   // special case: there are 2 faces, 3 vertices in current component
   // this happens if input contains such component because
   // this edge collapse implementation avoid generating them
-  if (v_del_neighbors.empty()) {
-    assert(faces[edge.face(0)][edge.ord_in_face(0)] ==
-           faces[edge.face(1)][edge.ord_in_face(1)]);
+  if (vDelNeighbors.empty()) {
+    assert(_faces[edge.face(0)][edge.ordInF(0)] ==
+           _faces[edge.face(1)][edge.ordInF(1)]);
     return false;
   }
 
   // special case: avoid collapsing a tetrahedron into folded faces
-  if (v_del_neighbors.size() == 1 && v_kept_neighbors.size() == 1) return false;
+  if (vDelNeighbors.size() == 1 && vKeptNeighbors.size() == 1) return false;
 
   // fine target to collapse
   return true;
 }
 
-void InteriorRing::collapse(QEMHeap &heap, bool fix_boundary) {
+void InteriorRing::collapse(QEMHeap &heap, bool fixBoundary) {
   const idx f0 = edge.face(0);
   const idx f1 = edge.face(1);
 
   // update vertex position and quadric
-  if (edge.neither_v_on_border())
-    vertices.setPosition(v_kept, edge.col_center());
-  vertices.setQ(v_kept, edge.col_q());
+  if (edge.neitherEndOnBoundary()) _vertices.setPosition(vKept, edge.center());
+  _vertices.setQ(vKept, edge.q());
 
   // two kept edges in two deleted faces
-  Edge *edge_kept0 = faces.edgeAcrossFrom(f0, v_del);
-  Edge *edge_kept1 = faces.edgeAcrossFrom(f1, v_del);
+  Edge *edgeKept0 = _faces.edgeAcrossFrom(f0, vDel);
+  Edge *edgeKept1 = _faces.edgeAcrossFrom(f1, vDel);
 
-  auto it = v_del_neighbors.begin();
-  Edge *dirty_edge_ptr = edge_kept0;
+  auto it = vDelNeighbors.begin();
+  Edge *dirtyEdge = edgeKept0;
 
   // first face to process: deleted face 0
-  faces.setV(it->f(), it->center(), v_kept);
-  heap.erase(faces.side(it->f(), it->j()));
+  _faces.setV(it->f(), it->center(), vKept);
+  heap.erase(_faces.side(it->f(), it->j()));
 
-  faces.setSide(it->f(), it->j(), edge_kept0);
-  dirty_edge_ptr->replace_f(f0, it->f(), it->j());
-  faces.erase(f0);
+  _faces.setSide(it->f(), it->j(), edgeKept0);
+  dirtyEdge->replaceWing(f0, it->f(), it->j());
+  _faces.erase(f0);
 
-  vertices.setBoundary(v_del, vertices.isBoundary(v_kept));
+  _vertices.setBoundary(vDel, _vertices.isBoundary(vKept));
 
   // every face centered around deleted vertex
-  for (++it; it != v_del_neighbors.end(); ++it) {
-    faces.setV(it->f(), it->center(), v_kept);
-    dirty_edge_ptr = faces.side(it->f(), it->j());
+  for (++it; it != vDelNeighbors.end(); ++it) {
+    _faces.setV(it->f(), it->center(), vKept);
+    dirtyEdge = _faces.side(it->f(), it->j());
 
-    dirty_edge_ptr->replace_v(v_del, v_kept);
+    dirtyEdge->replaceEndpoint(vDel, vKept);
 
-    update_error_and_center(vertices, heap, dirty_edge_ptr, fix_boundary);
+    updateError(_vertices, heap, dirtyEdge, fixBoundary);
   }
 
   // the deleted face 1
   --it;
-  heap.erase(faces.side(it->f(), it->i()));
-  faces.setSide(it->f(), it->i(), edge_kept1);
-  dirty_edge_ptr = edge_kept1;
-  dirty_edge_ptr->replace_f(f1, it->f(), it->i());
-  faces.erase(f1);
+  heap.erase(_faces.side(it->f(), it->i()));
+  _faces.setSide(it->f(), it->i(), edgeKept1);
+  dirtyEdge = edgeKept1;
+  dirtyEdge->replaceWing(f1, it->f(), it->i());
+  _faces.erase(f1);
 
-  vertices.erase(v_del);
+  _vertices.erase(vDel);
 
   // every edge centered around the kept vertex
-  for (auto nb : v_kept_neighbors) {
-    dirty_edge_ptr = nb.first_edge(faces);
-    if (fix_boundary && dirty_edge_ptr->both_v_on_border()) continue;
-    update_error_and_center(vertices, heap, dirty_edge_ptr, fix_boundary);
+  for (auto nb : vKeptNeighbors) {
+    dirtyEdge = nb.firstEdge(_faces);
+    if (fixBoundary && dirtyEdge->bothEndsOnBoundary()) continue;
+    updateError(_vertices, heap, dirtyEdge, fixBoundary);
   }
 
-  if (!(fix_boundary && edge_kept0->both_v_on_border())) {
-    update_error_and_center(vertices, heap, edge_kept0, fix_boundary);
+  if (!(fixBoundary && edgeKept0->bothEndsOnBoundary())) {
+    updateError(_vertices, heap, edgeKept0, fixBoundary);
   }
 }
 
 void BoundaryRing::collect() {
   const idx f = edge.face(0);
 
-  Neighbor nb(f, edge.ord_in_face(0), ccw);
+  Neighbor nb(f, edge.ordInF(0), ccw);
   while (true) {
-    const Edge *next_edge = nb.second_edge(faces);
+    const Edge *nextEdge = nb.secondEdge(_faces);
 
-    if (next_edge->on_boundary()) break;
+    if (nextEdge->onBoundary()) break;
 
-    nb.rotate(faces);
-    v_del_neighbors.push_back(nb);
+    nb.rotate(_faces);
+    vDelNeighbors.push_back(nb);
   }
 
-  nb = Neighbor(f, edge.ord_in_face(0), !ccw);
+  nb = Neighbor(f, edge.ordInF(0), !ccw);
   while (true) {
-    const Edge *next_edge = nb.second_edge(faces);
+    const Edge *nextEdge = nb.secondEdge(_faces);
 
-    if (next_edge->on_boundary()) break;
+    if (nextEdge->onBoundary()) break;
 
-    nb.rotate(faces);
-    v_kept_neighbors.push_back(nb);
+    nb.rotate(_faces);
+    vKeptNeighbors.push_back(nb);
   }
 }
 
-bool BoundaryRing::check_env() {
+bool BoundaryRing::checkEnv() {
   // special case: there is ONE triangle in current component
-  if (v_kept_neighbors.empty()) return false;
+  if (vKeptNeighbors.empty()) return false;
 
   return true;
 }
 
-void BoundaryRing::collapse(QEMHeap &heap, bool fix_boundary) {
+void BoundaryRing::collapse(QEMHeap &heap, bool fixBoundary) {
   const idx f = edge.face(0);
 
   // update vertex position and quadric
-  vertices.setPosition(v_kept, edge.col_center());
-  vertices.setQ(v_kept, edge.col_q());
+  _vertices.setPosition(vKept, edge.center());
+  _vertices.setQ(vKept, edge.q());
 
-  Edge *edge_kept = faces.edgeAcrossFrom(f, v_del);
-  Edge *dirty_edge_ptr = edge_kept;
+  Edge *edgeKept = _faces.edgeAcrossFrom(f, vDel);
+  Edge *dirtyEdge = edgeKept;
 
-  // it is possible that v_del_neighbors is empty
-  heap.erase(faces.edgeAcrossFrom(f, v_kept));
-  if (v_del_neighbors.empty()) {
-    dirty_edge_ptr->drop_f(f);
+  // it is possible that vDelNeighbors is empty
+  heap.erase(_faces.edgeAcrossFrom(f, vKept));
+  if (vDelNeighbors.empty()) {
+    dirtyEdge->dropWing(f);
   } else {
-    auto it = v_del_neighbors.begin();
-    faces.setSide(it->f(), it->j(), edge_kept);
-    dirty_edge_ptr->replace_f(f, it->f(), it->j());
+    auto it = vDelNeighbors.begin();
+    _faces.setSide(it->f(), it->j(), edgeKept);
+    dirtyEdge->replaceWing(f, it->f(), it->j());
   }
 
-  faces.erase(f);
+  _faces.erase(f);
 
   // every face centered around deleted vertex
-  for (const auto &nb : v_del_neighbors) {
-    faces.setV(nb.f(), nb.center(), v_kept);
-    dirty_edge_ptr = nb.second_edge(faces);
+  for (const auto &nb : vDelNeighbors) {
+    _faces.setV(nb.f(), nb.center(), vKept);
+    dirtyEdge = nb.secondEdge(_faces);
 
-    dirty_edge_ptr->replace_v(v_del, v_kept);
+    dirtyEdge->replaceEndpoint(vDel, vKept);
 
-    assert(!dirty_edge_ptr->neither_v_on_border());
-    update_error_and_center(vertices, heap, dirty_edge_ptr, false);
+    assert(!dirtyEdge->neitherEndOnBoundary());
+    updateError(_vertices, heap, dirtyEdge, false);
   }
 
-  vertices.erase(v_del);
+  _vertices.erase(vDel);
 
-  update_error_and_center(vertices, heap, edge_kept, false);
-  for (auto nb : v_kept_neighbors) {
-    dirty_edge_ptr = nb.second_edge(faces);
-    update_error_and_center(vertices, heap, dirty_edge_ptr, false);
+  updateError(_vertices, heap, edgeKept, false);
+  for (auto nb : vKeptNeighbors) {
+    dirtyEdge = nb.secondEdge(_faces);
+    updateError(_vertices, heap, dirtyEdge, false);
   }
 }
 

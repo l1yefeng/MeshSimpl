@@ -2,7 +2,7 @@
 // Created by nickl on 1/8/19.
 //
 
-#include "qem_heap.hpp"
+#include "qemheap.hpp"
 #include <cassert>   // for assert
 #include <cmath>     // for isnan
 #include <memory>    // for allocator_traits<>::value_type
@@ -12,15 +12,8 @@
 namespace MeshSimpl {
 namespace Internal {
 
-QEMHeap::QEMHeap(E &edges /*, bool include_boundary*/)
+QEMHeap::QEMHeap(Edges &edges )
     : keys(edges.size() + 1), edges(edges), handles(edges.size()), n(0) {
-  /* for (idx i = 0; i < edges.size(); ++i)
-     if (include_boundary || !edges[i].both_v_on_border(vertices))
-       keys[handles[i] = ++n] = i;
-
-   keys.resize(n + 1);
-   for (size_t k = n / 2; k >= 1; --k) sink(k);
-   assert(is_min_heap());*/
 }
 
 void QEMHeap::pop() {
@@ -29,29 +22,29 @@ void QEMHeap::pop() {
   keys.resize(n + 1);
 }
 
-void QEMHeap::fix(const Edge *ptr, double error_prev) {
+void QEMHeap::fix(const Edge *ptr, double errorPrev) {
   auto e = static_cast<idx>(ptr - edges.data());
   size_t k = handles[e];
-  if (ptr->col_error() > error_prev)
+  if (ptr->error() > errorPrev)
     sink(k);
   else
     swim(k);
 }
 
 void QEMHeap::penalize(Edge *edge) {
-  edge->set_infty_error();
+  edge->setErrorInfty();
   sink(handles[edge - edges.data()]);
 }
 
 void QEMHeap::erase(const Edge *ptr) {
   idx e = ptr - edges.data();
 
-  const double error_prev = edges[e].col_error();
+  const double errorPrev = edges[e].error();
   size_t k = handles[e];
   assert(k < n + 1 && k >= 1);  // check existence in heap
 
   exchange(k, n--);
-  if (edges[keys[k]].col_error() > error_prev)
+  if (edges[keys[k]].error() > errorPrev)
     sink(k);
   else
     swim(k);
@@ -59,9 +52,9 @@ void QEMHeap::erase(const Edge *ptr) {
 }
 
 bool QEMHeap::greater(size_t i, size_t j) const {
-  assert(!std::isnan(edges[keys[i]].col_error()));
-  assert(!std::isnan(edges[keys[j]].col_error()));
-  return edges[keys[i]].col_error() > edges[keys[j]].col_error();
+  assert(!std::isnan(edges[keys[i]].error()));
+  assert(!std::isnan(edges[keys[j]].error()));
+  return edges[keys[i]].error() > edges[keys[j]].error();
 }
 
 void QEMHeap::exchange(size_t i, size_t j) {
@@ -69,13 +62,13 @@ void QEMHeap::exchange(size_t i, size_t j) {
   std::swap(keys[i], keys[j]);
 }
 
-bool QEMHeap::is_min_heap(size_t k) const {
+bool QEMHeap::isMinHeap(size_t k) const {
   if (k > n) return true;
   size_t left = 2 * k;
   size_t right = 2 * k + 1;
   assert(!(left <= n && greater(k, left)));
   assert(!(right <= n && greater(k, right)));
-  return is_min_heap(left) && is_min_heap(right);
+  return isMinHeap(left) && isMinHeap(right);
 }
 
 void QEMHeap::swim(size_t k) {
