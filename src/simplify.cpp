@@ -41,20 +41,20 @@ void simplify(Positions &positions, Indices &indices,
 
   // [1] find out information of edges (endpoints, incident faces) and face2edge
   E edges;
+  Edge::embedVertices(vertices);
   construct_edges(vertices, faces, edges);
 
   // [2] compute quadrics of vertices
   compute_quadrics(vertices, faces, edges, options);
 
   // [3] assigning edge errors using quadrics
-  for (auto &edge : edges) edge.plan_collapse(vertices, options.fix_boundary);
+  for (auto &edge : edges) edge.plan_collapse(options.fix_boundary);
 
   // [4] create priority queue on quadric error
   /*QEMHeap heap(edges, !options.fix_boundary);*/
   QEMHeap heap(edges);
   for (idx e = 0; e < edges.size(); ++e) {
-    if (!(options.fix_boundary && edges[e].both_v_on_border(vertices)))
-      heap.push(e);
+    if (!(options.fix_boundary && edges[e].both_v_on_border())) heap.push(e);
   }
   heap.heapilize();
 

@@ -148,7 +148,7 @@ void construct_edges(Vertices &vertices, Faces &faces, E &edges) {
           }
           throw std::invalid_argument(ss.str());
         } else {
-          edge.attach_2nd_face(f, k, vertices);
+          edge.attach_2nd_face(f, k);
           twoWings = true;
         }
       }

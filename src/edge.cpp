@@ -9,42 +9,27 @@
 namespace MeshSimpl {
 namespace Internal {
 
+Vertices* Edge::_vertices = nullptr;
+
 void Edge::attach_1st_face(idx face, order edge_order_in_face) {
   ff[0] = face;
   ord_in_ff[0] = edge_order_in_face;
 }
 
-bool Edge::attach_2nd_face(idx face, order edge_order_in_face,
-                           Vertices& vertices) {
-  /*assert(!one_v_on_border(vertices));
-  if (neither_v_on_border(vertices)) return false;
-
-  vertices.setBoundary(vv[0], false);
-  vertices.setBoundary(vv[1], false);*/
-  /*v_on_border[0] = false;
-  v_on_border[1] = false;*/
+void Edge::attach_2nd_face(idx face, order edge_order_in_face) {
   ff[1] = face;
   ord_in_ff[1] = edge_order_in_face;
-  return true;
 }
 
-void Edge::set_v_on_border(bool v0_on_border, bool v1_on_border,
-                           Vertices& vertices) {
-  /*v_on_border[0] = v0_on_border;
-  v_on_border[1] = v1_on_border;*/
-  vertices.setBoundary(vv[0], v0_on_border);
-  vertices.setBoundary(vv[1], v1_on_border);
-}
+void Edge::plan_collapse(bool fix_boundary) {
+  q = _vertices->q(vv[0]) + _vertices->q(vv[1]);
 
-void Edge::plan_collapse(const Vertices& vertices, bool fix_boundary) {
-  q = vertices.q(vv[0]) + vertices.q(vv[1]);
-
-  if (fix_boundary && both_v_on_border(vertices)) {
+  if (fix_boundary && both_v_on_border()) {
     // the plan is: no plan is needed because it will never by modified
     return;
-  } else if (fix_boundary && one_v_on_border(vertices)) {
+  } else if (fix_boundary && one_v_on_border()) {
     // the plan is: new position is the position of the vertex on border
-    center = vertices[vertices.isBoundary(vv[0]) ? vv[0] : vv[1]];
+    center = _vertices->position(_vertices->isBoundary(vv[0]) ? vv[0] : vv[1]);
     error = q_error(q, center);
   } else {
     // the plan is: new position leads to the lowest error
@@ -73,12 +58,12 @@ void Edge::plan_collapse(const Vertices& vertices, bool fix_boundary) {
       error = dot(b, center) + c;
     } else {
       // not invertible, choose from endpoints and midpoint
-      center = midpoint(vertices[vv[0]], vertices[vv[1]]);
+      center = midpoint(_vertices->position(vv[0]), _vertices->position(vv[1]));
       error = q_error(q, center);
       for (const idx v : vv) {
-        const double err = q_error(q, vertices[v]);
+        const double err = q_error(q, _vertices->position(v));
         if (err < error) {
-          center = vertices[v];
+          center = _vertices->position(v);
           error = err;
         }
       }
@@ -89,15 +74,10 @@ void Edge::plan_collapse(const Vertices& vertices, bool fix_boundary) {
 void Edge::replace_v(idx prev_v, idx new_v) {
   order ord = v_order(prev_v);
   vv[ord] = new_v;
-  /*if (new_v_on_border) vertices.setBoundary(vv[ord], true);*/
 
   assert(vv[0] != vv[1]);
   if (vv[0] > vv[1]) {
     std::swap(vv[0], vv[1]);
-    /*auto temp = vertices.isBoundary(vv[0]);
-    vertices.setBoundary(vv[0], vertices.isBoundary(vv[1]));
-    vertices.setBoundary(vv[1], temp);*/
-    /*std::swap(vertices.isBoundary(vv[0]), vertices.isBoundary(vv[1]));*/
   }
 }
 

@@ -24,6 +24,8 @@ namespace Internal {
 // provided.
 class Edge {
  private:
+  static Vertices *_vertices;
+
   // sum of quadrics of two endpoints
   Quadric q = {};
 
@@ -49,6 +51,8 @@ class Edge {
   std::array<bool, 2> v_on_border;*/
 
  public:
+  static void embedVertices(Vertices &vertices) { _vertices = &vertices; }
+
   // Construct an edge with two endpoints indexes.
   // After constructed this edge
   //  - (Required) call attach_1st_face()
@@ -65,15 +69,7 @@ class Edge {
   // Returns false if this is not the first time attach_2nd_face() being called.
   // Must be called after attach_1st_face();
   // No other modifier member functions should be called before this call
-  bool attach_2nd_face(idx face, order edge_order_in_face, Vertices &vertices);
-
-  // Before this call, the vertex-on-border information is
-  //  - both_on_border: this edge is on border;
-  //  - neither_on_border: this edge is not on border;
-  // Only after this call does the vertex-on-border information actually mean
-  // endpoint on border or not
-  void set_v_on_border(bool v0_on_border, bool v1_on_border,
-                       Vertices &vertices);
+  void attach_2nd_face(idx face, order edge_order_in_face);
 
   //
   // public methods for retrieval of information
@@ -88,16 +84,16 @@ class Edge {
   // Returns the sum of quadrics of two endpoints
   const Quadric &col_q() const { return q; }
 
-  bool both_v_on_border(const Vertices &vertices) const {
-    return vertices.isBoundary(vv[0]) && vertices.isBoundary(vv[1]);
+  bool both_v_on_border() const {
+    return _vertices->isBoundary(vv[0]) && _vertices->isBoundary(vv[1]);
   }
 
-  bool neither_v_on_border(const Vertices &vertices) const {
-    return !vertices.isBoundary(vv[0]) && !vertices.isBoundary(vv[1]);
+  bool neither_v_on_border() const {
+    return !_vertices->isBoundary(vv[0]) && !_vertices->isBoundary(vv[1]);
   }
 
-  bool one_v_on_border(const Vertices &vertices) const {
-    return !both_v_on_border(vertices) && !neither_v_on_border(vertices);
+  bool one_v_on_border() const {
+    return !both_v_on_border() && !neither_v_on_border();
   }
 
   idx face(order ord) const { return ff[ord]; }
@@ -125,9 +121,7 @@ class Edge {
   // By keeping one endpoint and deleting the other, followed by update on the
   // kept endpoint (position, quadric, etc), the edge is collapsed into a new
   // vertex (the center)
-  order v_del_order(const Vertices &vertices) const {
-    return vertices.isBoundary(vv[0]) ? 1 : 0;
-  }
+  order v_del_order() const { return _vertices->isBoundary(vv[0]) ? 1 : 0; }
 
   const vec2i &faces() const { return ff; }
 
@@ -144,7 +138,7 @@ class Edge {
   //  - what is current sum of endpoints quadrics
   //  - which position to collapse into (center)
   //  - what will be the error
-  void plan_collapse(const Vertices &vertices, bool fix_boundary);
+  void plan_collapse(bool fix_boundary);
 
   void set_infty_error() { error = std::numeric_limits<double>::max(); }
 

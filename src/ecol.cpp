@@ -16,13 +16,13 @@ namespace Internal {
 
 void update_error_and_center(Vertices &vertices, QEMHeap &heap,
                              Edge *const edge_ptr, bool fix_boundary) {
-  if (fix_boundary && edge_ptr->both_v_on_border(vertices)) {
+  if (fix_boundary && edge_ptr->both_v_on_border()) {
     // this handles the case when non-boundary edge becomes boundary edge cannot
     // erase if given edge was on boundary, since then it would not be in heap
     heap.erase(edge_ptr);
   } else {
     const double error_prev = edge_ptr->col_error();
-    edge_ptr->plan_collapse(vertices, fix_boundary);
+    edge_ptr->plan_collapse(fix_boundary);
     heap.fix(edge_ptr, error_prev);
   }
 }
@@ -64,7 +64,7 @@ int edge_collapse(Vertices &vertices, Faces &faces, QEMHeap &heap, Edge &target,
                   const SimplifyOptions &options) {
   // if non-boundary edge has two endpoints on boundary, we avoid collapsing it
   // because it is possible to produce non-manifold vertex
-  if (target.both_v_on_border(vertices) && !target.on_boundary()) {
+  if (target.both_v_on_border() && !target.on_boundary()) {
     heap.penalize(&target);
     return 0;
   }
