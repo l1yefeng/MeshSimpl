@@ -42,7 +42,6 @@ void simplify(Positions &positions, Indices &indices,
 
   // [1] find out information of edges (endpoints, incident faces) and face2edge
   Edges edges;
-  Edge::setVertices(vertices);
   buildConnectivity(vertices, faces, edges);
 
   // [2] compute quadrics of vertices

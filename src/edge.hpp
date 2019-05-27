@@ -22,7 +22,7 @@ namespace Internal {
 // provided.
 class Edge {
  private:
-  static Vertices *vertices;
+  Vertices &vertices;
 
   // sum of quadrics of two endpoints
   Quadric _q = {};
@@ -41,12 +41,11 @@ class Edge {
   std::array<order, 2> _ordInFF = {{INVALID, INVALID}};
 
  public:
-  static void setVertices(Vertices &vertices) { vertices = &vertices; }
-
   // Construct an edge with two endpoints indexes.
   // After constructed this edge, call setWing() once or twice
   // Then this edge is correctly initialized
-  Edge(idx v0, idx v1) : _vv({v0, v1}) {}
+  Edge(Vertices &vertices, idx v0, idx v1)
+      : vertices(vertices), _vv({v0, v1}) {}
 
   // Attach a face to edge.
   // No other modifier member functions should be called before this call
@@ -69,11 +68,11 @@ class Edge {
   const Quadric &q() const { return _q; }
 
   bool bothEndsOnBoundary() const {
-    return vertices->isBoundary(_vv[0]) && vertices->isBoundary(_vv[1]);
+    return vertices.isBoundary(_vv[0]) && vertices.isBoundary(_vv[1]);
   }
 
   bool neitherEndOnBoundary() const {
-    return !vertices->isBoundary(_vv[0]) && !vertices->isBoundary(_vv[1]);
+    return !vertices.isBoundary(_vv[0]) && !vertices.isBoundary(_vv[1]);
   }
 
   bool oneEndOnBoundary() const {
@@ -105,9 +104,7 @@ class Edge {
   // By keeping one endpoint and deleting the other, followed by update on the
   // kept endpoint (position, quadric, etc), the edge is collapsed into a new
   // vertex (the center)
-  order delEndpointOrder() const {
-    return vertices->isBoundary(_vv[0]) ? 1 : 0;
-  }
+  order delEndpointOrder() const { return vertices.isBoundary(_vv[0]) ? 1 : 0; }
 
   const vec2i &endpoints() const { return _vv; }
 

@@ -129,7 +129,7 @@ void buildConnectivity(Vertices &vertices, Faces &faces, Edges &edges) {
       idx v1 = face[j];
       if (v0 > v1) std::swap(v0, v1);
       auto res = edgeSet.emplace(std::make_pair(v0, v1),
-                                 std::make_pair(Edge(v0, v1), false));
+                                 std::make_pair(Edge(vertices, v0, v1), false));
       auto inserted = res.second;
       auto &edge = res.first->second.first;
       auto &twoWings = res.first->second.second;
