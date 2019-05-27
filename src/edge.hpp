@@ -15,11 +15,6 @@
 namespace MeshSimpl {
 namespace Internal {
 
-struct Wing {
-  idx f;
-  order ordInF;
-};
-
 // Edge defines the struct of an edge
 //
 // Only some convenient methods are defined for the purpose of less repetition.
@@ -41,7 +36,9 @@ class Edge {
   // index of two endpoints
   vec2i _vv;
 
-  std::array<Wing, 2> _wings = {{{0, INVALID}, {0, INVALID}}};
+  // wings
+  vec2i _ff = {};
+  std::array<order, 2> _ordInFF = {{INVALID, INVALID}};
 
  public:
   static void setVertices(Vertices &vertices) { _vertices = &vertices; }
@@ -54,8 +51,8 @@ class Edge {
   // Attach a face to edge.
   // No other modifier member functions should be called before this call
   void setWing(order wingOrd, idx f, order ordInF) {
-    _wings[wingOrd].f = f;
-    _wings[wingOrd].ordInF = ordInF;
+    _ff[wingOrd] = f;
+    _ordInFF[wingOrd] = ordInF;
   }
 
   //
@@ -83,10 +80,10 @@ class Edge {
     return !bothEndsOnBoundary() && !neitherEndOnBoundary();
   }
 
-  idx face(order ord) const { return _wings[ord].f; }
+  idx face(order ord) const { return _ff[ord]; }
 
   // Returns the order of this edge in face(ord)
-  order ordInF(order ord) const { return _wings[ord].ordInF; }
+  order ordInF(order ord) const { return _ordInFF[ord]; }
 
   // Returns true if egde is on border
   // NOTE: different from both endpoints on border
@@ -129,7 +126,10 @@ class Edge {
 
   void setErrorInfty() { _error = std::numeric_limits<double>::max(); }
 
-  void swapWings() { std::swap(_wings[0], _wings[1]); }
+  void swapWings() {
+    std::swap(_ff[0], _ff[1]);
+    std::swap(_ordInFF[0], _ordInFF[1]);
+  }
 
   void replaceEndpoint(idx prevV, idx newV);
 
