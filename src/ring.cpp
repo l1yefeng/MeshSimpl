@@ -124,7 +124,7 @@ void InteriorRing::collapse(QEMHeap &heap, bool fix_boundary) {
   const idx f1 = edge.face(1);
 
   // update vertex position and quadric
-  if (edge.neither_v_on_border())
+  if (edge.neither_v_on_border(vertices))
     vertices.setPosition(v_kept, edge.col_center());
   vertices.setQ(v_kept, edge.col_q());
 
@@ -143,12 +143,14 @@ void InteriorRing::collapse(QEMHeap &heap, bool fix_boundary) {
   dirty_edge_ptr->replace_f(f0, it->f(), it->j());
   faces.erase(f0);
 
+  vertices.setBoundary(v_del, vertices.isBoundary(v_kept));
+
   // every face centered around deleted vertex
   for (++it; it != v_del_neighbors.end(); ++it) {
     faces.setV(it->f(), it->center(), v_kept);
     dirty_edge_ptr = faces.side(it->f(), it->j());
 
-    dirty_edge_ptr->replace_v(v_del, v_kept, edge.one_v_on_border());
+    dirty_edge_ptr->replace_v(v_del, v_kept);
 
     update_error_and_center(vertices, heap, dirty_edge_ptr, fix_boundary);
   }
@@ -166,11 +168,11 @@ void InteriorRing::collapse(QEMHeap &heap, bool fix_boundary) {
   // every edge centered around the kept vertex
   for (auto nb : v_kept_neighbors) {
     dirty_edge_ptr = nb.first_edge(faces);
-    if (fix_boundary && dirty_edge_ptr->both_v_on_border()) continue;
+    if (fix_boundary && dirty_edge_ptr->both_v_on_border(vertices)) continue;
     update_error_and_center(vertices, heap, dirty_edge_ptr, fix_boundary);
   }
 
-  if (!(fix_boundary && edge_kept0->both_v_on_border())) {
+  if (!(fix_boundary && edge_kept0->both_v_on_border(vertices))) {
     update_error_and_center(vertices, heap, edge_kept0, fix_boundary);
   }
 }
@@ -233,9 +235,9 @@ void BoundaryRing::collapse(QEMHeap &heap, bool fix_boundary) {
     faces.setV(nb.f(), nb.center(), v_kept);
     dirty_edge_ptr = nb.second_edge(faces);
 
-    dirty_edge_ptr->replace_v(v_del, v_kept, true);
+    dirty_edge_ptr->replace_v(v_del, v_kept);
 
-    assert(!dirty_edge_ptr->neither_v_on_border());
+    assert(!dirty_edge_ptr->neither_v_on_border(vertices));
     update_error_and_center(vertices, heap, dirty_edge_ptr, false);
   }
 

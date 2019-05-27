@@ -50,7 +50,13 @@ void simplify(Positions &positions, Indices &indices,
   for (auto &edge : edges) edge.plan_collapse(vertices, options.fix_boundary);
 
   // [4] create priority queue on quadric error
-  QEMHeap heap(edges, !options.fix_boundary);
+  /*QEMHeap heap(edges, !options.fix_boundary);*/
+  QEMHeap heap(edges);
+  for (idx e = 0; e < edges.size(); ++e) {
+    if (!(options.fix_boundary && edges[e].both_v_on_border(vertices)))
+      heap.push(e);
+  }
+  heap.heapilize();
 
   size_t nv = nv_to_decimate;
   while (!heap.empty() && nv > 0) {

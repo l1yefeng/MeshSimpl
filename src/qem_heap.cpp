@@ -12,15 +12,15 @@
 namespace MeshSimpl {
 namespace Internal {
 
-QEMHeap::QEMHeap(E &edges, bool include_boundary)
+QEMHeap::QEMHeap(E &edges /*, bool include_boundary*/)
     : keys(edges.size() + 1), edges(edges), handles(edges.size()), n(0) {
-  for (idx i = 0; i < edges.size(); ++i)
-    if (include_boundary || !edges[i].both_v_on_border())
-      keys[handles[i] = ++n] = i;
+  /* for (idx i = 0; i < edges.size(); ++i)
+     if (include_boundary || !edges[i].both_v_on_border(vertices))
+       keys[handles[i] = ++n] = i;
 
-  keys.resize(n + 1);
-  for (size_t k = n / 2; k >= 1; --k) sink(k);
-  assert(is_min_heap());
+   keys.resize(n + 1);
+   for (size_t k = n / 2; k >= 1; --k) sink(k);
+   assert(is_min_heap());*/
 }
 
 void QEMHeap::pop() {

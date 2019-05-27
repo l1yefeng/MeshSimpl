@@ -16,13 +16,15 @@ class Vertices : public Erasables {
  private:
   Positions _positions;
   std::vector<Quadric> _quadrics;
+  std::vector<bool> _boundary;
 
  public:
   // Embed positions and allocate space for quadrics
   explicit Vertices(Positions& positions)
       : Erasables(positions.size()),
         _positions(std::move(positions)),
-        _quadrics(size()) {}
+        _quadrics(size()),
+        _boundary(size(), false) {}
 
   // Get/set position of a vertex
   const vec3d& position(idx v) const {
@@ -45,6 +47,13 @@ class Vertices : public Erasables {
     assert(exists(v));
     _quadrics[v] = val;
   }
+
+  // Get/set if a vertex is on boundary
+  bool isBoundary(idx v) const {
+    assert(exists(v));
+    return _boundary[v];
+  }
+  void setBoundary(idx v, bool val) { _boundary[v] = val; }
 
   // Erase unreferenced vertices
   void eraseUnref(const Faces& faces) {

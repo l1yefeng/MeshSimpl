@@ -5,6 +5,7 @@
 #ifndef MESH_SIMPL_QEM_HEAP_HPP
 #define MESH_SIMPL_QEM_HEAP_HPP
 
+#include <cassert>
 #include <cstddef>    // for size_t
 #include <vector>     // for vector
 #include "types.hpp"  // for E, idx
@@ -19,7 +20,15 @@ class QEMHeap {
  public:
   // Construct a min-binary-heap with edge ecol errors as keys;
   // store a reference of the list of edges and store all handles
-  explicit QEMHeap(E &edges, bool include_boundary);
+  explicit QEMHeap(E &edges /*, bool include_boundary*/);
+
+  void push(idx e) { keys[handles[e] = ++n] = e; }
+
+  void heapilize() {
+    keys.resize(n + 1);
+    for (size_t k = n / 2; k >= 1; --k) sink(k);
+    assert(is_min_heap());
+  }
 
   // Returns the edge id with minimum ecol error
   Edge *top() const { return &edges[keys[1]]; }

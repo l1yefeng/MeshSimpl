@@ -10,11 +10,12 @@
 #include <limits>     // for numeric_limits
 #include <utility>    // for swap
 #include "types.hpp"  // for order, vec2i, idx, Quadric, vec3d
+#include "vertices.hpp"
 
 namespace MeshSimpl {
 namespace Internal {
 
-class Vertices;
+/*class Vertices;*/
 
 // Edge defines the struct of an edge
 //
@@ -44,8 +45,8 @@ class Edge {
   // order of this edge in two incident faces, match the order to member "ff"
   std::array<order, 2> ord_in_ff = {INVALID, INVALID};
 
-  // vertices on boundary
-  std::array<bool, 2> v_on_border;
+  /*// vertices on boundary
+  std::array<bool, 2> v_on_border;*/
 
  public:
   // Construct an edge with two endpoints indexes.
@@ -54,7 +55,7 @@ class Edge {
   //  - (Optional) call attach_2nd_face()
   //  - (Required) call set_v_on_border()
   // Then this edge is correctly initialized
-  Edge(idx v0, idx v1) : vv({v0, v1}), v_on_border({true, true}) {}
+  Edge(idx v0, idx v1) : vv({v0, v1}) /*, v_on_border({true, true})*/ {}
 
   // Attach a face to edge.
   // No other modifier member functions should be called before this call
@@ -64,14 +65,15 @@ class Edge {
   // Returns false if this is not the first time attach_2nd_face() being called.
   // Must be called after attach_1st_face();
   // No other modifier member functions should be called before this call
-  bool attach_2nd_face(idx face, order edge_order_in_face);
+  bool attach_2nd_face(idx face, order edge_order_in_face, Vertices &vertices);
 
   // Before this call, the vertex-on-border information is
   //  - both_on_border: this edge is on border;
   //  - neither_on_border: this edge is not on border;
   // Only after this call does the vertex-on-border information actually mean
   // endpoint on border or not
-  void set_v_on_border(bool v0_on_border, bool v1_on_border);
+  void set_v_on_border(bool v0_on_border, bool v1_on_border,
+                       Vertices &vertices);
 
   //
   // public methods for retrieval of information
@@ -86,14 +88,16 @@ class Edge {
   // Returns the sum of quadrics of two endpoints
   const Quadric &col_q() const { return q; }
 
-  bool both_v_on_border() const { return v_on_border[0] && v_on_border[1]; }
-
-  bool neither_v_on_border() const {
-    return !v_on_border[0] && !v_on_border[1];
+  bool both_v_on_border(const Vertices &vertices) const {
+    return vertices.isBoundary(vv[0]) && vertices.isBoundary(vv[1]);
   }
 
-  bool one_v_on_border() const {
-    return !both_v_on_border() && !neither_v_on_border();
+  bool neither_v_on_border(const Vertices &vertices) const {
+    return !vertices.isBoundary(vv[0]) && !vertices.isBoundary(vv[1]);
+  }
+
+  bool one_v_on_border(const Vertices &vertices) const {
+    return !both_v_on_border(vertices) && !neither_v_on_border(vertices);
   }
 
   idx face(order ord) const { return ff[ord]; }
@@ -121,7 +125,9 @@ class Edge {
   // By keeping one endpoint and deleting the other, followed by update on the
   // kept endpoint (position, quadric, etc), the edge is collapsed into a new
   // vertex (the center)
-  order v_del_order() const { return v_on_border[0] ? 1 : 0; }
+  order v_del_order(const Vertices &vertices) const {
+    return vertices.isBoundary(vv[0]) ? 1 : 0;
+  }
 
   const vec2i &faces() const { return ff; }
 
@@ -147,7 +153,7 @@ class Edge {
     std::swap(ord_in_ff[0], ord_in_ff[1]);
   }
 
-  void replace_v(idx prev_v, idx new_v, bool new_v_on_border);
+  void replace_v(idx prev_v, idx new_v);
 
   void drop_f(idx face);
 

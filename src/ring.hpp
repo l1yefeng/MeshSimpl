@@ -46,8 +46,8 @@ class Ring {
       : vertices(vertices),
         faces(faces),
         edge(edge),
-        v_kept(edge[1 - edge.v_del_order()]),
-        v_del(edge[edge.v_del_order()]),
+        v_kept(edge[1 - edge.v_del_order(vertices)]),
+        v_del(edge[edge.v_del_order(vertices)]),
         ccw(ccw_when_collect()) {}
 
   void reserve(size_t sz) {

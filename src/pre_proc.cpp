@@ -112,7 +112,7 @@ bool edge_topo_correctness(const Faces &faces, const E &edges) {
 }
 
 void construct_edges(Vertices &vertices, Faces &faces, E &edges) {
-  std::map<std::pair<idx, idx>, Edge> edge_set;
+  std::map<std::pair<idx, idx>, std::pair<Edge, bool>> edge_set;
 
   // insert all edges into edge_set and find out if it is on boundary
   for (idx f = 0; f < faces.size(); ++f) {
@@ -125,15 +125,20 @@ void construct_edges(Vertices &vertices, Faces &faces, E &edges) {
       idx v0 = face[i];
       idx v1 = face[j];
       if (v0 > v1) std::swap(v0, v1);
-      auto res = edge_set.emplace(std::make_pair(v0, v1), Edge(v0, v1));
+      auto res = edge_set.emplace(std::make_pair(v0, v1),
+                                  std::make_pair(Edge(v0, v1), false));
       auto inserted = res.second;
-      auto &edge = res.first->second;
+      auto &edge = res.first->second.first;
+      auto &twoWings = res.first->second.second;
 
       if (inserted) {
         edge.attach_1st_face(f, k);
+        assert(!twoWings);
       } else {
-        bool ok = edge.attach_2nd_face(f, k);
-        if (!ok) {
+        if (twoWings)
+        /*bool ok = edge.attach_2nd_face(f, k, vertices);
+        if (!ok)*/
+        {
           std::stringstream ss;
           ss << "ERROR::INPUT_MESH: found non-manifold edge" << std::endl;
           for (idx _f : {edge.face(0), edge.face(1), f}) {
@@ -142,6 +147,9 @@ void construct_edges(Vertices &vertices, Faces &faces, E &edges) {
             ss << std::endl;
           }
           throw std::invalid_argument(ss.str());
+        } else {
+          edge.attach_2nd_face(f, k, vertices);
+          twoWings = true;
         }
       }
     }
@@ -149,28 +157,40 @@ void construct_edges(Vertices &vertices, Faces &faces, E &edges) {
 
   // populate edges vector from map
   edges.reserve(edge_set.size());
-  for (const auto &elem : edge_set) edges.emplace_back(elem.second);
+  for (const auto &elem : edge_set) {
+    auto &edge = elem.second.first;
+    auto &twoWings = elem.second.second;
 
-  std::vector<bool> vertex_on_boundary(vertices.size(), false);
+    edges.emplace_back(edge);
 
-  for (auto &edge : edges) {
+    faces.setSide(edge.face(0), edge.ord_in_face(0), &edges.back());
+    if (!twoWings) {
+      for (order i : {0, 1}) vertices.setBoundary(edge[i], true);
+    } else {
+      faces.setSide(edge.face(1), edge.ord_in_face(1), &edges.back());
+    }
+  }
+
+  /*std::vector<bool> vertex_on_boundary(vertices.size(), false);*/
+
+  /*for (auto &edge : edges) {
     // identify boundary vertices
-    if (edge.both_v_on_border()) {
+    if (edge.both_v_on_border(vertices)) {
       vertex_on_boundary[edge[0]] = true;
       vertex_on_boundary[edge[1]] = true;
     }
 
     // populate face2edge references
     faces.setSide(edge.face(0), edge.ord_in_face(0), &edge);
-    if (!edge.both_v_on_border())
+    if (!edge.both_v_on_border(vertices))
       faces.setSide(edge.face(1), edge.ord_in_face(1), &edge);
-  }
+  }*/
 
-  // non-boundary edges may have one vertex on boundary, find them in this loop
-  for (auto &edge : edges) {
+  /*// non-boundary edges may have one vertex on boundary, find them in this
+  loop for (auto &edge : edges) {
     edge.set_v_on_border(vertex_on_boundary[edge[0]],
                          vertex_on_boundary[edge[1]]);
-  }
+  }*/
 
   assert(edge_topo_correctness(faces, edges));
 }
