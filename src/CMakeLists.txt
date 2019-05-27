@@ -4,25 +4,25 @@ project(MeshSimpl VERSION ${MESH_SIMPL_VERSION} LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 11)
 
 add_library(${PROJECT_NAME}
-  ecol.cpp
-  ecol.hpp
-  edge.cpp
-  edge.hpp
-  erasable.hpp
-  faces.cpp
-  faces.hpp
-  neighbor.hpp
-  pre_proc.cpp
-  pre_proc.hpp
-  qem_heap.cpp
-  qem_heap.hpp
-  ring.cpp
-  ring.hpp
-  simplify.cpp
-  simplify.hpp
-  types.hpp
-  util.cpp
-  util.hpp)
+            ecol.cpp
+            ecol.hpp
+            edge.cpp
+            edge.hpp
+            erasable.hpp
+            faces.cpp
+            faces.hpp
+            neighbor.hpp
+            pre_proc.cpp
+            pre_proc.hpp
+            qem_heap.cpp
+            qem_heap.hpp
+            ring.cpp
+            ring.hpp
+            simplify.cpp
+            simplify.hpp
+            types.hpp
+            util.cpp
+            util.hpp)
 
 target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_11)
 
