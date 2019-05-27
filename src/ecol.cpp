@@ -29,9 +29,12 @@ void update_error_and_center(Vertices &vertices, QEMHeap &heap,
 
 bool is_face_folded(const Vertices &vertices, const Faces &faces, idx f,
                     order moved, const vec3d &position, double angle) {
-  const vec3d edgeVec0 = faces.edgeVec(f, moved, vertices);
-  const vec3d edgeVec1 = faces.edgeVec(f, next(moved), vertices);
-  const vec3d edgeVec1New = position - faces.vPos(f, prev(moved), vertices);
+  const vec3d &vk = faces.vPos(f, moved, vertices);
+  const vec3d &vi = faces.vPos(f, next(moved), vertices);
+  const vec3d &vj = faces.vPos(f, prev(moved), vertices);
+  const vec3d edgeVec0 = vj - vi;
+  const vec3d edgeVec1 = vk - vj;
+  const vec3d edgeVec1New = position - vj;
   vec3d normal_prv = cross(edgeVec0, edgeVec1);
   double mag_prv = magnitude(normal_prv);
   assert(mag_prv != 0);
