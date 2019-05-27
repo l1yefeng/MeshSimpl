@@ -21,7 +21,7 @@ bool Ring::checkTopo() {
   for (const auto &nb : vKeptNeighbors) starKept.push_back(&nb);
 
   const auto cmp = [&](const Neighbor *nb0, const Neighbor *nb1) -> bool {
-    return nb0->secondV(_faces) < nb1->secondV(_faces);
+    return nb0->secondV(faces) < nb1->secondV(faces);
   };
   std::sort(starDel.begin(), starDel.end(), cmp);
   std::sort(starKept.begin(), starKept.end(), cmp);
@@ -41,12 +41,12 @@ bool Ring::checkTopo() {
 
 bool Ring::checkGeom(double foldOverAngle) const {
   for (const auto &nb : vDelNeighbors) {
-    if (isFaceFolded(_vertices, _faces, nb.f(), nb.center(), edge.center(),
+    if (isFaceFolded(vertices, faces, nb.f(), nb.center(), edge.center(),
                      foldOverAngle))
       return false;
   }
   for (const auto &nb : vKeptNeighbors) {
-    if (isFaceFolded(_vertices, _faces, nb.f(), nb.center(), edge.center(),
+    if (isFaceFolded(vertices, faces, nb.f(), nb.center(), edge.center(),
                      foldOverAngle))
       return false;
   }
@@ -55,13 +55,13 @@ bool Ring::checkGeom(double foldOverAngle) const {
 
 bool Ring::checkQuality(double aspectRatio) const {
   for (const auto &nb : vDelNeighbors) {
-    if (isFaceElongated(_vertices[vDel], _vertices[nb.firstV(_faces)],
-                        _vertices[nb.secondV(_faces)], aspectRatio))
+    if (isFaceElongated(vertices[vDel], vertices[nb.firstV(faces)],
+                        vertices[nb.secondV(faces)], aspectRatio))
       return false;
   }
   for (const auto &nb : vDelNeighbors) {
-    if (isFaceElongated(_vertices[vKept], _vertices[nb.firstV(_faces)],
-                        _vertices[nb.secondV(_faces)], aspectRatio))
+    if (isFaceElongated(vertices[vKept], vertices[nb.firstV(faces)],
+                        vertices[nb.secondV(faces)], aspectRatio))
       return false;
   }
   return true;
@@ -73,7 +73,7 @@ void InteriorRing::collect() {
 
   Neighbor nb(f0, edge.ordInF(0), ccw);
   while (true) {
-    nb.rotate(_faces);
+    nb.rotate(faces);
     if (nb.f() == f1) break;
     vDelNeighbors.push_back(nb);
   }
@@ -81,7 +81,7 @@ void InteriorRing::collect() {
   bool boundaryHit = false;  // useful in case vKept is on boundary
   nb = Neighbor(f1, edge.ordInF(1), ccw);
   while (true) {
-    if (nb.secondEdge(_faces)->onBoundary()) {
+    if (nb.secondEdge(faces)->onBoundary()) {
       if (boundaryHit)
         break;  // while-loop breaks here if one vKept is on boundary
       boundaryHit = true;
@@ -89,7 +89,7 @@ void InteriorRing::collect() {
       continue;
     }
 
-    nb.rotate(_faces);
+    nb.rotate(faces);
 
     // this face is deleted thus unnecessary to check fold-over if f == f0
     if (nb.f() == f0) {
@@ -107,8 +107,8 @@ bool InteriorRing::checkEnv() {
   // this happens if input contains such component because
   // this edge collapse implementation avoid generating them
   if (vDelNeighbors.empty()) {
-    assert(_faces[edge.face(0)][edge.ordInF(0)] ==
-           _faces[edge.face(1)][edge.ordInF(1)]);
+    assert(faces[edge.face(0)][edge.ordInF(0)] ==
+           faces[edge.face(1)][edge.ordInF(1)]);
     return false;
   }
 
@@ -124,55 +124,55 @@ void InteriorRing::collapse(QEMHeap &heap, bool fixBoundary) {
   const idx f1 = edge.face(1);
 
   // update vertex position and quadric
-  if (edge.neitherEndOnBoundary()) _vertices.setPosition(vKept, edge.center());
-  _vertices.setQ(vKept, edge.q());
+  if (edge.neitherEndOnBoundary()) vertices.setPosition(vKept, edge.center());
+  vertices.setQ(vKept, edge.q());
 
   // two kept edges in two deleted faces
-  Edge *edgeKept0 = _faces.edgeAcrossFrom(f0, vDel);
-  Edge *edgeKept1 = _faces.edgeAcrossFrom(f1, vDel);
+  Edge *edgeKept0 = faces.edgeAcrossFrom(f0, vDel);
+  Edge *edgeKept1 = faces.edgeAcrossFrom(f1, vDel);
 
   auto it = vDelNeighbors.begin();
   Edge *dirtyEdge = edgeKept0;
 
   // first face to process: deleted face 0
-  _faces.setV(it->f(), it->center(), vKept);
-  heap.erase(_faces.side(it->f(), it->j()));
+  faces.setV(it->f(), it->center(), vKept);
+  heap.erase(faces.side(it->f(), it->j()));
 
-  _faces.setSide(it->f(), it->j(), edgeKept0);
+  faces.setSide(it->f(), it->j(), edgeKept0);
   dirtyEdge->replaceWing(f0, it->f(), it->j());
-  _faces.erase(f0);
+  faces.erase(f0);
 
-  _vertices.setBoundary(vDel, _vertices.isBoundary(vKept));
+  vertices.setBoundary(vDel, vertices.isBoundary(vKept));
 
   // every face centered around deleted vertex
   for (++it; it != vDelNeighbors.end(); ++it) {
-    _faces.setV(it->f(), it->center(), vKept);
-    dirtyEdge = _faces.side(it->f(), it->j());
+    faces.setV(it->f(), it->center(), vKept);
+    dirtyEdge = faces.side(it->f(), it->j());
 
     dirtyEdge->replaceEndpoint(vDel, vKept);
 
-    updateError(_vertices, heap, dirtyEdge, fixBoundary);
+    updateError(vertices, heap, dirtyEdge, fixBoundary);
   }
 
   // the deleted face 1
   --it;
-  heap.erase(_faces.side(it->f(), it->i()));
-  _faces.setSide(it->f(), it->i(), edgeKept1);
+  heap.erase(faces.side(it->f(), it->i()));
+  faces.setSide(it->f(), it->i(), edgeKept1);
   dirtyEdge = edgeKept1;
   dirtyEdge->replaceWing(f1, it->f(), it->i());
-  _faces.erase(f1);
+  faces.erase(f1);
 
-  _vertices.erase(vDel);
+  vertices.erase(vDel);
 
   // every edge centered around the kept vertex
   for (auto nb : vKeptNeighbors) {
-    dirtyEdge = nb.firstEdge(_faces);
+    dirtyEdge = nb.firstEdge(faces);
     if (fixBoundary && dirtyEdge->bothEndsOnBoundary()) continue;
-    updateError(_vertices, heap, dirtyEdge, fixBoundary);
+    updateError(vertices, heap, dirtyEdge, fixBoundary);
   }
 
   if (!(fixBoundary && edgeKept0->bothEndsOnBoundary())) {
-    updateError(_vertices, heap, edgeKept0, fixBoundary);
+    updateError(vertices, heap, edgeKept0, fixBoundary);
   }
 }
 
@@ -181,21 +181,21 @@ void BoundaryRing::collect() {
 
   Neighbor nb(f, edge.ordInF(0), ccw);
   while (true) {
-    const Edge *nextEdge = nb.secondEdge(_faces);
+    const Edge *nextEdge = nb.secondEdge(faces);
 
     if (nextEdge->onBoundary()) break;
 
-    nb.rotate(_faces);
+    nb.rotate(faces);
     vDelNeighbors.push_back(nb);
   }
 
   nb = Neighbor(f, edge.ordInF(0), !ccw);
   while (true) {
-    const Edge *nextEdge = nb.secondEdge(_faces);
+    const Edge *nextEdge = nb.secondEdge(faces);
 
     if (nextEdge->onBoundary()) break;
 
-    nb.rotate(_faces);
+    nb.rotate(faces);
     vKeptNeighbors.push_back(nb);
   }
 }
@@ -211,41 +211,41 @@ void BoundaryRing::collapse(QEMHeap &heap, bool fixBoundary) {
   const idx f = edge.face(0);
 
   // update vertex position and quadric
-  _vertices.setPosition(vKept, edge.center());
-  _vertices.setQ(vKept, edge.q());
+  vertices.setPosition(vKept, edge.center());
+  vertices.setQ(vKept, edge.q());
 
-  Edge *edgeKept = _faces.edgeAcrossFrom(f, vDel);
+  Edge *edgeKept = faces.edgeAcrossFrom(f, vDel);
   Edge *dirtyEdge = edgeKept;
 
   // it is possible that vDelNeighbors is empty
-  heap.erase(_faces.edgeAcrossFrom(f, vKept));
+  heap.erase(faces.edgeAcrossFrom(f, vKept));
   if (vDelNeighbors.empty()) {
     dirtyEdge->dropWing(f);
   } else {
     auto it = vDelNeighbors.begin();
-    _faces.setSide(it->f(), it->j(), edgeKept);
+    faces.setSide(it->f(), it->j(), edgeKept);
     dirtyEdge->replaceWing(f, it->f(), it->j());
   }
 
-  _faces.erase(f);
+  faces.erase(f);
 
   // every face centered around deleted vertex
   for (const auto &nb : vDelNeighbors) {
-    _faces.setV(nb.f(), nb.center(), vKept);
-    dirtyEdge = nb.secondEdge(_faces);
+    faces.setV(nb.f(), nb.center(), vKept);
+    dirtyEdge = nb.secondEdge(faces);
 
     dirtyEdge->replaceEndpoint(vDel, vKept);
 
     assert(!dirtyEdge->neitherEndOnBoundary());
-    updateError(_vertices, heap, dirtyEdge, false);
+    updateError(vertices, heap, dirtyEdge, false);
   }
 
-  _vertices.erase(vDel);
+  vertices.erase(vDel);
 
-  updateError(_vertices, heap, edgeKept, false);
+  updateError(vertices, heap, edgeKept, false);
   for (auto nb : vKeptNeighbors) {
-    dirtyEdge = nb.secondEdge(_faces);
-    updateError(_vertices, heap, dirtyEdge, false);
+    dirtyEdge = nb.secondEdge(faces);
+    updateError(vertices, heap, dirtyEdge, false);
   }
 }
 

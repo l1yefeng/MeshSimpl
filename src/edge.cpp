@@ -9,17 +9,17 @@
 namespace MeshSimpl {
 namespace Internal {
 
-Vertices* Edge::_vertices = nullptr;
+Vertices* Edge::vertices = nullptr;
 
 void Edge::planCollapse(bool fixBoundary) {
-  _q = _vertices->q(_vv[0]) + _vertices->q(_vv[1]);
+  _q = vertices->q(_vv[0]) + vertices->q(_vv[1]);
 
   if (fixBoundary && bothEndsOnBoundary()) {
     // the plan is: no plan is needed because it will never by modified
     return;
   } else if (fixBoundary && oneEndOnBoundary()) {
     // the plan is: new position is the position of the vertex on border
-    _center = _vertices->position(_vertices->isBoundary(_vv[0]) ? _vv[0] : _vv[1]);
+    _center = vertices->position(vertices->isBoundary(_vv[0]) ? _vv[0] : _vv[1]);
     _error = qError(_q, _center);
   } else {
     // the plan is: new position leads to the lowest error
@@ -48,12 +48,12 @@ void Edge::planCollapse(bool fixBoundary) {
       _error = dot(b, _center) + c;
     } else {
       // not invertible, choose from endpoints and midpoint
-      _center = midpoint(_vertices->position(_vv[0]), _vertices->position(_vv[1]));
+      _center = midpoint(vertices->position(_vv[0]), vertices->position(_vv[1]));
       _error = qError(_q, _center);
       for (const idx v : _vv) {
-        const double err = qError(_q, _vertices->position(v));
+        const double err = qError(_q, vertices->position(v));
         if (err < _error) {
-          _center = _vertices->position(v);
+          _center = vertices->position(v);
           _error = err;
         }
       }

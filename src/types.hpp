@@ -43,6 +43,8 @@ struct SimplifyOptions {
   // Simplifying Surfaces with Color and Texture using Quadric Error Metrics
   bool fixBoundary = false;
 
+  bool topologyModifiable = false;
+
   // the following are very fine grained configuration options
 
   // the constant that decides the weight of constraint planes (if fixBoundary

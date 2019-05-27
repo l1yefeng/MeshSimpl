@@ -24,15 +24,15 @@ class Vertices;
 class Ring {
  private:
   bool ccwWhenCollect() const {
-    return edge.ordInF(0) != next(_faces.orderOf(edge.face(0), vDel));
+    return edge.ordInF(0) != next(faces.orderOf(edge.face(0), vDel));
   }
 
  protected:
   static const size_t ESTIMATE_VALENCE = 8;
 
   // keep some references internally
-  Vertices &_vertices;
-  Faces &_faces;
+  Vertices &vertices;
+  Faces &faces;
 
   // in the center of the ring
   const Edge &edge;
@@ -43,8 +43,8 @@ class Ring {
   std::vector<Neighbor> vDelNeighbors, vKeptNeighbors;
 
   Ring(Vertices &vertices, Faces &faces, const Edge &edge)
-      : _vertices(vertices),
-        _faces(faces),
+      : vertices(vertices),
+        faces(faces),
         edge(edge),
         vKept(edge[1 - edge.delEndpointOrder()]),
         vDel(edge[edge.delEndpointOrder()]),

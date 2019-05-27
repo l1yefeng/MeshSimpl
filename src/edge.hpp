@@ -22,7 +22,7 @@ namespace Internal {
 // provided.
 class Edge {
  private:
-  static Vertices *_vertices;
+  static Vertices *vertices;
 
   // sum of quadrics of two endpoints
   Quadric _q = {};
@@ -41,7 +41,7 @@ class Edge {
   std::array<order, 2> _ordInFF = {{INVALID, INVALID}};
 
  public:
-  static void setVertices(Vertices &vertices) { _vertices = &vertices; }
+  static void setVertices(Vertices &vertices) { vertices = &vertices; }
 
   // Construct an edge with two endpoints indexes.
   // After constructed this edge, call setWing() once or twice
@@ -69,11 +69,11 @@ class Edge {
   const Quadric &q() const { return _q; }
 
   bool bothEndsOnBoundary() const {
-    return _vertices->isBoundary(_vv[0]) && _vertices->isBoundary(_vv[1]);
+    return vertices->isBoundary(_vv[0]) && vertices->isBoundary(_vv[1]);
   }
 
   bool neitherEndOnBoundary() const {
-    return !_vertices->isBoundary(_vv[0]) && !_vertices->isBoundary(_vv[1]);
+    return !vertices->isBoundary(_vv[0]) && !vertices->isBoundary(_vv[1]);
   }
 
   bool oneEndOnBoundary() const {
@@ -106,7 +106,7 @@ class Edge {
   // kept endpoint (position, quadric, etc), the edge is collapsed into a new
   // vertex (the center)
   order delEndpointOrder() const {
-    return _vertices->isBoundary(_vv[0]) ? 1 : 0;
+    return vertices->isBoundary(_vv[0]) ? 1 : 0;
   }
 
   const vec2i &endpoints() const { return _vv; }
