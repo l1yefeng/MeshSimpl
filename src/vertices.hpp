@@ -49,7 +49,7 @@ class Vertices : public Erasables {
   // Erase unreferenced vertices
   void eraseUnref(const Faces& faces) {
     erased = std::vector<bool>(size(), true);
-    for (idx f = 0; f < size(); ++f) {
+    for (idx f = 0; f < faces.size(); ++f) {
       for (idx v : faces[f]) erased[v] = false;
     }
   }
@@ -63,7 +63,7 @@ class Vertices : public Erasables {
     }
 
     // get rid of deleted vertices and keep the mapping valid
-    for (size_t lo = 0, hi = size() - 1;; ++lo, --hi) {
+    for (size_t lo = 0, hi = size() - 1; true; ++lo, --hi) {
       while (exists(lo) && lo <= hi) ++lo;
       while (!exists(hi) && lo < hi) --hi;
       if (lo >= hi) {

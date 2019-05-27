@@ -32,6 +32,7 @@ void simplify(Positions &positions, Indices &indices,
   // positions and indices are moved and no longer hold data
   Vertices vertices(positions);
   Faces faces(indices);
+  vertices.eraseUnref(faces);
 
   const size_t NV = vertices.size();
   const size_t nv_to_decimate = std::lround(options.strength * NV);
