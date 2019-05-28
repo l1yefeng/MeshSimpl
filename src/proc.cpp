@@ -184,14 +184,17 @@ bool isFaceFolded(const Vertices &vertices, const Faces &faces, idx f,
   const vec3d edgeVec1New = position - vj;
   vec3d normalPrv = cross(edgeVec0, edgeVec1);
   double magPrv = magnitude(normalPrv);
-  assert(magPrv != 0);
-  vec3d normalNew = cross(edgeVec0, edgeVec1New);
-  double magNew = magnitude(normalNew);
-  if (magNew == 0) return true;
-  normalPrv /= magPrv;
-  normalNew /= magNew;
-  double cos = dot(normalPrv, normalNew);
-  return cos < angle;
+  if (magPrv != 0) {
+    vec3d normalNew = cross(edgeVec0, edgeVec1New);
+    double magNew = magnitude(normalNew);
+    if (magNew == 0) return true;
+    normalPrv /= magPrv;
+    normalNew /= magNew;
+    double cos = dot(normalPrv, normalNew);
+    return cos < angle;
+  } else {
+    return false;
+  }
 }
 
 bool isFaceElongated(const vec3d &pos0, const vec3d &pos1, const vec3d &pos2,
