@@ -2,23 +2,23 @@
 // Created by nickl on 1/8/19.
 //
 
+#include <array>             // for array
 #include <cassert>           // for assert
+#include <initializer_list>  // for initializer_list
+#include <limits>            // for numeric_limits
 #include <map>               // for map, _Rb_tree_iterator
 #include <memory>            // for unique_ptr
 #include <sstream>           // for operator<<, basic_ostream, stringstream
-#include <array>             // for array
-#include <initializer_list>  // for initializer_list
-#include <limits>            // for numeric_limits
 #include <stdexcept>         // for invalid_argument
 #include <utility>           // for pair, make_pair, swap
 
+#include "edge.hpp"   // for Edge
+#include "faces.hpp"  // for Faces
 #include "proc.hpp"
-#include "edge.hpp"          // for Edge
-#include "faces.hpp"         // for Faces
-#include "qemheap.hpp"       // for QEMHeap
-#include "ring.hpp"          // for Ring, BoundaryRing, InteriorRing
-#include "util.hpp"          // for magnitude, operator-, cross, next, opera...
-#include "vertices.hpp"      // for Vertices
+#include "qemheap.hpp"   // for QEMHeap
+#include "ring.hpp"      // for Ring, BoundaryRing, InteriorRing
+#include "util.hpp"      // for magnitude, operator-, cross, next, opera...
+#include "vertices.hpp"  // for Vertices
 
 namespace MeshSimpl {
 namespace Internal {
@@ -174,19 +174,6 @@ void buildConnectivity(Vertices &vertices, Faces &faces, Edges &edges) {
   assert(edgeTopoCorrectness(faces, edges));
 }
 
-void updateError(Vertices &vertices, QEMHeap &heap, Edge *edge,
-                 bool fixBoundary) {
-  if (fixBoundary && edge->bothEndsOnBoundary()) {
-    // this handles the case when non-boundary edge becomes boundary edge cannot
-    // erase if given edge was on boundary, since then it would not be in heap
-    heap.erase(edge);
-  } else {
-    const double errorPrev = edge->error();
-    edge->planCollapse(fixBoundary);
-    heap.fix(edge, errorPrev);
-  }
-}
-
 bool isFaceFolded(const Vertices &vertices, const Faces &faces, idx f,
                   order moved, const vec3d &position, double angle) {
   const vec3d &vk = faces.vPos(f, moved, vertices);
@@ -231,13 +218,15 @@ int edgeCollapse(Vertices &vertices, Faces &faces, QEMHeap &heap, Edge &target,
 
   std::unique_ptr<Ring> ring;
   if (target.onBoundary())
-    ring = std::unique_ptr<Ring>(new BoundaryRing(vertices, faces, target));
+    ring = std::unique_ptr<Ring>(
+        new BoundaryRing(vertices, faces, heap, options, target));
   else
-    ring = std::unique_ptr<Ring>(new InteriorRing(vertices, faces, target));
+    ring = std::unique_ptr<Ring>(
+        new InteriorRing(vertices, faces, heap, options, target));
 
   ring->collect();
 
-  if (!ring->check(options)) {
+  if (!ring->check()) {
     heap.penalize(&target);
     return 0;
   }
@@ -245,7 +234,7 @@ int edgeCollapse(Vertices &vertices, Faces &faces, QEMHeap &heap, Edge &target,
   // now that we are certain this edge is to be collapsed, remove it from heap
   heap.pop();
 
-  ring->collapse(heap, options.fixBoundary);
+  ring->collapse();
 
   return 1;
 }

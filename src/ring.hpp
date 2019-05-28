@@ -33,6 +33,8 @@ class Ring {
   // keep some references internally
   Vertices &vertices;
   Faces &faces;
+  QEMHeap &heap;
+  const SimplifyOptions &options;
 
   // in the center of the ring
   const Edge &edge;
@@ -42,9 +44,12 @@ class Ring {
   bool ccw;
   std::vector<Neighbor> vDelNeighbors, vKeptNeighbors;
 
-  Ring(Vertices &vertices, Faces &faces, const Edge &edge)
+  Ring(Vertices &vertices, Faces &faces, QEMHeap &heap,
+       const SimplifyOptions &options, const Edge &edge)
       : vertices(vertices),
         faces(faces),
+        heap(heap),
+        options(options),
         edge(edge),
         vKept(edge[1 - edge.delEndpointOrder()]),
         vDel(edge[edge.delEndpointOrder()]),
@@ -63,6 +68,8 @@ class Ring {
 
   bool checkQuality(double aspectRatio) const;
 
+  void updateEdge(Edge *outdated);
+
  public:
   virtual ~Ring() = default;
 
@@ -74,13 +81,14 @@ class Ring {
            checkQuality(options.aspectRatioAtLeast);
   }
 
-  virtual void collapse(QEMHeap &heap, bool fixBoundary) = 0;
+  virtual void collapse() = 0;
 };
 
 class InteriorRing : public Ring {
  public:
-  InteriorRing(Vertices &vertices, Faces &faces, const Edge &edge)
-      : Ring(vertices, faces, edge) {
+  InteriorRing(Vertices &vertices, Faces &faces, QEMHeap &heap,
+               const SimplifyOptions &options, const Edge &edge)
+      : Ring(vertices, faces, heap, options, edge) {
     reserve(ESTIMATE_VALENCE);
   }
 
@@ -88,13 +96,14 @@ class InteriorRing : public Ring {
 
   bool checkEnv() override;
 
-  void collapse(QEMHeap &heap, bool fixBoundary) override;
+  void collapse() override;
 };
 
 class BoundaryRing : public Ring {
  public:
-  BoundaryRing(Vertices &vertices, Faces &faces, const Edge &edge)
-      : Ring(vertices, faces, edge) {
+  BoundaryRing(Vertices &vertices, Faces &faces, QEMHeap &heap,
+               const SimplifyOptions &options, const Edge &edge)
+      : Ring(vertices, faces, heap, options, edge) {
     reserve(ESTIMATE_VALENCE / 2);
   }
 
@@ -102,7 +111,7 @@ class BoundaryRing : public Ring {
 
   bool checkEnv() override;
 
-  void collapse(QEMHeap &heap, bool fixBoundary) override;
+  void collapse() override;
 };
 
 }  // namespace Internal

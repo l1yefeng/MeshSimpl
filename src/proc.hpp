@@ -31,10 +31,6 @@ bool edgeTopoCorrectness(const Faces& faces, const Edges& edges);
 // This method does not initialize members optimal_pos and error in struct Edge.
 void buildConnectivity(Vertices& vertices, Faces& faces, Edges& edges);
 
-// Replace a vertex in edge, and update other members then fix priority in heap
-void updateError(Vertices& vertices, QEMHeap& heap, Edge* edge,
-                 bool fixBoundary);
-
 // Returns true if the movement of vertex will cause this face to flip too much
 // to accept
 bool isFaceFolded(const Vertices& vertices, const Faces& faces, idx f,

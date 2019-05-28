@@ -5,7 +5,7 @@
 #include "ring.hpp"
 #include <algorithm>     // for sort
 #include <cassert>       // for assert
-#include "proc.hpp"      // for updateError, isFaceElongated
+#include "proc.hpp"      // for updateEdge, isFaceElongated
 #include "qemheap.hpp"   // for QEMHeap
 #include "vertices.hpp"  // for Vertices
 
@@ -67,10 +67,21 @@ bool Ring::checkQuality(double aspectRatio) const {
   return true;
 }
 
+void Ring::updateEdge(Edge *outdated) {
+  if (options.fixBoundary && outdated->bothEndsOnBoundary()) {
+    heap.erase(outdated);
+  } else {
+    const double errorPrev = outdated->error();
+    outdated->planCollapse(options.fixBoundary);
+    heap.fix(outdated, errorPrev);
+  }
+}
+
 void InteriorRing::collect() {
   const idx f0 = edge.face(0);
   const idx f1 = edge.face(1);
 
+  // from f0 to f1 around vDel
   Neighbor nb(f0, edge.ordInF(0), ccw);
   while (true) {
     nb.rotate(faces);
@@ -78,27 +89,28 @@ void InteriorRing::collect() {
     vDelNeighbors.push_back(nb);
   }
 
-  bool boundaryHit = false;  // useful in case vKept is on boundary
-  nb = Neighbor(f1, edge.ordInF(1), ccw);
-  while (true) {
-    if (nb.secondEdge(faces)->onBoundary()) {
-      if (boundaryHit)
-        break;  // while-loop breaks here if one vKept is on boundary
-      boundaryHit = true;
-      nb = Neighbor(f0, edge.ordInF(0), !ccw);
-      continue;
+  if (edge.neitherEndOnBoundary()) {
+    // from f1 to f0 around vKept
+    nb = Neighbor(f1, edge.ordInF(1), ccw);
+    while (true) {
+      nb.rotate(faces);
+      if (nb.f() == f0) break;
+      vKeptNeighbors.push_back(nb);
+    }
+  } else {
+    // from f1 to boundary around vKept
+    nb = Neighbor(f1, edge.ordInF(1), ccw);
+    while (!nb.secondEdge(faces)->onBoundary()) {
+      nb.rotate(faces);
+      vKeptNeighbors.push_back(nb);
     }
 
-    nb.rotate(faces);
-
-    // this face is deleted thus unnecessary to check fold-over if f == f0
-    if (nb.f() == f0) {
-      // while-loop breaks here if there is no business of boundary
-      assert(!boundaryHit);
-      break;
+    // from f0 to boundary around vKept (switch direction)
+    nb = Neighbor(f0, edge.ordInF(0), !ccw);
+    while (!nb.secondEdge(faces)->onBoundary()) {
+      nb.rotate(faces);
+      vKeptNeighbors.push_back(nb);
     }
-
-    vKeptNeighbors.push_back(nb);
   }
 }
 
@@ -119,12 +131,12 @@ bool InteriorRing::checkEnv() {
   return true;
 }
 
-void InteriorRing::collapse(QEMHeap &heap, bool fixBoundary) {
+void InteriorRing::collapse() {
   const idx f0 = edge.face(0);
   const idx f1 = edge.face(1);
 
   // update vertex position and quadric
-  if (edge.neitherEndOnBoundary()) vertices.setPosition(vKept, edge.center());
+  vertices.setPosition(vKept, edge.center());
   vertices.setQ(vKept, edge.q());
 
   // two kept edges in two deleted faces
@@ -142,8 +154,6 @@ void InteriorRing::collapse(QEMHeap &heap, bool fixBoundary) {
   dirtyEdge->replaceWing(f0, it->f(), it->j());
   faces.erase(f0);
 
-  vertices.setBoundary(vDel, vertices.isBoundary(vKept));
-
   // every face centered around deleted vertex
   for (++it; it != vDelNeighbors.end(); ++it) {
     faces.setV(it->f(), it->center(), vKept);
@@ -151,7 +161,7 @@ void InteriorRing::collapse(QEMHeap &heap, bool fixBoundary) {
 
     dirtyEdge->replaceEndpoint(vDel, vKept);
 
-    updateError(vertices, heap, dirtyEdge, fixBoundary);
+    updateEdge(dirtyEdge);
   }
 
   // the deleted face 1
@@ -167,13 +177,10 @@ void InteriorRing::collapse(QEMHeap &heap, bool fixBoundary) {
   // every edge centered around the kept vertex
   for (auto nb : vKeptNeighbors) {
     dirtyEdge = nb.firstEdge(faces);
-    if (fixBoundary && dirtyEdge->bothEndsOnBoundary()) continue;
-    updateError(vertices, heap, dirtyEdge, fixBoundary);
+    updateEdge(dirtyEdge);
   }
 
-  if (!(fixBoundary && edgeKept0->bothEndsOnBoundary())) {
-    updateError(vertices, heap, edgeKept0, fixBoundary);
-  }
+  updateEdge(dirtyEdge);
 }
 
 void BoundaryRing::collect() {
@@ -207,7 +214,7 @@ bool BoundaryRing::checkEnv() {
   return true;
 }
 
-void BoundaryRing::collapse(QEMHeap &heap, bool fixBoundary) {
+void BoundaryRing::collapse() {
   const idx f = edge.face(0);
 
   // update vertex position and quadric
@@ -237,15 +244,15 @@ void BoundaryRing::collapse(QEMHeap &heap, bool fixBoundary) {
     dirtyEdge->replaceEndpoint(vDel, vKept);
 
     assert(!dirtyEdge->neitherEndOnBoundary());
-    updateError(vertices, heap, dirtyEdge, false);
+    updateEdge(dirtyEdge);
   }
 
   vertices.erase(vDel);
 
-  updateError(vertices, heap, edgeKept, false);
+  updateEdge(dirtyEdge);
   for (auto nb : vKeptNeighbors) {
     dirtyEdge = nb.secondEdge(faces);
-    updateError(vertices, heap, dirtyEdge, false);
+    updateEdge(dirtyEdge);
   }
 }
 
