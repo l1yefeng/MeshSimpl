@@ -29,16 +29,17 @@ void simplify(Positions &positions, Indices &indices,
               const SimplifyOptions &options) {
   validateOptions(options);
 
+  // TODO: specify simplify strength by face and vertex counts
+  const size_t NV = positions.size();
+  const size_t nvToDecimate = std::lround(options.strength * NV);
+
+  if (nvToDecimate == 0) return;
+
   // construct vertices and faces from positions and indices
   // positions and indices are moved and no longer hold data
   Vertices vertices(positions);
   Faces faces(indices);
   vertices.eraseUnref(faces);
-
-  const size_t NV = vertices.size();
-  const size_t nvToDecimate = std::lround(options.strength * NV);
-
-  if (nvToDecimate == 0) return;
 
   // [1] find out information of edges (endpoints, incident faces) and face2edge
   Edges edges;
@@ -63,6 +64,10 @@ void simplify(Positions &positions, Indices &indices,
     // target the least-error edge, if it is what we saw last iteration,
     // it means loop should stop because all remaining edges have been penalized
     Edge *const edge = heap.top();
+    if (!edge->exists()) {
+      heap.pop();
+      continue;
+    }
     if (edge->error() >= std::numeric_limits<double>::max()) break;
 
     // [5] collapse the least-error edge until mesh is simplified enough

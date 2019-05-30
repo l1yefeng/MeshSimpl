@@ -43,8 +43,6 @@ class QEMHeap {
   // Suppress this edge until it is, if ever, updated next time
   void penalize(Edge *edge);
 
-  void erase(const Edge *ptr);
-
   // Returns true if heap is empty
   bool empty() const { return size() == 0; }
 

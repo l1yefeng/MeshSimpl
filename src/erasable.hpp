@@ -14,13 +14,12 @@ namespace Internal {
 
 class Erasable {
  protected:
-  bool _erased;
-
-  void checkExistence() const { assert(!_erased); }
+  bool _erased = false;
 
  public:
+  Erasable() = default;
+
   void erase() {
-    checkExistence();
     _erased = true;
   }
 

@@ -75,7 +75,7 @@ class Ring {
 
   virtual void collect() = 0;
 
-  bool check(const SimplifyOptions &options) {
+  bool check() {
     return checkEnv() && checkTopo() &&
            checkGeom(options.foldOverAngleThreshold) &&
            checkQuality(options.aspectRatioAtLeast);

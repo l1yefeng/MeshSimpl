@@ -36,22 +36,6 @@ void QEMHeap::penalize(Edge *edge) {
   sink(handles[edge - edges.data()]);
 }
 
-void QEMHeap::erase(const Edge *ptr) {
-  idx e = ptr - edges.data();
-
-  const double errorPrev = edges[e].error();
-  size_t k = handles[e];
-
-  if (k < n + 1) {
-    exchange(k, n--);
-    if (edges[keys[k]].error() > errorPrev)
-      sink(k);
-    else
-      swim(k);
-    keys.resize(n + 1);
-  }
-}
-
 bool QEMHeap::greater(size_t i, size_t j) const {
   assert(!std::isnan(edges[keys[i]].error()));
   assert(!std::isnan(edges[keys[j]].error()));

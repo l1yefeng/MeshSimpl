@@ -9,8 +9,10 @@
 #include <cassert>    // for assert
 #include <limits>     // for numeric_limits
 #include <utility>    // for swap
+
 #include "types.hpp"  // for order, vec2i, idx, Quadric, vec3d
 #include "vertices.hpp"
+#include "erasable.hpp"
 
 namespace MeshSimpl {
 namespace Internal {
@@ -20,7 +22,7 @@ namespace Internal {
 // Only some convenient methods are defined for the purpose of less repetition.
 // Methods to initialize (adding first and second face), and update are not
 // provided.
-class Edge {
+class Edge : public Erasable {
  private:
   Vertices &vertices;
 
@@ -45,7 +47,7 @@ class Edge {
   // After constructed this edge, call setWing() once or twice
   // Then this edge is correctly initialized
   Edge(Vertices &vertices, idx v0, idx v1)
-      : vertices(vertices), _vv({v0, v1}) {}
+      : Erasable(), vertices(vertices), _vv({v0, v1}) {}
 
   // Attach a face to edge.
   // No other modifier member functions should be called before this call

@@ -68,13 +68,9 @@ bool Ring::checkQuality(double aspectRatio) const {
 }
 
 void Ring::updateEdge(Edge *outdated) {
-  if (options.fixBoundary && outdated->bothEndsOnBoundary()) {
-    heap.erase(outdated);
-  } else {
-    const double errorPrev = outdated->error();
-    outdated->planCollapse(options.fixBoundary);
-    heap.fix(outdated, errorPrev);
-  }
+  const double errorPrev = outdated->error();
+  outdated->planCollapse(options.fixBoundary);
+  heap.fix(outdated, errorPrev);
 }
 
 void InteriorRing::collect() {
@@ -148,7 +144,7 @@ void InteriorRing::collapse() {
 
   // first face to process: deleted face 0
   faces.setV(it->f(), it->center(), vKept);
-  heap.erase(faces.side(it->f(), it->j()));
+  faces.side(it->f(), it->j())->erase();
 
   faces.setSide(it->f(), it->j(), edgeKept0);
   dirtyEdge->replaceWing(f0, it->f(), it->j());
@@ -166,7 +162,7 @@ void InteriorRing::collapse() {
 
   // the deleted face 1
   --it;
-  heap.erase(faces.side(it->f(), it->i()));
+  faces.side(it->f(), it->i())->erase();
   faces.setSide(it->f(), it->i(), edgeKept1);
   dirtyEdge = edgeKept1;
   dirtyEdge->replaceWing(f1, it->f(), it->i());
@@ -225,7 +221,7 @@ void BoundaryRing::collapse() {
   Edge *dirtyEdge = edgeKept;
 
   // it is possible that vDelNeighbors is empty
-  heap.erase(faces.edgeAcrossFrom(f, vKept));
+  faces.edgeAcrossFrom(f, vKept)->erase();
   if (vDelNeighbors.empty()) {
     dirtyEdge->dropWing(f);
   } else {
