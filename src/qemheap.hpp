@@ -6,9 +6,9 @@
 #define MESH_SIMPL_QEMHEAP_HPP
 
 #include <cassert>
-#include <cstddef>    // for size_t
-#include <vector>     // for vector
-#include "types.hpp"  // for E, idx
+#include <cstddef>
+#include <vector>
+#include "types.hpp"
 
 namespace MeshSimpl {
 namespace Internal {

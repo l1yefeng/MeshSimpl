@@ -2,14 +2,12 @@
 // Created by nickl on 5/13/19.
 //
 
+#include <algorithm>
+
+#include "proc.hpp"
+#include "qemheap.hpp"
 #include "ring.hpp"
-#include <algorithm>  // for sort
-#include <cassert>    // for assert
-#include "boundaryring.hpp"
-#include "interiorring.hpp"
-#include "proc.hpp"      // for updateEdge, isFaceElongated
-#include "qemheap.hpp"   // for QEMHeap
-#include "vertices.hpp"  // for Vertices
+#include "vertices.hpp"
 
 namespace MeshSimpl {
 namespace Internal {

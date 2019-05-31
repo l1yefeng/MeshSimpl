@@ -5,14 +5,14 @@
 #ifndef MESH_SIMPL_FACES_HPP
 #define MESH_SIMPL_FACES_HPP
 
-#include <array>         // for array, swap
-#include <cassert>       // for assert
-#include <cstddef>       // for size_t
-#include <memory>        // for allocator_traits<>::value_type
-#include <utility>       // for move
-#include <vector>        // for vector
-#include "erasable.hpp"  // for Erasables
-#include "types.hpp"     // for idx, Indices, vec3i, order, vec3d, INVALID
+#include <array>
+#include <cassert>
+#include <cstddef>
+#include <memory>
+#include <utility>
+#include <vector>
+#include "erasable.hpp"
+#include "types.hpp"
 
 namespace MeshSimpl {
 namespace Internal {

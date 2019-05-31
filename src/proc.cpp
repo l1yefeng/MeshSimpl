@@ -2,25 +2,25 @@
 // Created by nickl on 1/8/19.
 //
 
-#include <array>             // for array
-#include <cassert>           // for assert
-#include <initializer_list>  // for initializer_list
-#include <limits>            // for numeric_limits
-#include <map>               // for map, _Rb_tree_iterator
-#include <memory>            // for unique_ptr
-#include <sstream>           // for operator<<, basic_ostream, stringstream
-#include <stdexcept>         // for invalid_argument
-#include <utility>           // for pair, make_pair, swap
+#include <array>
+#include <cassert>
+#include <initializer_list>
+#include <limits>
+#include <map>
+#include <memory>
+#include <sstream>
+#include <stdexcept>
+#include <utility>
 
-#include "boundaryring.hpp"  // for Ring, BoundaryRing, InteriorRing
-#include "edge.hpp"          // for Edge
-#include "faces.hpp"         // for Faces
-#include "interiorring.hpp"  // for Ring, BoundaryRing, InteriorRing
+#include "boundaryring.hpp"
+#include "edge.hpp"
+#include "faces.hpp"
+#include "interiorring.hpp"
 #include "proc.hpp"
-#include "qemheap.hpp"   // for QEMHeap
-#include "ring.hpp"      // for Ring, BoundaryRing, InteriorRing
-#include "util.hpp"      // for magnitude, operator-, cross, next, opera...
-#include "vertices.hpp"  // for Vertices
+#include "qemheap.hpp"
+#include "ring.hpp"
+#include "util.hpp"
+#include "vertices.hpp"
 
 namespace MeshSimpl {
 namespace Internal {
@@ -237,6 +237,7 @@ int edgeCollapse(Vertices &vertices, Faces &faces, QEMHeap &heap, Edge &target,
   }
 
   // now that we are certain this edge is to be collapsed, remove it from heap
+  target.erase();
   heap.pop();
 
   ring->collapse();

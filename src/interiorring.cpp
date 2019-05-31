@@ -2,11 +2,18 @@
 // Created by nickl on 5/31/19.
 //
 
+#include <cassert>
+#include <vector>
+
+#include "edge.hpp"
+#include "faces.hpp"
 #include "interiorring.hpp"
+#include "neighbor.hpp"
+#include "types.hpp"
+#include "vertices.hpp"
 
 namespace MeshSimpl {
 namespace Internal {
-
 
 void InteriorRing::collect() {
   const idx f0 = edge.face(0);
@@ -112,5 +119,5 @@ void InteriorRing::collapse() {
   updateEdge(dirtyEdge);
 }
 
-}
+}  // namespace Internal
 }  // namespace MeshSimpl

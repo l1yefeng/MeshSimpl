@@ -2,17 +2,17 @@
 // Created by nickl on 1/8/19.
 //
 
-#include <cstddef>       // for size_t
-#include <limits>        // for numeric_limits
-#include <stdexcept>     // for invalid_argument
-#include <memory>        // for allocator_traits<>::value_type
+#include <cstddef>
+#include <limits>
+#include <memory>
+#include <stdexcept>
 
+#include "edge.hpp"
+#include "faces.hpp"
+#include "proc.hpp"
+#include "qemheap.hpp"
 #include "simplify.hpp"
-#include "proc.hpp"      // for buildConnectivity, computeQuadrics, edgeColl...
-#include "edge.hpp"      // for Edge
-#include "faces.hpp"     // for Faces
-#include "qemheap.hpp"   // for QEMHeap
-#include "vertices.hpp"  // for Vertices
+#include "vertices.hpp"
 
 namespace MeshSimpl {
 

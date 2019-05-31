@@ -5,13 +5,13 @@
 #ifndef MESH_SIMPL_RING_HPP
 #define MESH_SIMPL_RING_HPP
 
-#include <cstddef>       // for size_t
-#include <vector>        // for vector
-#include "edge.hpp"      // for Edge
-#include "faces.hpp"     // for Faces
-#include "neighbor.hpp"  // for Neighbor
-#include "types.hpp"     // for SimplifyOptions, idx
-#include "util.hpp"      // for next
+#include <cstddef>
+#include <vector>
+#include "edge.hpp"
+#include "faces.hpp"
+#include "neighbor.hpp"
+#include "types.hpp"
+#include "util.hpp"
 
 namespace MeshSimpl {
 namespace Internal {

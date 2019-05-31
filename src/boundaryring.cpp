@@ -2,7 +2,15 @@
 // Created by nickl on 5/31/19.
 //
 
+#include <cassert>
+#include <vector>
+
 #include "boundaryring.hpp"
+#include "edge.hpp"
+#include "faces.hpp"
+#include "neighbor.hpp"
+#include "types.hpp"
+#include "vertices.hpp"
 
 namespace MeshSimpl {
 namespace Internal {

@@ -6,8 +6,17 @@
 #define MESH_SIMPL_BOUNDARYRING_HPP
 
 #include "ring.hpp"
+
 namespace MeshSimpl {
+
+struct SimplifyOptions;
+
 namespace Internal {
+
+class Edge;
+class Faces;
+class Vertices;
+class QEMHeap;
 
 class BoundaryRing : public Ring {
  public:

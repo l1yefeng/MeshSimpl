@@ -3,10 +3,10 @@
 //
 
 #include "faces.hpp"
-#include <initializer_list>  // for initializer_list
-#include "edge.hpp"          // for Edge
-#include "util.hpp"          // for next, operator-, prev
-#include "vertices.hpp"      // for Vertices
+#include <initializer_list>
+#include "edge.hpp"
+#include "util.hpp"
+#include "vertices.hpp"
 
 namespace MeshSimpl {
 namespace Internal {

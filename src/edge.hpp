@@ -5,14 +5,14 @@
 #ifndef MESH_SIMPL_EDGE_HPP
 #define MESH_SIMPL_EDGE_HPP
 
-#include <array>      // for array
-#include <cassert>    // for assert
-#include <limits>     // for numeric_limits
-#include <utility>    // for swap
+#include <array>
+#include <cassert>
+#include <limits>
+#include <utility>
 
-#include "types.hpp"  // for order, vec2i, idx, Quadric, vec3d
-#include "vertices.hpp"
 #include "erasable.hpp"
+#include "types.hpp"
+#include "vertices.hpp"
 
 namespace MeshSimpl {
 namespace Internal {
