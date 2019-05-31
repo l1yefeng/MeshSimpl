@@ -84,36 +84,6 @@ class Ring {
   virtual void collapse() = 0;
 };
 
-class InteriorRing : public Ring {
- public:
-  InteriorRing(Vertices &vertices, Faces &faces, QEMHeap &heap,
-               const SimplifyOptions &options, const Edge &edge)
-      : Ring(vertices, faces, heap, options, edge) {
-    reserve(ESTIMATE_VALENCE);
-  }
-
-  void collect() override;
-
-  bool checkEnv() override;
-
-  void collapse() override;
-};
-
-class BoundaryRing : public Ring {
- public:
-  BoundaryRing(Vertices &vertices, Faces &faces, QEMHeap &heap,
-               const SimplifyOptions &options, const Edge &edge)
-      : Ring(vertices, faces, heap, options, edge) {
-    reserve(ESTIMATE_VALENCE / 2);
-  }
-
-  void collect() override;
-
-  bool checkEnv() override;
-
-  void collapse() override;
-};
-
 }  // namespace Internal
 }  // namespace MeshSimpl
 

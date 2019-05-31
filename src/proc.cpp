@@ -12,8 +12,10 @@
 #include <stdexcept>         // for invalid_argument
 #include <utility>           // for pair, make_pair, swap
 
-#include "edge.hpp"   // for Edge
-#include "faces.hpp"  // for Faces
+#include "boundaryring.hpp"  // for Ring, BoundaryRing, InteriorRing
+#include "edge.hpp"          // for Edge
+#include "faces.hpp"         // for Faces
+#include "interiorring.hpp"  // for Ring, BoundaryRing, InteriorRing
 #include "proc.hpp"
 #include "qemheap.hpp"   // for QEMHeap
 #include "ring.hpp"      // for Ring, BoundaryRing, InteriorRing
