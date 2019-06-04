@@ -52,7 +52,7 @@ struct SimplifyOptions {
   float borderConstraint = 2.0f;
 
   // used to check if, during edge collapse, faces get folded;
-  double foldOverAngleThreshold = std::cos(160);
+  double foldOverAngleThreshold = std::cos(80.0 / 180.0 * std::acos(-1));
 
   // used to check if, during edge collapse, faces become extremely elongated;
   // aspect ratio = 8(s-a)(s-b)(s-c)/abc, faces with lower aspect ratio -> lower
