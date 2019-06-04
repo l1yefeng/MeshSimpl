@@ -24,7 +24,7 @@ add_library(${PROJECT_NAME}
             simplify.hpp
             types.hpp
             util.cpp
-            util.hpp)
+            util.hpp nonmaniring.cpp nonmaniring.hpp)
 
 target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_11)
 

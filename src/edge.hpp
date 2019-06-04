@@ -110,7 +110,9 @@ class Edge : public Erasable {
 
   const vec2i &endpoints() const { return _vv; }
 
-  idx operator[](order ord) const { return _vv[ord]; }
+  idx endpoint(order ord) const { return endpoints()[ord]; }
+
+  idx operator[](order ord) const { return endpoint(ord); }
 
   //
   // public methods for update

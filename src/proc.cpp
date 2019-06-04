@@ -16,6 +16,7 @@
 #include "edge.hpp"
 #include "faces.hpp"
 #include "interiorring.hpp"
+#include "nonmaniring.hpp"
 #include "proc.hpp"
 #include "qemheap.hpp"
 #include "ring.hpp"
@@ -219,6 +220,12 @@ int edgeCollapse(Vertices &vertices, Faces &faces, QEMHeap &heap, Edge &target,
   if (target.bothEndsOnBoundary() && !target.onBoundary()) {
     heap.penalize(&target);
     return 0;
+  }
+
+  if (options.topologyModifiable) {
+    NonManiRing ring(vertices, faces, heap, &target, options);
+    int vRemoved = ring.collapse();
+    return vRemoved;
   }
 
   std::unique_ptr<Ring> ring;

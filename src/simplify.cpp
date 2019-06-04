@@ -59,7 +59,7 @@ void simplify(Positions &positions, Indices &indices,
   }
   heap.heapilize();
 
-  size_t nv = nvToDecimate;
+  int nv = nvToDecimate;
   while (!heap.empty() && nv > 0) {
     // target the least-error edge, if it is what we saw last iteration,
     // it means loop should stop because all remaining edges have been penalized

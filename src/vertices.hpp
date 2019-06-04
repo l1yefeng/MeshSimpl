@@ -63,6 +63,14 @@ class Vertices : public Erasables {
     }
   }
 
+  idx duplicateV(idx src) {
+    _erased.push_back(false);
+    _positions.push_back(_positions[src]);
+    _quadrics.push_back(_quadrics[src]);
+    _boundary.push_back(_boundary[src]);
+    return size() - 1;
+  }
+
   void compactPositionsAndDie(Positions& positions, Indices& indices) {
     std::vector<std::array<std::vector<idx>, 3>> vertex2face(size());
 
@@ -73,8 +81,8 @@ class Vertices : public Erasables {
 
     // get rid of deleted vertices and keep the mapping valid
     for (size_t lo = 0, hi = size() - 1; true; ++lo, --hi) {
-      while (exists(lo) && lo <= hi) ++lo;
-      while (!exists(hi) && lo < hi) --hi;
+      while (lo <= hi && exists(lo)) ++lo;
+      while (lo < hi && !exists(hi)) --hi;
       if (lo >= hi) {
         _positions.resize(lo);
         vertex2face.resize(lo);

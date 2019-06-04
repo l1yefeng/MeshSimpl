@@ -32,6 +32,8 @@ int main(int argc, char* argv[]) {
        (value("output", out)) % "output file path",
        (option("-f", "--fix-boundary").set(options.fixBoundary)) %
            "do not move vertices on boundary",
+       (option("-t", "--topo-modifiable").set(options.topologyModifiable)) %
+           "permit change of topology during simplification",
        (option("-w", "--weighting") & value("strategy", weighting)) %
            "one of { uniform, by-area, by-area-inv }",
        (option("-s", "--strength") & number("ratio", options.strength)) %
