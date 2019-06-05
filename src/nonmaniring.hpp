@@ -301,6 +301,9 @@ class NonManiRing {
     // there is topo change or not, collapse the target now. cleanup afterwords
     std::vector<Edge*> dirtyEdges;
 
+    vertices.setPosition(vKept, target->center());
+    vertices.setQ(vKept, target->q());
+
     auto it = vDelNeighbors.begin();
     dirtyEdges.push_back(it->firstEdge(faces));
     for (; it != vDelNeighbors.end(); ++it) {
