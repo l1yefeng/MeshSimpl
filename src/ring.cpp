@@ -21,7 +21,7 @@ bool Ring::checkTopo() {
   for (const auto &nb : vKeptNeighbors) starKept.push_back(&nb);
 
   const auto cmp = [&](const Neighbor *nb0, const Neighbor *nb1) -> bool {
-    return nb0->secondV(faces) < nb1->secondV(faces);
+    return nb0->secondV() < nb1->secondV();
   };
   std::sort(starDel.begin(), starDel.end(), cmp);
   std::sort(starKept.begin(), starKept.end(), cmp);
@@ -55,13 +55,13 @@ bool Ring::checkGeom(double foldOverAngle) const {
 
 bool Ring::checkQuality(double aspectRatio) const {
   for (const auto &nb : vDelNeighbors) {
-    if (isFaceElongated(vertices[vDel], vertices[nb.firstV(faces)],
-                        vertices[nb.secondV(faces)], aspectRatio))
+    if (isFaceElongated(vertices[vDel], vertices[nb.firstV()],
+                        vertices[nb.secondV()], aspectRatio))
       return false;
   }
   for (const auto &nb : vDelNeighbors) {
-    if (isFaceElongated(vertices[vKept], vertices[nb.firstV(faces)],
-                        vertices[nb.secondV(faces)], aspectRatio))
+    if (isFaceElongated(vertices[vKept], vertices[nb.firstV()],
+                        vertices[nb.secondV()], aspectRatio))
       return false;
   }
   return true;

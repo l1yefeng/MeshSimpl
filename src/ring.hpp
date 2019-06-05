@@ -22,11 +22,6 @@ class Vertices;
 // 1-ring neighborhood of edge of interest, i.e., the union of 1-ring
 // neighborhood of the endpoints of this edge.
 class Ring {
- private:
-  bool ccwWhenCollect() const {
-    return edge.ordInF(0) != next(faces.orderOf(edge.face(0), vDel));
-  }
-
  protected:
   static const size_t ESTIMATE_VALENCE = 8;
 
@@ -41,7 +36,6 @@ class Ring {
   idx vKept, vDel;
 
   // collections
-  bool ccw;
   std::vector<Neighbor> vDelNeighbors, vKeptNeighbors;
 
   Ring(Vertices &vertices, Faces &faces, QEMHeap &heap,
@@ -52,8 +46,7 @@ class Ring {
         options(options),
         edge(edge),
         vKept(edge[1 - edge.delEndpointOrder()]),
-        vDel(edge[edge.delEndpointOrder()]),
-        ccw(ccwWhenCollect()) {}
+        vDel(edge[edge.delEndpointOrder()]) {}
 
   void reserve(size_t sz) {
     vDelNeighbors.reserve(sz);

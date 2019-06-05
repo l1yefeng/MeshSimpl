@@ -16,34 +16,34 @@ namespace MeshSimpl {
 namespace Internal {
 
 void BoundaryRing::collect() {
-  const idx f = edge.face(0);
-
-  Neighbor nb(f, edge.ordInF(0), ccw);
+  Neighbor nb(&edge, 0, vDel, faces);
   while (true) {
-    const Edge *nextEdge = nb.secondEdge(faces);
+    const Edge *nextEdge = nb.secondEdge();
 
     if (nextEdge->onBoundary()) break;
 
-    nb.rotate(faces);
+    nb.rotate();
     vDelNeighbors.push_back(nb);
   }
 
-  nb = Neighbor(f, edge.ordInF(0), !ccw);
+  nb.replace(&edge, 0, vKept);
   while (true) {
-    const Edge *nextEdge = nb.secondEdge(faces);
+    const Edge *nextEdge = nb.secondEdge();
 
     if (nextEdge->onBoundary()) break;
 
-    nb.rotate(faces);
+    nb.rotate();
     vKeptNeighbors.push_back(nb);
   }
 }
+
 bool BoundaryRing::checkEnv() {
   // special case: there is ONE triangle in current component
   if (vKeptNeighbors.empty()) return false;
 
   return true;
 }
+
 void BoundaryRing::collapse() {
   const idx f = edge.face(0);
 
@@ -60,8 +60,8 @@ void BoundaryRing::collapse() {
     dirtyEdge->dropWing(f);
   } else {
     auto it = vDelNeighbors.begin();
-    faces.setSide(it->f(), it->j(), edgeKept);
-    dirtyEdge->replaceWing(f, it->f(), it->j());
+    faces.setSide(it->f(), it->secondVOrd(), edgeKept);
+    dirtyEdge->replaceWing(f, it->f(), it->secondVOrd());
   }
 
   faces.erase(f);
@@ -69,7 +69,7 @@ void BoundaryRing::collapse() {
   // every face centered around deleted vertex
   for (const auto &nb : vDelNeighbors) {
     faces.setV(nb.f(), nb.center(), vKept);
-    dirtyEdge = nb.secondEdge(faces);
+    dirtyEdge = nb.secondEdge();
 
     dirtyEdge->replaceEndpoint(vDel, vKept);
 
@@ -81,7 +81,7 @@ void BoundaryRing::collapse() {
 
   updateEdge(dirtyEdge);
   for (auto nb : vKeptNeighbors) {
-    dirtyEdge = nb.secondEdge(faces);
+    dirtyEdge = nb.secondEdge();
     updateEdge(dirtyEdge);
   }
 }

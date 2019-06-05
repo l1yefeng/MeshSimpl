@@ -34,37 +34,36 @@ class NonManiRing {
     const idx f0 = target->face(0);
     const idx f1 = target->face(1);
     const idx vDel = target->endpoint(target->delEndpointOrder());
-    const bool ccw =
-        target->ordInF(0) != next(faces.orderOf(target->face(0), vDel));
+    const idx vKept = target->endpoint(1 - target->delEndpointOrder());
 
     // from f0 to f1 around vDel
-    Neighbor nb(f0, target->ordInF(0), ccw);
+    Neighbor nb(target, 0, vDel, faces);
     while (true) {
-      nb.rotate(faces);
+      nb.rotate();
       if (nb.f() == f1) break;
       vDelNeighbors.push_back(nb);
     }
 
     if (target->neitherEndOnBoundary()) {
       // from f1 to f0 around vKept
-      nb = Neighbor(f1, target->ordInF(1), ccw);
+      nb.replace(target, 1, vKept);
       while (true) {
-        nb.rotate(faces);
+        nb.rotate();
         if (nb.f() == f0) break;
         vKeptNeighbors.push_back(nb);
       }
     } else {
       // from f1 to boundary around vKept
-      nb = Neighbor(f1, target->ordInF(1), ccw);
-      while (!nb.secondEdge(faces)->onBoundary()) {
-        nb.rotate(faces);
+      nb.replace(target, 1, vKept);
+      while (!nb.secondEdge()->onBoundary()) {
+        nb.rotate();
         vKeptNeighbors.push_back(nb);
       }
 
       // from f0 to boundary around vKept (switch direction)
-      nb = Neighbor(f0, target->ordInF(0), !ccw);
-      while (!nb.secondEdge(faces)->onBoundary()) {
-        nb.rotate(faces);
+      nb.replace(target, 0, vKept);
+      while (!nb.secondEdge()->onBoundary()) {
+        nb.rotate();
         vKeptNeighbors.push_back(nb);
       }
     }
@@ -81,7 +80,7 @@ class NonManiRing {
     for (const auto& nb : vKeptNeighbors) starKept.push_back(&nb);
 
     const auto cmp = [&](const Neighbor* nb0, const Neighbor* nb1) -> bool {
-      return nb0->secondV(faces) < nb1->secondV(faces);
+      return nb0->secondV() < nb1->secondV();
     };
     std::sort(starDel.begin(), starDel.end(), cmp);
     std::sort(starKept.begin(), starKept.end(), cmp);
@@ -92,9 +91,9 @@ class NonManiRing {
       } else if (cmp(*itk, *itd)) {
         ++itk;
       } else {
-        std::array<Edge*, 2> coincided = {(*itd)->secondEdge(faces),
-                                          (*itk)->secondEdge(faces)};
-        nonMani.emplace((*itd)->secondV(faces), coincided);
+        std::array<Edge*, 2> coincided = {(*itd)->secondEdge(),
+                                          (*itk)->secondEdge()};
+        nonMani.emplace((*itd)->secondV(), coincided);
 
         ++itd;
         ++itk;
@@ -144,31 +143,29 @@ class NonManiRing {
     idx vKeptFork = vertices.duplicateV(vKept);
     idx vOther = nm.first;
     idx vOtherFork = vertices.duplicateV(vOther);
-    // pass k to Neighbor() to circle around vKept, !k around vOther
-    bool k = e0->ordInF(1) != next(faces.orderOf(e0->face(1), vKept));
 
     // run = false => around vKept (replaced with vDel)
     // run = true  => around the other (replaced with vOtherFork)
     idx fSave;
     std::vector<Neighbor> aroundVKept, aroundVOther;
 
-    Neighbor nb(e0->face(1), e0->ordInF(1), k);
+    Neighbor nb(e0, 1, vKept, faces);
     assert(faces.v(nb.f(), nb.center()) == vKept);
     while (true) {
-      edgesReplaceEnd.emplace_back(nb.secondEdge(faces), vKept, vKeptFork);
+      edgesReplaceEnd.emplace_back(nb.secondEdge(), vKept, vKeptFork);
       facesSetV.emplace_back(nb.f(), nb.center(), vKeptFork);
 
-      auto itVisited = visited.find(nb.secondV(faces));
+      auto itVisited = visited.find(nb.secondV());
       if (itVisited != visited.end()) {
         itVisited->second += 1;
       }
 
-      if (nb.secondEdge(faces) == e1) {
+      if (nb.secondEdge() == e1) {
         fSave = nb.f();
         break;
       }
-      nb.rotate(faces);
-      assert(nb.secondEdge(faces) != e0);
+      nb.rotate();
+      assert(nb.secondEdge() != e0);
     }
 
     for (auto it = nonMani.begin(), last = nonMani.end(); it != last;) {
@@ -194,18 +191,18 @@ class NonManiRing {
       nonManiGroup.erase(vKept);
     }
 
-    nb = Neighbor(e0->face(1), e0->ordInF(1), !k);
+    nb.replace(e0, 1, vOther);
     assert(faces.v(nb.f(), nb.center()) == vOther);
     while (true) {
-      edgesReplaceEnd.emplace_back(nb.secondEdge(faces), vOther, vOtherFork);
+      edgesReplaceEnd.emplace_back(nb.secondEdge(), vOther, vOtherFork);
       facesSetV.emplace_back(nb.f(), nb.center(), vOtherFork);
 
-      if (nb.secondEdge(faces) == e1) {
+      if (nb.secondEdge() == e1) {
         assert(fSave == nb.f());
         break;
       }
-      nb.rotate(faces);
-      assert(nb.secondEdge(faces) != e0);
+      nb.rotate();
+      assert(nb.secondEdge() != e0);
     }
 
     // e0 has correct f0 but incorrect f1 (currently attached to e1)
@@ -272,10 +269,10 @@ class NonManiRing {
         vertices.erase(faces.v(target->face(i), target->ordInF(i)));
         faces.erase(target->face(i));
       }
-      nbd.firstEdge(faces)->erase();
-      nbd.secondEdge(faces)->erase();
-      nbk.firstEdge(faces)->erase();
-      nbk.secondEdge(faces)->erase();
+      nbd.firstEdge()->erase();
+      nbd.secondEdge()->erase();
+      nbk.firstEdge()->erase();
+      nbk.secondEdge()->erase();
       target->erase();
       faces.side(nbd.f(), nbd.center())->erase();
       faces.erase(nbd.f());
@@ -305,10 +302,10 @@ class NonManiRing {
     vertices.setQ(vKept, target->q());
 
     auto it = vDelNeighbors.begin();
-    dirtyEdges.push_back(it->firstEdge(faces));
+    dirtyEdges.push_back(it->firstEdge());
     for (; it != vDelNeighbors.end(); ++it) {
       faces.setV(it->f(), it->center(), vKept);
-      Edge* dirty = it->secondEdge(faces);
+      Edge* dirty = it->secondEdge();
       dirty->replaceEndpoint(vDel, vKept);
       dirtyEdges.push_back(dirty);
     }
@@ -316,13 +313,12 @@ class NonManiRing {
     if (target->oneEndOnBoundary()) {
       for (order i : {0, 1})
         dirtyEdges.push_back(faces.edgeAcrossFrom(target->face(i), vDel));
-      for (auto& nb : vKeptNeighbors)
-        dirtyEdges.push_back(nb.secondEdge(faces));
+      for (auto& nb : vKeptNeighbors) dirtyEdges.push_back(nb.secondEdge());
     } else {
       it = vKeptNeighbors.begin();
-      dirtyEdges.push_back(it->firstEdge(faces));
+      dirtyEdges.push_back(it->firstEdge());
       for (; it != vKeptNeighbors.end(); ++it) {
-        dirtyEdges.push_back(it->secondEdge(faces));
+        dirtyEdges.push_back(it->secondEdge());
       }
     }
 
@@ -338,18 +334,20 @@ class NonManiRing {
     Edge* edgeK = faces.edgeAcrossFrom(f, vDel);
     order fOrdInEdgeK = edgeK->wingOrder(f);
     edgeK->setWing(fOrdInEdgeK, vDelNeighbors.front().f(),
-                   vDelNeighbors.front().j());
-    vDelNeighbors.front().firstEdge(faces)->erase();
-    faces.setSide(vDelNeighbors.front().f(), vDelNeighbors.front().j(), edgeK);
+                   vDelNeighbors.front().secondVOrd());
+    vDelNeighbors.front().firstEdge()->erase();
+    faces.setSide(vDelNeighbors.front().f(), vDelNeighbors.front().secondVOrd(),
+                  edgeK);
 
     // take away f1
     f = target->face(1);
     edgeK = faces.edgeAcrossFrom(f, vDel);
     fOrdInEdgeK = edgeK->wingOrder(f);
     edgeK->setWing(fOrdInEdgeK, vDelNeighbors.back().f(),
-                   vDelNeighbors.back().i());
-    vDelNeighbors.back().secondEdge(faces)->erase();
-    faces.setSide(vDelNeighbors.back().f(), vDelNeighbors.back().i(), edgeK);
+                   vDelNeighbors.back().firstVOrd());
+    vDelNeighbors.back().secondEdge()->erase();
+    faces.setSide(vDelNeighbors.back().f(), vDelNeighbors.back().firstVOrd(),
+                  edgeK);
 
     target->erase();
     for (order i : {0, 1}) faces.erase(target->face(i));

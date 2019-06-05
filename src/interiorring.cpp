@@ -20,37 +20,38 @@ void InteriorRing::collect() {
   const idx f1 = edge.face(1);
 
   // from f0 to f1 around vDel
-  Neighbor nb(f0, edge.ordInF(0), ccw);
+  Neighbor nb(&edge, 0, vDel, faces);
   while (true) {
-    nb.rotate(faces);
+    nb.rotate();
     if (nb.f() == f1) break;
     vDelNeighbors.push_back(nb);
   }
 
   if (edge.neitherEndOnBoundary()) {
     // from f1 to f0 around vKept
-    nb = Neighbor(f1, edge.ordInF(1), ccw);
+    nb.replace(&edge, 1, vKept);
     while (true) {
-      nb.rotate(faces);
+      nb.rotate();
       if (nb.f() == f0) break;
       vKeptNeighbors.push_back(nb);
     }
   } else {
     // from f1 to boundary around vKept
-    nb = Neighbor(f1, edge.ordInF(1), ccw);
-    while (!nb.secondEdge(faces)->onBoundary()) {
-      nb.rotate(faces);
+    nb.replace(&edge, 1, vKept);
+    while (!nb.secondEdge()->onBoundary()) {
+      nb.rotate();
       vKeptNeighbors.push_back(nb);
     }
 
     // from f0 to boundary around vKept (switch direction)
-    nb = Neighbor(f0, edge.ordInF(0), !ccw);
-    while (!nb.secondEdge(faces)->onBoundary()) {
-      nb.rotate(faces);
+    nb.replace(&edge, 0, vKept);
+    while (!nb.secondEdge()->onBoundary()) {
+      nb.rotate();
       vKeptNeighbors.push_back(nb);
     }
   }
 }
+
 bool InteriorRing::checkEnv() {
   // special case: there are 2 faces, 3 vertices in current component
   // this happens if input contains such component because
@@ -67,6 +68,7 @@ bool InteriorRing::checkEnv() {
   // fine target to collapse
   return true;
 }
+
 void InteriorRing::collapse() {
   const idx f0 = edge.face(0);
   const idx f1 = edge.face(1);
@@ -84,16 +86,16 @@ void InteriorRing::collapse() {
 
   // first face to process: deleted face 0
   faces.setV(it->f(), it->center(), vKept);
-  faces.side(it->f(), it->j())->erase();
+  faces.side(it->f(), it->secondVOrd())->erase();
 
-  faces.setSide(it->f(), it->j(), edgeKept0);
-  dirtyEdge->replaceWing(f0, it->f(), it->j());
+  faces.setSide(it->f(), it->secondVOrd(), edgeKept0);
+  dirtyEdge->replaceWing(f0, it->f(), it->secondVOrd());
   faces.erase(f0);
 
   // every face centered around deleted vertex
   for (++it; it != vDelNeighbors.end(); ++it) {
     faces.setV(it->f(), it->center(), vKept);
-    dirtyEdge = faces.side(it->f(), it->j());
+    dirtyEdge = faces.side(it->f(), it->secondVOrd());
 
     dirtyEdge->replaceEndpoint(vDel, vKept);
 
@@ -102,17 +104,17 @@ void InteriorRing::collapse() {
 
   // the deleted face 1
   --it;
-  faces.side(it->f(), it->i())->erase();
-  faces.setSide(it->f(), it->i(), edgeKept1);
+  faces.side(it->f(), it->firstVOrd())->erase();
+  faces.setSide(it->f(), it->firstVOrd(), edgeKept1);
   dirtyEdge = edgeKept1;
-  dirtyEdge->replaceWing(f1, it->f(), it->i());
+  dirtyEdge->replaceWing(f1, it->f(), it->firstVOrd());
   faces.erase(f1);
 
   vertices.erase(vDel);
 
   // every edge centered around the kept vertex
   for (auto nb : vKeptNeighbors) {
-    dirtyEdge = nb.firstEdge(faces);
+    dirtyEdge = nb.firstEdge();
     updateEdge(dirtyEdge);
   }
 

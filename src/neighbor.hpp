@@ -11,39 +11,50 @@
 namespace MeshSimpl {
 namespace Internal {
 
-// This is a compact structure to represent an incident face around a center
+// Neighbor represents an incident face around a center
 // vertex. It is created for the traverse of the incident faces of a vertex
 // (center) during edge-collapse operation.
 //
-// It contains a face index and two vertex (the third is the center) order: i
-// and j. i, j, and center are local orders of three vertices. In typical
-// (clockwise) cases, the orientation is center -> i -> j -> center
-//
 // Mind that in a face, any edge and the vertex across from it have the same
-// order
+// order. Therefore there is no firstEdgeOrd(), use secondVOrd().
 class Neighbor {
  private:
-  idx _f;  // face index in indices
-  bool _ccw;  // determines the direction of rotation
-  order _i;  // i = (j + 1) % 3 if clockwise
-  order _j;  // j = (center + 1) % 3 if clockwise
+  const Faces& faces;
+  idx _f;         // face index in indices
+  bool _ccw;      // determines the direction of rotation
+  order _second;  // = (first + 1) % 3 if counter-clockwise
+  order _first;   // = (second - 1) % 3 = (center + 1) % 3 if counter-clockwise
 
-  order iFromJ(order j) { return _ccw ? prev(j) : next(j); }
+  order getFirst(order second) { return _ccw ? prev(second) : next(second); }
 
  public:
-  Neighbor(idx face, order j, bool ccw)
-      : _f(face), _ccw(ccw), _i(iFromJ(j)), _j(j) {}
+  Neighbor(const Edge* firstEdge, order toWingOrder, idx vCenter,
+           const Faces& faces)
+      : faces(faces),
+        _f(firstEdge->face(toWingOrder)),
+        _ccw(firstEdge->ordInF(toWingOrder) !=
+             next(faces.orderOf(firstEdge->face(toWingOrder), vCenter))),
+        _second(firstEdge->ordInF(toWingOrder)),
+        _first(getFirst(_second)) {}
+
+  void replace(const Edge* firstEdge, order toWingOrder, idx vCenter) {
+    _f = firstEdge->face(toWingOrder);
+    _ccw = firstEdge->ordInF(toWingOrder) !=
+           next(faces.orderOf(firstEdge->face(toWingOrder), vCenter));
+    _second = firstEdge->ordInF(toWingOrder);
+    _first = getFirst(_second);
+  }
 
   idx f() const { return _f; }
 
-  order i() const { return _i; }
+  order firstVOrd() const { return _first; }
 
-  order j() const { return _j; }
+  order secondVOrd() const { return _second; }
 
-  order center() const { return 3 - _i - _j; }
+  order center() const { return 3 - _first - _second; }
 
-  void rotate(const Faces& faces) {
-    const Edge* currEdge = secondEdge(faces);
+  void rotate() {
+    const Edge* currEdge = secondEdge();
     assert(!currEdge->onBoundary());
 
     const idx prevCenter = faces[_f][center()];
@@ -52,19 +63,19 @@ class Neighbor {
     const idx nextFace = currEdge->face(1 - ford);
     assert(_f != nextFace);
     _f = nextFace;
-    _j = currEdge->ordInF(1 - ford);
-    _i = iFromJ(_j);
+    _second = currEdge->ordInF(1 - ford);
+    _first = getFirst(_second);
 
     assert(faces[_f][center()] == prevCenter);
   }
 
-  Edge* firstEdge(const Faces& faces) const { return faces.side(f(), _j); }
+  Edge* firstEdge() const { return faces.side(f(), _second); }
 
-  Edge* secondEdge(const Faces& faces) const { return faces.side(f(), _i); }
+  Edge* secondEdge() const { return faces.side(f(), _first); }
 
-  idx firstV(const Faces& faces) const { return faces[f()][_i]; }
+  idx firstV() const { return faces[f()][_first]; }
 
-  idx secondV(const Faces& faces) const { return faces[f()][_j]; }
+  idx secondV() const { return faces[f()][_second]; }
 };
 
 }  // namespace Internal
