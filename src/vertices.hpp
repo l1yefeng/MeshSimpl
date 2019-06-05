@@ -64,11 +64,12 @@ class Vertices : public Erasables {
   }
 
   idx duplicateV(idx src) {
+    idx v = size();
     _erased.push_back(false);
     _positions.push_back(_positions[src]);
     _quadrics.push_back(_quadrics[src]);
     _boundary.push_back(_boundary[src]);
-    return size() - 1;
+    return v;
   }
 
   void compactPositionsAndDie(Positions& positions, Indices& indices) {

@@ -118,6 +118,7 @@ class NonManiRing {
 
   void cleanup(std::map<idx, NonManiInfo>& nonManiGroup) {
     assert(!nonManiGroup.empty());
+    // the original vKept or a fork
     idx vKept = nonManiGroup.begin()->first;
     NonManiInfo& nonMani = nonManiGroup.begin()->second;
     assert(!nonMani.empty());
@@ -125,11 +126,6 @@ class NonManiRing {
     // use the first non-manifold edge to separate this mess
     std::vector<std::tuple<Edge*, idx, idx>> edgesReplaceEnd;
     std::vector<std::tuple<idx, order, idx>> facesSetV;
-
-    std::map<idx, int> visited;
-    for (auto& nm : nonMani) {
-      visited.emplace(nm.first, 0);
-    }
 
     auto& nm = *nonMani.begin();
     // e0 will be attached to the e0->face(0) now and the face connects to it
@@ -144,14 +140,33 @@ class NonManiRing {
     idx vOther = nm.first;
     idx vOtherFork = vertices.duplicateV(vOther);
 
-    // run = false => around vKept (replaced with vDel)
-    // run = true  => around the other (replaced with vOtherFork)
-    idx fSave;
-    std::vector<Neighbor> aroundVKept, aroundVOther;
+    idx fExch0;
 
-    Neighbor nb(e0, 1, vKept, faces);
+    // used to check whether another non-manifold edge will be handled
+    // while we fork this non-manifold edge (visited once meaning yeah)
+    std::map<idx, int> visited;
+    for (auto& _nm : nonMani) {
+      visited.emplace(_nm.first, 0);
+    }
+
+    // select a direction (1, but 0 will work as well), circle around
+    // until met the coincided edge and every visited face will be separated
+    // to the forked edge to turn the non-manifold into 2-manifold
+    order traverseOrd = 1;
+    Neighbor nb(e0, traverseOrd, vKept, faces);
     assert(faces.v(nb.f(), nb.center()) == vKept);
     while (true) {
+      if (nb.secondEdge()->onBoundary()) {
+        // switch direction in order to separate edge in one pass
+        edgesReplaceEnd.clear();
+        facesSetV.clear();
+        for (auto& vis : visited) vis.second = 0;
+
+        traverseOrd = 0;
+        nb.replace(e0, traverseOrd, vKept);
+        continue;
+      }
+
       edgesReplaceEnd.emplace_back(nb.secondEdge(), vKept, vKeptFork);
       facesSetV.emplace_back(nb.f(), nb.center(), vKeptFork);
 
@@ -161,7 +176,7 @@ class NonManiRing {
       }
 
       if (nb.secondEdge() == e1) {
-        fSave = nb.f();
+        fExch0 = nb.f();
         break;
       }
       nb.rotate();
@@ -191,33 +206,32 @@ class NonManiRing {
       nonManiGroup.erase(vKept);
     }
 
-    nb.replace(e0, 1, vOther);
+    nb.replace(e0, traverseOrd, vOther);
     assert(faces.v(nb.f(), nb.center()) == vOther);
     while (true) {
+      assert(!nb.secondEdge()->onBoundary());
+
       edgesReplaceEnd.emplace_back(nb.secondEdge(), vOther, vOtherFork);
       facesSetV.emplace_back(nb.f(), nb.center(), vOtherFork);
 
       if (nb.secondEdge() == e1) {
-        assert(fSave == nb.f());
+        assert(fExch0 == nb.f());
         break;
       }
       nb.rotate();
       assert(nb.secondEdge() != e0);
     }
 
-    // e0 has correct f0 but incorrect f1 (currently attached to e1)
-    // e0->face(0) has correct sides
-    // e0->face(1) currently has side e0 but should be replaced with e1
-    // e1 has correct fSave but incorrect the other fSave2
-    // fSave has correct sides
-    // fSave2 currently has side e1 but should be replaced with e0
-    faces.setSide(e0->face(1), e0->ordInF(1), e1);
-    order fSaveOrd = e1->wingOrder(fSave);
-    faces.setSide(e1->face(1 - fSaveOrd), e1->ordInF(1 - fSaveOrd), e0);
-    idx fSave2 = e1->face(1 - fSaveOrd);
-    order fSave2Ord = e1->ordInF(1 - fSaveOrd);
-    e1->setWing(1 - fSaveOrd, e0->face(1), e0->ordInF(1));
-    e0->setWing(1, fSave2, fSave2Ord);
+    // exchange wing between e0 and e1. when completed, e0 will have
+    // two wings remain on surface while e1 will have two wings
+    // detached (endpoints are forked)
+    faces.setSide(e0->face(traverseOrd), e0->ordInF(traverseOrd), e1);
+    order fExch1Ord = 1 - e1->wingOrder(fExch0);
+    faces.setSide(e1->face(fExch1Ord), e1->ordInF(fExch1Ord), e0);
+    idx fExch1 = e1->face(fExch1Ord);
+    order e1OrdInFExch = e1->ordInF(fExch1Ord);
+    e1->setWing(fExch1Ord, e0->face(traverseOrd), e0->ordInF(traverseOrd));
+    e0->setWing(traverseOrd, fExch1, e1OrdInFExch);
 
     for (auto& ere : edgesReplaceEnd)
       std::get<0>(ere)->replaceEndpoint(std::get<1>(ere), std::get<2>(ere));
@@ -259,7 +273,9 @@ class NonManiRing {
     }
 
     // special case: tetrahedron
-    if (vDelNeighbors.size() == 1 && vKeptNeighbors.size() == 1) {
+    // FIXME: this case need no special handling if topo can be changed
+    // but it worth check if topo must be preserved
+    /*if (vDelNeighbors.size() == 1 && vKeptNeighbors.size() == 1) {
       const auto& nbd = vDelNeighbors.front();
       const auto& nbk = vKeptNeighbors.front();
       assert(faces.side(nbd.f(), nbd.center()) ==
@@ -279,7 +295,7 @@ class NonManiRing {
       faces.erase(nbk.f());
 
       return 4;
-    }
+    }*/
 
     // check cause of topo change
     order vDelOrd = target->delEndpointOrder();
@@ -298,9 +314,11 @@ class NonManiRing {
     // there is topo change or not, collapse the target now. cleanup afterwords
     std::vector<Edge*> dirtyEdges;
 
+    // update vertex data
     vertices.setPosition(vKept, target->center());
     vertices.setQ(vKept, target->q());
 
+    // vDel in each face/edge needs to be replaced
     auto it = vDelNeighbors.begin();
     dirtyEdges.push_back(it->firstEdge());
     for (; it != vDelNeighbors.end(); ++it) {
@@ -310,6 +328,7 @@ class NonManiRing {
       dirtyEdges.push_back(dirty);
     }
 
+    // connectivity around vKept is unchanged but their q and error need update
     if (target->oneEndOnBoundary()) {
       for (order i : {0, 1})
         dirtyEdges.push_back(faces.edgeAcrossFrom(target->face(i), vDel));
@@ -323,7 +342,10 @@ class NonManiRing {
     }
 
     for (auto& dirty : dirtyEdges) {
-      if (dirty->bothEndsOnBoundary()) continue;
+      if (options.fixBoundary && dirty->bothEndsOnBoundary()) {
+        // there is no need to update, plus it is not in heap anyway
+        continue;
+      }
       double errorPrev = dirty->error();
       dirty->planCollapse(options.fixBoundary);
       heap.fix(dirty, errorPrev);
