@@ -5,14 +5,11 @@ Mesh simplification implementation
     - Cannot handle non-manifold mesh
     - Cannot handle mesh with wrong oriented face
 
-- Simplification flaws:
-    - Not able to change topology
-
 - To-do-next:
-    - Use OOP better to improve program
+    1. Augmenting faces
+    2. Topo-change simplification
+    3. Use OOP better to improve program
         - neighborhood
-    - Topo-change simplify
-    - SoA structure
 
 
 Naming
@@ -20,13 +17,35 @@ Naming
     typedef:        Indices
     member:         Faces.replaceSide(1)
     private member: _indices
-    file name:      for class Indices:  Indices.{ch}pp
-                    for non class:      utils.{ch}pp
+    file name:      lowercase.{hpp,cpp}
 
 Terms
     faces incident to some edge are its wings
     edges around a face are its sides
     vertices of an edge are its endpoints
-    edges of a vertex are its ???
-    faces of a vertex are its ???
     vertices of a face are its corners
+    
+=====
+How was topology changed during simplification?
+=====
+
+After initial edge collapse operation on edge (d, k), two endpoints merge into
+one, say k. Here it is possible that (a, d) and (a, k) two edges become coincide
+which will introduce non-manifold edges in output.
+
+This implementation eliminate non-manifold edges immediately after such
+coincide edges appear. The method is *forking*, which separate the two edges
+by attaching the forks of endpoints to one of the two coincide edges.
+
+E.g., two edges ek, ed both have endpoints (k, a) but they have different wings.
+First create new vertices k' and a' as forks. One of ed and ek will become
+(k', a') instead of (k, a). Second, exchange one wing between the ed and ek
+to consolidate the connectivity.
+
+======
+Augmenting faces (to implement):
+======
+
+If there are a sequence of vertices on boundary a, b, and c, create a augmenting
+face (a, b, c) so that when traverse around boundary vertex b a complete circle
+can be made.
