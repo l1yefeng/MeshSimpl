@@ -27,11 +27,7 @@ class NonManiRing {
   Edge* target;
   const SimplifyOptions& options;
 
-  struct CoincideEdge {
-    Edge *ed, *ek;
-    CoincideEdge(Edge* ed, Edge* ek) : ed(ed), ek(ek) {}
-  };
-  std::vector<CoincideEdge> nonMani;
+  typedef std::map<idx, std::array<Edge*, 2>> NonManiInfo;
 
   void collect(std::vector<Neighbor>& vDelNeighbors,
                std::vector<Neighbor>& vKeptNeighbors) {
@@ -75,7 +71,8 @@ class NonManiRing {
   }
 
   void findCoincideEdges(const std::vector<Neighbor>& vDelNeighbors,
-                         const std::vector<Neighbor>& vKeptNeighbors) {
+                         const std::vector<Neighbor>& vKeptNeighbors,
+                         NonManiInfo& nonMani) {
     std::vector<const Neighbor*> starDel, starKept;
     starDel.reserve(vDelNeighbors.size());
     starKept.reserve(vKeptNeighbors.size());
@@ -95,8 +92,9 @@ class NonManiRing {
       } else if (cmp(*itk, *itd)) {
         ++itk;
       } else {
-        nonMani.emplace_back((*itd)->secondEdge(faces),
-                             (*itk)->secondEdge(faces));
+        std::array<Edge*, 2> coincided = {(*itd)->secondEdge(faces),
+                                          (*itk)->secondEdge(faces)};
+        nonMani.emplace((*itd)->secondV(faces), coincided);
 
         ++itd;
         ++itk;
@@ -117,6 +115,117 @@ class NonManiRing {
         return false;
     }
     return true;
+  }
+
+  void cleanup(std::map<idx, NonManiInfo>& nonManiGroup) {
+    assert(!nonManiGroup.empty());
+    idx vKept = nonManiGroup.begin()->first;
+    NonManiInfo& nonMani = nonManiGroup.begin()->second;
+    assert(!nonMani.empty());
+
+    // use the first non-manifold edge to separate this mess
+    std::vector<std::tuple<Edge*, idx, idx>> edgesReplaceEnd;
+    std::vector<std::tuple<idx, order, idx>> facesSetV;
+
+    std::map<idx, int> visited;
+    for (auto& nm : nonMani) {
+      visited.emplace(nm.first, 0);
+    }
+
+    auto& nm = *nonMani.begin();
+    // e0 will be attached to the e0->face(0) now and the face connects to it
+    // on e1 e0 will keep current endpoints e1 will be attached to the
+    // e0->face(1) now and the face connects to it on e1 e1 will have
+    // endpoints vKept replaced with vDel, vOther with vOtherFork
+    Edge* e0 = nm.second[0];
+    Edge* e1 = nm.second[1];
+    assert(e0->endpoints() == e1->endpoints());
+
+    idx vKeptFork = vertices.duplicateV(vKept);
+    idx vOther = nm.first;
+    idx vOtherFork = vertices.duplicateV(vOther);
+    // pass k to Neighbor() to circle around vKept, !k around vOther
+    bool k = e0->ordInF(1) != next(faces.orderOf(e0->face(1), vKept));
+
+    // run = false => around vKept (replaced with vDel)
+    // run = true  => around the other (replaced with vOtherFork)
+    idx fSave;
+    std::vector<Neighbor> aroundVKept, aroundVOther;
+
+    Neighbor nb(e0->face(1), e0->ordInF(1), k);
+    assert(faces.v(nb.f(), nb.center()) == vKept);
+    while (true) {
+      edgesReplaceEnd.emplace_back(nb.secondEdge(faces), vKept, vKeptFork);
+      facesSetV.emplace_back(nb.f(), nb.center(), vKeptFork);
+
+      auto itVisited = visited.find(nb.secondV(faces));
+      if (itVisited != visited.end()) {
+        itVisited->second += 1;
+      }
+
+      if (nb.secondEdge(faces) == e1) {
+        fSave = nb.f();
+        break;
+      }
+      nb.rotate(faces);
+      assert(nb.secondEdge(faces) != e0);
+    }
+
+    for (auto it = nonMani.begin(), last = nonMani.end(); it != last;) {
+      switch (visited[it->first]) {
+        case 1:
+          it = nonMani.erase(it);
+          break;
+        case 0:
+          ++it;
+          break;
+        case 2: {
+          auto insertRes = nonManiGroup.emplace(vKeptFork, NonManiInfo{});
+          insertRes.first->second.emplace(it->first, it->second);
+          it = nonMani.erase(it);
+          break;
+        }
+        default:
+          assert(false);
+      }
+    }
+
+    if (nonMani.empty()) {
+      nonManiGroup.erase(vKept);
+    }
+
+    nb = Neighbor(e0->face(1), e0->ordInF(1), !k);
+    assert(faces.v(nb.f(), nb.center()) == vOther);
+    while (true) {
+      edgesReplaceEnd.emplace_back(nb.secondEdge(faces), vOther, vOtherFork);
+      facesSetV.emplace_back(nb.f(), nb.center(), vOtherFork);
+
+      if (nb.secondEdge(faces) == e1) {
+        assert(fSave == nb.f());
+        break;
+      }
+      nb.rotate(faces);
+      assert(nb.secondEdge(faces) != e0);
+    }
+
+    // e0 has correct f0 but incorrect f1 (currently attached to e1)
+    // e0->face(0) has correct sides
+    // e0->face(1) currently has side e0 but should be replaced with e1
+    // e1 has correct fSave but incorrect the other fSave2
+    // fSave has correct sides
+    // fSave2 currently has side e1 but should be replaced with e0
+    faces.setSide(e0->face(1), e0->ordInF(1), e1);
+    order fSaveOrd = e1->wingOrder(fSave);
+    faces.setSide(e1->face(1 - fSaveOrd), e1->ordInF(1 - fSaveOrd), e0);
+    idx fSave2 = e1->face(1 - fSaveOrd);
+    order fSave2Ord = e1->ordInF(1 - fSaveOrd);
+    e1->setWing(1 - fSaveOrd, e0->face(1), e0->ordInF(1));
+    e0->setWing(1, fSave2, fSave2Ord);
+
+    for (auto& ere : edgesReplaceEnd)
+      std::get<0>(ere)->replaceEndpoint(std::get<1>(ere), std::get<2>(ere));
+    for (auto& fsv : facesSetV)
+      faces.setV(std::get<0>(fsv), std::get<1>(fsv), std::get<2>(fsv));
   }
 
  public:
@@ -176,7 +285,11 @@ class NonManiRing {
     }
 
     // check cause of topo change
-    findCoincideEdges(vDelNeighbors, vKeptNeighbors);
+    order vDelOrd = target->delEndpointOrder();
+    idx vDel = target->endpoint(vDelOrd);
+    idx vKept = target->endpoint(1 - vDelOrd);
+    NonManiInfo nonMani;
+    findCoincideEdges(vDelNeighbors, vKeptNeighbors, nonMani);
 
     if (nonMani.empty()) {
       if (!checkGeom(vDelNeighbors, vKeptNeighbors)) {
@@ -187,9 +300,6 @@ class NonManiRing {
 
     // there is topo change or not, collapse the target now. cleanup afterwords
     std::vector<Edge*> dirtyEdges;
-    order vDelOrd = target->delEndpointOrder();
-    idx vDel = target->endpoint(vDelOrd);
-    idx vKept = target->endpoint(1 - vDelOrd);
 
     auto it = vDelNeighbors.begin();
     dirtyEdges.push_back(it->firstEdge(faces));
@@ -241,86 +351,18 @@ class NonManiRing {
     target->erase();
     for (order i : {0, 1}) faces.erase(target->face(i));
 
+    vertices.erase(vDel);
     if (nonMani.empty()) {
-      vertices.erase(vDel);
       return 1;
     }
 
-    // vDel will reborn as the fork of vKept
-    vertices.setPosition(vDel, vertices.position(vKept));
-    vertices.setQ(vDel, vertices.q(vKept));
-
-    // use the first non-manifold edge to separate this mess
-    std::vector<std::tuple<Edge*, idx, idx>> edgesReplaceEnd;
-    std::vector<std::tuple<idx, order, idx>> facesSetV;
-
-    {
-      auto& nm = nonMani.front();
-      // e0 will be attached to the e0->face(0) now and the face connects to it
-      // on e1 e0 will keep current endpoints e1 will be attached to the
-      // e0->face(1) now and the face connects to it on e1 e1 will have
-      // endpoints vKept replaced with vDel, vOther with vNew
-      Edge* e0 = nm.ed;
-      Edge* e1 = nm.ek;
-      assert(e0->endpoints() == e1->endpoints());
-
-      idx vOther = e0->endpoint(0) + e0->endpoint(1) - vKept;
-      idx vNew = vertices.duplicateV(vOther);
-      // pass k to Neighbor() to circle around vKept, !k around vOther
-      bool k = e0->ordInF(1) != next(faces.orderOf(e0->face(1), vKept));
-
-      // run = false => around vKept (replaced with vDel)
-      // run = true  => around the other (replaced with vNew)
-      idx fSave = faces.size();
-      std::vector<Neighbor> aroundVKept, aroundVOther;
-      for (auto run : {false, true}) {
-        Neighbor nb(e0->face(1), e0->ordInF(1), !run ? k : !k);
-        if (!run)
-          assert(faces.v(nb.f(), nb.center()) == vKept);
-        else
-          assert(faces.v(nb.f(), nb.center()) == vOther);
-        while (true) {
-          if (!run) {
-            edgesReplaceEnd.emplace_back(nb.secondEdge(faces), vKept, vDel);
-            facesSetV.emplace_back(nb.f(), nb.center(), vDel);
-          } else {
-            edgesReplaceEnd.emplace_back(nb.secondEdge(faces), vOther, vNew);
-            facesSetV.emplace_back(nb.f(), nb.center(), vNew);
-          }
-          if (nb.secondEdge(faces) == e1) {
-            if (fSave != faces.size()) {
-              assert(fSave == nb.f());
-              break;
-            }
-            fSave = nb.f();
-            break;
-          }
-          nb.rotate(faces);
-          assert(nb.secondEdge(faces) != e0);
-        }
-      }
-
-      // e0 has correct f0 but incorrect f1 (currently attached to e1)
-      // e0->face(0) has correct sides
-      // e0->face(1) currently has side e0 but should be replaced with e1
-      // e1 has correct fSave but incorrect the other fSave2
-      // fSave has correct sides
-      // fSave2 currently has side e1 but should be replaced with e0
-      faces.setSide(e0->face(1), e0->ordInF(1), e1);
-      order fSaveOrd = e1->wingOrder(fSave);
-      faces.setSide(e1->face(1 - fSaveOrd), e1->ordInF(1 - fSaveOrd), e0);
-      idx fSave2 = e1->face(1 - fSaveOrd);
-      order fSave2Ord = e1->ordInF(1 - fSaveOrd);
-      e1->setWing(1 - fSaveOrd, e0->face(1), e0->ordInF(1));
-      e0->setWing(1, fSave2, fSave2Ord);
+    int forked;
+    std::map<idx, NonManiInfo> nonManiGroup = {{vKept, nonMani}};
+    for (forked = 0; !nonManiGroup.empty(); forked++) {
+      cleanup(nonManiGroup);
     }
 
-    for (auto& ere : edgesReplaceEnd)
-      std::get<0>(ere)->replaceEndpoint(std::get<1>(ere), std::get<2>(ere));
-    for (auto& fsv : facesSetV)
-      faces.setV(std::get<0>(fsv), std::get<1>(fsv), std::get<2>(fsv));
-
-    return -1;
+    return 1 - 2 * forked;
   }
 };
 
