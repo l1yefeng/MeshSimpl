@@ -49,7 +49,7 @@ struct SimplifyOptions {
 
   // the constant that decides the weight of constraint planes (if fixBoundary
   // unset); larger borderConstraint -> harder for boundary to deform
-  float borderConstraint = 2.0f;
+  float borderConstraint = 1.0f;
 
   // used to check if, during edge collapse, faces get folded;
   double foldOverAngleThreshold = std::cos(80.0 / 180.0 * std::acos(-1));
