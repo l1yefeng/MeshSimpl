@@ -5,7 +5,6 @@
 #include <cstddef>
 #include <limits>
 #include <stdexcept>
-#include <utility>
 
 #include "collapser.hpp"
 #include "edge.hpp"
@@ -31,16 +30,15 @@ void simplify(Positions &positions, Indices &indices,
   validateOptions(options);
 
   // TODO: specify simplify strength by face and vertex counts
-  const size_t NV = positions.size();
-  const size_t nvToDecimate = std::lround(options.strength * NV);
+  const size_t NF = indices.size();
+  const size_t nfToDecimate = std::lround(options.strength * NF);
 
-  if (nvToDecimate == 0) return;
+  if (nfToDecimate == 0) return;
 
   // construct vertices and faces from positions and indices
   // positions and indices are moved and no longer hold data
   Vertices vertices(positions);
   Faces faces(indices);
-  vertices.eraseUnref(faces);
 
   // [1] find out information of edges (endpoints, incident faces) and face2edge
   Edges edges;
@@ -60,8 +58,8 @@ void simplify(Positions &positions, Indices &indices,
     }
   }
 
-  int nv = nvToDecimate;
-  while (!heap.empty() && nv > 0) {
+  int nf = nfToDecimate;
+  while (!heap.empty() && nf > 0) {
     // target the least-error edge, if it is what we saw last iteration,
     // it means loop should stop because all remaining edges have been penalized
     Edge *const edge = heap.top();
@@ -73,9 +71,11 @@ void simplify(Positions &positions, Indices &indices,
 
     // [5] collapse the least-error edge until mesh is simplified enough
     Collapser collapser(vertices, faces, heap, edge, options);
-    std::pair<int, int> removed = collapser.collapse();
-    nv -= removed.first;
+    int removed = collapser.collapse();
+    nf -= removed;
   }
+
+  vertices.eraseUnref(faces);
 
   // edges are useless
   // faces and vertices will be used to generate indices and positions

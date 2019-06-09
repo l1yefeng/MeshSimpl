@@ -32,29 +32,19 @@ class Collapser {
   const SimplifyOptions& options;
 
   std::array<std::vector<Neighbor>, 2> neighbors;
-  int vRemoved;
   int fRemoved;
 
   typedef std::map<idx, std::array<Edge*, 2>> NonManiInfo;
-  typedef std::pair<int, int> ReturnType;
+  typedef std::map<idx, NonManiInfo> NonManiGroup;
 
-  ReturnType accept() { return {vRemoved, fRemoved}; }
+  NonManiGroup nonManiGroup;
 
-  ReturnType reject() {
+  int accept() { return fRemoved; }
+
+  int reject() {
     heap.penalize(target);
-    assert(vRemoved == 0);
     assert(fRemoved == 0);
-    return {vRemoved, fRemoved};
-  }
-
-  void eraseV(idx v) {
-    vertices.erase(v);
-    ++vRemoved;
-  }
-
-  idx duplicateV(idx src) {
-    --vRemoved;
-    return vertices.duplicate(src);
+    return fRemoved;
   }
 
   void eraseF(idx f) {
@@ -79,7 +69,10 @@ class Collapser {
     return true;
   }
 
-  void cleanup(std::map<idx, NonManiInfo>& nonManiGroup);
+  void cleanup();
+
+  void updateNonManiGroup(const std::map<idx, int>& visited,
+                          NonManiGroup::iterator current, idx vFork);
 
  public:
   Collapser(Vertices& vertices, Faces& faces, QEMHeap& heap, Edge* target,
@@ -90,10 +83,10 @@ class Collapser {
         target(target),
         options(options),
         neighbors(),
-        vRemoved(0),
-        fRemoved(0) {}
+        fRemoved(0),
+        nonManiGroup() {}
 
-  ReturnType collapse();
+  int collapse();
 };
 
 }  // namespace Internal

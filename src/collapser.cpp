@@ -68,7 +68,7 @@ void Collapser::findCoincideEdges(NonManiInfo& nonMani) {
   }
 }
 
-void Collapser::cleanup(std::map<idx, NonManiInfo>& nonManiGroup) {
+void Collapser::cleanup() {
   assert(!nonManiGroup.empty());
   // the original vKept or a fork
   idx vKept = nonManiGroup.begin()->first;
@@ -88,9 +88,9 @@ void Collapser::cleanup(std::map<idx, NonManiInfo>& nonManiGroup) {
   Edge* e1 = nm.second[1];
   assert(e0->endpoints() == e1->endpoints());
 
-  idx vKeptFork = duplicateV(vKept);
+  idx vKeptFork = vertices.duplicate(vKept);
   idx vOther = nm.first;
-  idx vOtherFork = duplicateV(vOther);
+  idx vOtherFork = vertices.duplicate(vOther);
   vertices.setBoundary(vKeptFork, false);
 
   idx fExch0;
@@ -114,7 +114,7 @@ void Collapser::cleanup(std::map<idx, NonManiInfo>& nonManiGroup) {
 
     auto itVisited = visited.find(nb.secondV());
     if (itVisited != visited.end()) {
-      itVisited->second += 1;
+      ++itVisited->second;
     }
 
     if (nb.secondEdge() == e1) {
@@ -165,7 +165,11 @@ void Collapser::cleanup(std::map<idx, NonManiInfo>& nonManiGroup) {
     nb.rotate();
     assert(nb.secondEdge() != e0);
   }
-  vertices.setBoundary(vOtherFork, hitBoundary);
+
+  if (vertices.isBoundary(vOther)) {
+    vertices.setBoundary(vOtherFork, hitBoundary);
+    vertices.setBoundary(vOther, !hitBoundary);
+  }
 
   // exchange wing between e0 and e1. when completed, e0 will have
   // two wings remain on surface while e1 will have two wings
@@ -184,8 +188,6 @@ void Collapser::cleanup(std::map<idx, NonManiInfo>& nonManiGroup) {
     bool edgeValid = e0->dropWing(e0->face(traverseOrd));
     if (!edgeValid) {
       e0->erase();
-      eraseV(e0->endpoint(0));
-      eraseV(e0->endpoint(1));
     }
   }
 
@@ -194,31 +196,10 @@ void Collapser::cleanup(std::map<idx, NonManiInfo>& nonManiGroup) {
   for (auto& fsv : facesSetV)
     faces.setV(std::get<0>(fsv), std::get<1>(fsv), std::get<2>(fsv));
 
-  for (auto it = nonMani.begin(), last = nonMani.end(); it != last;) {
-    switch (visited[it->first]) {
-      case 1:
-        it = nonMani.erase(it);
-        break;
-      case 0:
-        ++it;
-        break;
-      case 2: {
-        auto insertRes = nonManiGroup.emplace(vKeptFork, NonManiInfo{});
-        insertRes.first->second.emplace(it->first, it->second);
-        it = nonMani.erase(it);
-        break;
-      }
-      default:
-        assert(false);
-    }
-  }
-
-  if (nonMani.empty()) {
-    nonManiGroup.erase(vKept);
-  }
+  updateNonManiGroup(visited, nonManiGroup.begin(), vKeptFork);
 }
 
-Collapser::ReturnType Collapser::collapse() {
+int Collapser::collapse() {
   collect();
 
   order delOrd = vertices.isBoundary(target->endpoint(0)) ? 1 : 0;
@@ -281,15 +262,11 @@ Collapser::ReturnType Collapser::collapse() {
       assert(edge->face(0) + edge->face(1) == f0 + f1);
 
       edge->erase();
-      eraseV(faces.v(f0, ord));
     }
     eraseF(f0);
     eraseF(f1);
     return accept();
   }
-
-  // maps from center vertex to a group of coincide edges
-  std::map<idx, NonManiInfo> nonManiGroup{};
 
   // there is topo change or not, collapse the target now. cleanup afterwords
   // update vertex data
@@ -358,7 +335,6 @@ Collapser::ReturnType Collapser::collapse() {
     } else {
       edgeValid[i] = edgeKept[i]->dropWing(fDel);
       if (!edgeValid[i]) {
-        eraseV(faces.v(fDel, target->ordInF(i)));
         edgeKept[i]->erase();
       }
     }
@@ -370,32 +346,25 @@ Collapser::ReturnType Collapser::collapse() {
   }
 
   target->erase();
-  eraseV(vDel);
-
-  // special case: one face or two faces with one common edge
-  if (!edgeValid[0] && (!edgeKept[1] || !edgeValid[1])) {
-    eraseV(vKept);
-    assert(vRemoved == (edgeKept[1] ? 4 : 3));
-    return accept();
-  }
 
   // special case: component is separated
-  // FIXME: ERROR when nonMani has one of the coincided edges updated
   if (neck && edgeValid[0] && edgeValid[1]) {
     Edge* seed = edgeKept[1];
-    idx vFork = duplicateV(vKept);
-    assert(nonMani.find(seed->endpoint(0) + seed->endpoint(1) - vFork) ==
-           nonMani.end());
+    idx vFork = vertices.duplicate(vKept);
     std::vector<Neighbor> dirtyNeighbors;
+    std::map<idx, int> visited;
+    for (auto& nm : nonMani) visited.emplace(nm.first, 0);
+    assert(visited.find(seed->endpoint(0) + seed->endpoint(1) - vFork) ==
+           visited.end());
+
     for (int column : {0, 1}) {
       Neighbor nb(seed, column, vKept, faces);
       while (true) {
         dirtyNeighbors.push_back(nb);
-        NonManiInfo::iterator it;
-        if ((it = nonMani.find(nb.secondV())) != nonMani.end()) {
-          auto res = nonManiGroup.emplace(vFork, NonManiInfo{});
-          res.first->second.emplace(it->first, it->second);
-          nonMani.erase(it);
+
+        auto itVisit = visited.find(nb.secondV());
+        if (itVisit != visited.end()) {
+          ++itVisit->second;
         }
         if (nb.secondEdge()->onBoundary()) break;
         nb.rotate();
@@ -409,18 +378,44 @@ Collapser::ReturnType Collapser::collapse() {
       nb.secondEdge()->replaceEndpoint(vKept, vFork);
     }
 
-    assert(vRemoved == 0);
-  }
-
-  if (!nonMani.empty()) {
     nonManiGroup.emplace(vKept, nonMani);
+    updateNonManiGroup(visited, nonManiGroup.begin(), vFork);
+  } else {
+    if (!nonMani.empty()) nonManiGroup.emplace(vKept, nonMani);
   }
 
   while (!nonManiGroup.empty()) {
-    cleanup(nonManiGroup);
+    cleanup();
   }
 
   return accept();
+}
+
+void Collapser::updateNonManiGroup(const std::map<idx, int>& visited,
+                                   NonManiGroup::iterator current, idx vFork) {
+  auto& nonMani = current->second;
+  for (auto it = nonMani.begin(), last = nonMani.end(); it != last;) {
+    switch (visited.at(it->first)) {
+      case 1:
+        it = nonMani.erase(it);
+        break;
+      case 0:
+        ++it;
+        break;
+      case 2: {
+        auto insertRes = nonManiGroup.emplace(vFork, NonManiInfo{});
+        insertRes.first->second.emplace(it->first, it->second);
+        it = nonMani.erase(it);
+        break;
+      }
+      default:
+        assert(false);
+    }
+  }
+
+  if (nonMani.empty()) {
+    nonManiGroup.erase(current);
+  }
 }
 
 }  // namespace Internal

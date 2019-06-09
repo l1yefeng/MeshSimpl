@@ -18,7 +18,7 @@
 namespace MeshSimpl {
 namespace Internal {
 
-class Vertices : public Erasables {
+class Vertices : private Erasables {
  private:
   Positions _positions;
   std::vector<Quadric> _quadrics;
@@ -34,29 +34,24 @@ class Vertices : public Erasables {
 
   // Get/set position of a vertex
   const vec3d& position(idx v) const {
-    assert(exists(v));
     return _positions[v];
   }
   const vec3d& operator[](idx v) const { return position(v); }
   void setPosition(idx v, const vec3d& pos) {
-    assert(exists(v));
     _positions[v] = pos;
   }
 
   // Get/set quadric of a vertex
   const Quadric& q(idx v) const {
-    assert(exists(v));
     return _quadrics[v];
   }
   void increaseQ(idx v, const Quadric& by) { setQ(v, q(v) + by); }
   void setQ(idx v, const Quadric& val) {
-    assert(exists(v));
     _quadrics[v] = val;
   }
 
   // Get/set if a vertex is on boundary
   bool isBoundary(idx v) const {
-    assert(exists(v));
     return _boundary[v];
   }
   void setBoundary(idx v, bool val) { _boundary[v] = val; }
@@ -65,7 +60,11 @@ class Vertices : public Erasables {
   void eraseUnref(const Faces& faces) {
     _erased = std::vector<bool>(size(), true);
     for (idx f = 0; f < faces.size(); ++f) {
-      for (idx v : faces[f]) _erased[v] = false;
+      if (faces.exists(f)) {
+        for (idx v : faces[f]) {
+          _erased[v] = false;
+        }
+      }
     }
   }
 
