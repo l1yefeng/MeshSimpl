@@ -6,9 +6,7 @@ Mesh simplification implementation
     - Cannot handle mesh with wrong oriented face
 
 - To-do-next:
-    1. Augmenting faces
-    2. Topo-change simplification
-    3. Use OOP better to improve program
+    1. Use OOP better to improve program
         - neighborhood
 
 
@@ -41,11 +39,3 @@ E.g., two edges ek, ed both have endpoints (k, a) but they have different wings.
 First create new vertices k' and a' as forks. One of ed and ek will become
 (k', a') instead of (k, a). Second, exchange one wing between the ed and ek
 to consolidate the connectivity.
-
-======
-Augmenting faces (to implement):
-======
-
-If there are a sequence of vertices on boundary a, b, and c, create a augmenting
-face (a, b, c) so that when traverse around boundary vertex b a complete circle
-can be made.

@@ -9,7 +9,6 @@
 #include <cassert>
 #include <initializer_list>
 #include <map>
-#include <utility>
 #include <vector>
 
 #include "edge.hpp"
@@ -18,10 +17,11 @@
 #include "proc.hpp"
 #include "qemheap.hpp"
 #include "types.hpp"
-#include "vertices.hpp"
 
 namespace MeshSimpl {
 namespace Internal {
+
+class Vertices;
 
 class Collapser {
  private:

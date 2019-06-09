@@ -8,6 +8,7 @@
 
 #include "collapser.hpp"
 #include "util.hpp"
+#include "vertices.hpp"
 
 namespace MeshSimpl {
 namespace Internal {
