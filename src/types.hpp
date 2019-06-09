@@ -25,7 +25,7 @@ static const order INVALID = -1;
 enum WEIGHTING { UNIFORM, BY_AREA, BY_AREA_INV };
 
 struct SimplifyOptions {
-  // simplifies until vertex count is 1-strength of the original,
+  // simplifies until face count is 1-strength of the original,
   // only accept value in range [0, 1)
   float strength = 0.0f;
 

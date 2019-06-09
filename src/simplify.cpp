@@ -29,7 +29,6 @@ void simplify(Positions &positions, Indices &indices,
               const SimplifyOptions &options) {
   validateOptions(options);
 
-  // TODO: specify simplify strength by face and vertex counts
   const size_t NF = indices.size();
   const size_t nfToDecimate = std::lround(options.strength * NF);
 
