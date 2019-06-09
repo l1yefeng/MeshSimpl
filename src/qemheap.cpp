@@ -2,18 +2,29 @@
 // Created by nickl on 1/8/19.
 //
 
-#include "qemheap.hpp"
 #include <cassert>
 #include <cmath>
 #include <memory>
 #include <utility>
+
 #include "edge.hpp"
+#include "qemheap.hpp"
 
 namespace MeshSimpl {
 namespace Internal {
 
-QEMHeap::QEMHeap(Edges &edges )
-    : keys(edges.size() + 1), edges(edges), handles(edges.size()), n(0) {
+QEMHeap::QEMHeap(Edges &edges)
+    : keys(edges.size() + 1),
+      edges(edges),
+      handles(edges.size(), 0),
+      n(0),
+      removed(edges.size(), false) {
+  for (idx e = 0; e < edges.size(); ++e) {
+    keys[handles[e] = ++n] = e;
+  }
+  keys.resize(n + 1);
+  for (size_t k = n / 2; k >= 1; --k) sink(k);
+  assert(isMinHeap());
 }
 
 void QEMHeap::pop() {
@@ -23,8 +34,9 @@ void QEMHeap::pop() {
 }
 
 void QEMHeap::fix(const Edge *ptr, double errorPrev) {
-  auto e = static_cast<idx>(ptr - edges.data());
+  idx e = ptr - edges.data();
   size_t k = handles[e];
+  assert(contains(ptr));
   if (ptr->error() > errorPrev)
     sink(k);
   else
@@ -32,8 +44,21 @@ void QEMHeap::fix(const Edge *ptr, double errorPrev) {
 }
 
 void QEMHeap::penalize(Edge *edge) {
+  assert(contains(edge));
+  idx e = edge - edges.data();
   edge->setErrorInfty();
-  sink(handles[edge - edges.data()]);
+  sink(handles[e]);
+}
+
+bool QEMHeap::contains(const Edge *edge) const {
+  idx e = edge - edges.data();
+  if (removed[e]) return false;
+  return true;
+}
+
+void QEMHeap::remove(const Edge *edge) {
+  idx e = edge - edges.data();
+  removed[e] = true;
 }
 
 bool QEMHeap::greater(size_t i, size_t j) const {

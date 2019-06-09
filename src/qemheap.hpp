@@ -8,6 +8,7 @@
 #include <cassert>
 #include <cstddef>
 #include <vector>
+
 #include "types.hpp"
 
 namespace MeshSimpl {
@@ -21,14 +22,6 @@ class QEMHeap {
   // Construct a min-binary-heap with edge ecol errors as keys;
   // store a reference of the list of edges and store all handles
   explicit QEMHeap(Edges &edges);
-
-  void push(idx e) { keys[handles[e] = ++n] = e; }
-
-  void heapilize() {
-    keys.resize(n + 1);
-    for (size_t k = n / 2; k >= 1; --k) sink(k);
-    assert(isMinHeap());
-  }
 
   // Returns the edge id with minimum ecol error
   Edge *top() const { return &edges[keys[1]]; }
@@ -49,11 +42,16 @@ class QEMHeap {
   // Returns the size of the heap
   size_t size() const { return n; };
 
+  bool contains(const Edge *edge) const;
+
+  void remove(const Edge *edge);
+
  private:
   std::vector<idx> keys;        // binary heap array, indexed from 1
   Edges &edges;                 // a reference to `edges`
   std::vector<size_t> handles;  // handles[e] is the position of e in keys
   size_t n;                     // = heap.size() = keys.size() - 1
+  std::vector<bool> removed;    // erased from heap
 
   // Compare function: larger error --> lower priority
   bool greater(size_t i, size_t j) const;

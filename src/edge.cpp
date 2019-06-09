@@ -69,13 +69,12 @@ void Edge::replaceEndpoint(idx prevV, idx newV) {
   }
 }
 
-void Edge::dropWing(idx face) {
-  assert(!onBoundary());
+bool Edge::dropWing(idx face) {
   order ord = wingOrder(face);
   setWing(ord, 0, INVALID);
   if (ord == 0) swapWings();
 
-  assert(ordInF(0) != INVALID);
+  return ordInF(0) != INVALID;
 }
 
 void Edge::replaceWing(idx prevF, idx newF, order newOrdInFace) {

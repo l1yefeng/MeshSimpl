@@ -33,15 +33,11 @@ void buildConnectivity(Vertices& vertices, Faces& faces, Edges& edges);
 
 // Returns true if the movement of vertex will cause this face to flip too much
 // to accept
-bool isFaceFolded(const Vertices& vertices, const Faces& faces, idx f,
+bool isFaceFlipped(const Vertices& vertices, const Faces& faces, idx f,
                   order moved, const vec3d& position, double angle);
 
 bool isFaceElongated(const vec3d& pos0, const vec3d& pos1, const vec3d& pos2,
                      double ratio);
-
-// Returns true if edge is collapsed
-int edgeCollapse(Vertices& vertices, Faces& faces, QEMHeap& heap, Edge& target,
-                 const SimplifyOptions& options);
 
 }  // namespace Internal
 }  // namespace MeshSimpl

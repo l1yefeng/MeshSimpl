@@ -74,8 +74,8 @@ class Faces : public Erasables {
 
   void compactIndicesAndDie(Indices& indices) {
     for (size_t lo = 0, hi = size() - 1; true; ++lo, --hi) {
-      while (exists(lo) && lo <= hi) ++lo;
-      while (!exists(hi) && lo < hi) --hi;
+      while (lo <= hi && exists(lo)) ++lo;
+      while (lo < hi && !exists(hi)) --hi;
       if (lo >= hi) {
         _indices.resize(lo);
         break;

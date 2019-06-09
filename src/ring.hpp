@@ -7,6 +7,7 @@
 
 #include <cstddef>
 #include <vector>
+
 #include "edge.hpp"
 #include "faces.hpp"
 #include "neighbor.hpp"
@@ -16,6 +17,7 @@
 namespace MeshSimpl {
 namespace Internal {
 
+class Faces;
 class QEMHeap;
 class Vertices;
 

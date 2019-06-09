@@ -7,19 +7,13 @@
 #include <initializer_list>
 #include <limits>
 #include <map>
-#include <memory>
 #include <sstream>
 #include <stdexcept>
 #include <utility>
 
-#include "boundaryring.hpp"
 #include "edge.hpp"
 #include "faces.hpp"
-#include "interiorring.hpp"
-#include "nonmaniring.hpp"
 #include "proc.hpp"
-#include "qemheap.hpp"
-#include "ring.hpp"
 #include "util.hpp"
 #include "vertices.hpp"
 
@@ -177,8 +171,8 @@ void buildConnectivity(Vertices &vertices, Faces &faces, Edges &edges) {
   assert(edgeTopoCorrectness(faces, edges));
 }
 
-bool isFaceFolded(const Vertices &vertices, const Faces &faces, idx f,
-                  order moved, const vec3d &position, double angle) {
+bool isFaceFlipped(const Vertices &vertices, const Faces &faces, idx f,
+                   order moved, const vec3d &position, double angle) {
   const vec3d &vk = faces.vPos(f, moved, vertices);
   const vec3d &vi = faces.vPos(f, next(moved), vertices);
   const vec3d &vj = faces.vPos(f, prev(moved), vertices);
@@ -211,45 +205,6 @@ bool isFaceElongated(const vec3d &pos0, const vec3d &pos1, const vec3d &pos2,
   const double s = (a + b + c) / 2.0;
   const double aspectRatio = 8.0 * (s - a) * (s - b) * (s - c) / (a * b * c);
   return aspectRatio < ratio;
-}
-
-int edgeCollapse(Vertices &vertices, Faces &faces, QEMHeap &heap, Edge &target,
-                 const SimplifyOptions &options) {
-  // if non-boundary edge has two endpoints on boundary, we avoid collapsing it
-  // because it is possible to produce non-manifold vertex
-  if (target.bothEndsOnBoundary() && !target.onBoundary()) {
-    heap.penalize(&target);
-    return 0;
-  }
-
-  if (options.topologyModifiable) {
-    NonManiRing ring(vertices, faces, heap, &target, options);
-    int vRemoved = ring.collapse();
-    return vRemoved;
-  }
-
-  std::unique_ptr<Ring> ring;
-  if (target.onBoundary())
-    ring = std::unique_ptr<Ring>(
-        new BoundaryRing(vertices, faces, heap, options, target));
-  else
-    ring = std::unique_ptr<Ring>(
-        new InteriorRing(vertices, faces, heap, options, target));
-
-  ring->collect();
-
-  if (!ring->check()) {
-    heap.penalize(&target);
-    return 0;
-  }
-
-  // now that we are certain this edge is to be collapsed, remove it from heap
-  target.erase();
-  heap.pop();
-
-  ring->collapse();
-
-  return 1;
 }
 
 }  // namespace Internal

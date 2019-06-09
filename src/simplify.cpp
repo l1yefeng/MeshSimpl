@@ -4,11 +4,11 @@
 
 #include <cstddef>
 #include <limits>
-#include <memory>
 #include <stdexcept>
 
 #include "edge.hpp"
 #include "faces.hpp"
+#include "nonmaniring.hpp"
 #include "proc.hpp"
 #include "qemheap.hpp"
 #include "simplify.hpp"
@@ -52,28 +52,28 @@ void simplify(Positions &positions, Indices &indices,
   for (auto &edge : edges) edge.planCollapse(options.fixBoundary);
 
   // [4] create priority queue on quadric error
-
   QEMHeap heap(edges);
-  for (idx e = 0; e < edges.size(); ++e) {
-    if (!(options.fixBoundary && edges[e].bothEndsOnBoundary())) heap.push(e);
+  if (options.fixBoundary) {
+    for (auto &edge : edges) {
+      if (edge.bothEndsOnBoundary()) heap.remove(&edge);
+    }
   }
-  heap.heapilize();
 
   int nv = nvToDecimate;
   while (!heap.empty() && nv > 0) {
     // target the least-error edge, if it is what we saw last iteration,
     // it means loop should stop because all remaining edges have been penalized
     Edge *const edge = heap.top();
-    if (!edge->exists()) {
+    if (!edge->exists() || !heap.contains(edge)) {
       heap.pop();
       continue;
     }
     if (edge->error() >= std::numeric_limits<double>::max()) break;
 
     // [5] collapse the least-error edge until mesh is simplified enough
-    int collapsed = edgeCollapse(vertices, faces, heap, *edge, options);
-
-    nv -= collapsed;
+    NonManiRing ring(vertices, faces, heap, edge, options);
+    int vRemoved = ring.collapse();
+    nv -= vRemoved;
   }
 
   // edges are useless

@@ -41,12 +41,12 @@ bool Ring::checkTopo() {
 
 bool Ring::checkGeom(double foldOverAngle) const {
   for (const auto &nb : vDelNeighbors) {
-    if (isFaceFolded(vertices, faces, nb.f(), nb.center(), edge.center(),
+    if (isFaceFlipped(vertices, faces, nb.f(), nb.center(), edge.center(),
                      foldOverAngle))
       return false;
   }
   for (const auto &nb : vKeptNeighbors) {
-    if (isFaceFolded(vertices, faces, nb.f(), nb.center(), edge.center(),
+    if (isFaceFlipped(vertices, faces, nb.f(), nb.center(), edge.center(),
                      foldOverAngle))
       return false;
   }

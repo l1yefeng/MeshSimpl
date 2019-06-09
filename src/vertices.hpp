@@ -63,7 +63,7 @@ class Vertices : public Erasables {
     }
   }
 
-  idx duplicateV(idx src) {
+  idx duplicate(idx src) {
     idx v = size();
     _erased.push_back(false);
     _positions.push_back(_positions[src]);

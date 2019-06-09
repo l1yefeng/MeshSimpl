@@ -134,7 +134,12 @@ class Edge : public Erasable {
 
   void replaceEndpoint(idx prevV, idx newV);
 
-  void dropWing(idx face);
+  // Drop one wing: if it has two wings before then now it has one; if it
+  // was a boundary edge (has one wing) it will have no valid wing thus an
+  // invalid edge.
+  // Returns true if still has one wing; false if invalid
+  // User should probably erase this edge after receiving a false return value
+  bool dropWing(idx face);
 
   void replaceWing(idx prevF, idx newF, order newOrdInFace);
 };
