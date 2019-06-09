@@ -4,22 +4,16 @@ project(MeshSimpl VERSION ${MESH_SIMPL_VERSION} LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 11)
 
 add_library(${PROJECT_NAME}
-            boundaryring.cpp
-            boundaryring.hpp
             edge.cpp
             edge.hpp
             erasable.hpp
             faces.cpp
             faces.hpp
-            interiorring.cpp
-            interiorring.hpp
             neighbor.hpp
             proc.cpp
             proc.hpp
             qemheap.cpp
             qemheap.hpp
-            ring.cpp
-            ring.hpp
             simplify.cpp
             simplify.hpp
             types.hpp
