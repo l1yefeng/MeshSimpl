@@ -5,10 +5,10 @@
 #ifndef MESH_SIMPL_COLLAPSER_HPP
 #define MESH_SIMPL_COLLAPSER_HPP
 
+#include <algorithm>
 #include <array>
 #include <cassert>
 #include <initializer_list>
-#include <map>
 #include <vector>
 
 #include "edge.hpp"
@@ -33,11 +33,31 @@ class Collapser {
 
   std::array<std::vector<Neighbor>, 2> neighbors;
   int fRemoved;
+  std::vector<Edge*> dirtyEdges;
 
-  typedef std::map<idx, std::array<Edge*, 2>> NonManiInfo;
-  typedef std::map<idx, NonManiInfo> NonManiGroup;
+  struct NonManiInfo {
+    idx vKept, vOther;
+    std::array<Edge*, 2> edges;
+    int status;
+    NonManiInfo(idx vKept, idx vOther, Edge* e0, Edge* e1)
+        : vKept(vKept), vOther(vOther), edges({e0, e1}), status(0) {}
+  };
+  std::vector<NonManiInfo> nonMani;
 
-  NonManiGroup nonManiGroup;
+  void visitNonMani(idx vKept, idx vOther) {
+    for (auto& nm : nonMani) {
+      if (nm.status >= 0 && nm.vKept == vKept && nm.vOther == vOther) {
+        ++nm.status;
+        assert(nm.status == 1 || nm.status == 2);
+        return;
+      }
+    }
+  }
+
+  std::vector<NonManiInfo>::iterator frontNM() {
+    return std::find_if(nonMani.begin(), nonMani.end(),
+                        [](const NonManiInfo& nm) { return nm.status >= 0; });
+  }
 
   int accept() { return fRemoved; }
 
@@ -55,7 +75,7 @@ class Collapser {
   // Store neighbors around endpoint(i) into neighbors[i], where i in {0, 1}
   void collect();
 
-  void findCoincideEdges(NonManiInfo& nonMani);
+  void findCoincideEdges(idx vKept);
 
   bool checkGeom() const {
     for (int i : {0, 1}) {
@@ -69,10 +89,9 @@ class Collapser {
     return true;
   }
 
-  void cleanup();
+  bool cleanup();
 
-  void updateNonManiGroup(const std::map<idx, int>& visited,
-                          NonManiGroup::iterator current, idx vFork);
+  void updateNonManiGroup(idx vKept, idx vFork);
 
  public:
   Collapser(Vertices& vertices, Faces& faces, QEMHeap& heap, Edge* target,
@@ -84,7 +103,7 @@ class Collapser {
         options(options),
         neighbors(),
         fRemoved(0),
-        nonManiGroup() {}
+        nonMani() {}
 
   int collapse();
 };

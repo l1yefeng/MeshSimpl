@@ -4,7 +4,6 @@
 
 #include <algorithm>
 #include <tuple>
-#include <utility>
 
 #include "collapser.hpp"
 #include "util.hpp"
@@ -38,7 +37,7 @@ void Collapser::collect() {
   }
 }
 
-void Collapser::findCoincideEdges(NonManiInfo& nonMani) {
+void Collapser::findCoincideEdges(idx vKept) {
   // comparision used in sorting and finding intersection
   const auto cmp = [](const Neighbor* nb0, const Neighbor* nb1) -> bool {
     return nb0->secondV() < nb1->secondV();
@@ -59,9 +58,8 @@ void Collapser::findCoincideEdges(NonManiInfo& nonMani) {
     } else if (cmp(*it1, *it0)) {
       ++it1;
     } else {
-      std::array<Edge*, 2> coincided = {(*it0)->secondEdge(),
-                                        (*it1)->secondEdge()};
-      nonMani.emplace((*it0)->secondV(), coincided);
+      nonMani.emplace_back(vKept, (*it0)->secondV(), (*it0)->secondEdge(),
+                           (*it1)->secondEdge());
 
       ++it0;
       ++it1;
@@ -69,39 +67,31 @@ void Collapser::findCoincideEdges(NonManiInfo& nonMani) {
   }
 }
 
-void Collapser::cleanup() {
-  assert(!nonManiGroup.empty());
-  // the original vKept or a fork
-  idx vKept = nonManiGroup.begin()->first;
-  NonManiInfo& nonMani = nonManiGroup.begin()->second;
-  assert(!nonMani.empty());
+bool Collapser::cleanup() {
+  auto it = frontNM();
+  if (it == nonMani.end()) return false;
 
   // use the first non-manifold edge to separate this mess
   std::vector<std::tuple<Edge*, idx, idx>> edgesReplaceEnd;
   std::vector<std::tuple<idx, order, idx>> facesSetV;
 
-  auto& nm = *nonMani.begin();
   // e0 will be attached to the e0->face(0) now and the face connects to it
   // on e1 e0 will keep current endpoints e1 will be attached to the
   // e0->face(1) now and the face connects to it on e1 e1 will have
   // endpoints vKept replaced with vDel, vOther with vOtherFork
-  Edge* e0 = nm.second[0];
-  Edge* e1 = nm.second[1];
+  Edge* e0 = it->edges[0];
+  Edge* e1 = it->edges[1];
   assert(e0->endpoints() == e1->endpoints());
 
+  idx vKept = it->vKept;
+  vertices.reduceQByHalf(vKept);
   idx vKeptFork = vertices.duplicate(vKept);
-  idx vOther = nm.first;
+  idx vOther = it->vOther;
+  vertices.reduceQByHalf(vOther);
   idx vOtherFork = vertices.duplicate(vOther);
   vertices.setBoundary(vKeptFork, false);
 
   idx fExch0;
-
-  // used to check whether another non-manifold edge will be handled
-  // while we fork this non-manifold edge (visited once meaning yeah)
-  std::map<idx, int> visited;
-  for (auto& _nm : nonMani) {
-    visited.emplace(_nm.first, 0);
-  }
 
   // select a direction (1, but 0 will work as well), circle around
   // until met the coincided edge and every visited face will be separated
@@ -113,10 +103,7 @@ void Collapser::cleanup() {
     edgesReplaceEnd.emplace_back(nb.secondEdge(), vKept, vKeptFork);
     facesSetV.emplace_back(nb.f(), nb.center(), vKeptFork);
 
-    auto itVisited = visited.find(nb.secondV());
-    if (itVisited != visited.end()) {
-      ++itVisited->second;
-    }
+    visitNonMani(vKept, nb.secondV());
 
     if (nb.secondEdge() == e1) {
       fExch0 = nb.f();
@@ -126,7 +113,11 @@ void Collapser::cleanup() {
       // switch direction in order to separate edge in one pass
       edgesReplaceEnd.clear();
       facesSetV.clear();
-      for (auto& vis : visited) vis.second = 0;
+      for (auto& nm : nonMani) {
+        if (nm.vKept == vKept && nm.status > 0) {
+          nm.status = 0;
+        }
+      }
 
       traverseOrd = 1 - traverseOrd;
       nb.replace(e0, traverseOrd, vKept);
@@ -192,12 +183,15 @@ void Collapser::cleanup() {
     }
   }
 
-  for (auto& ere : edgesReplaceEnd)
+  for (auto& ere : edgesReplaceEnd) {
     std::get<0>(ere)->replaceEndpoint(std::get<1>(ere), std::get<2>(ere));
+    dirtyEdges.push_back(std::get<0>(ere));
+  }
   for (auto& fsv : facesSetV)
     faces.setV(std::get<0>(fsv), std::get<1>(fsv), std::get<2>(fsv));
 
-  updateNonManiGroup(visited, nonManiGroup.begin(), vKeptFork);
+  updateNonManiGroup(vKept, vKeptFork);
+  return true;
 }
 
 int Collapser::collapse() {
@@ -210,8 +204,7 @@ int Collapser::collapse() {
   // check cause of topo change
   idx vDel = target->endpoint(delOrd);
   idx vKept = target->endpoint(1 - delOrd);
-  NonManiInfo nonMani;
-  findCoincideEdges(nonMani);
+  findCoincideEdges(vKept);
 
   // reject now, before any modification that changes topology is applied
   if (!options.topologyModifiable) {
@@ -279,43 +272,36 @@ int Collapser::collapse() {
     faces.setV(nb.f(), nb.center(), vKept);
   }
 
-  std::array<std::vector<Edge*>, 2> dirtyEdges;
+  std::array<std::vector<Edge*>, 2> initDirtyEdges;
   // collect edges who need update around endpoint 0 and 1
   for (int i : {0, 1}) {
     if (!vertices.isBoundary(target->endpoint(i))) {
       auto it = neighbors[i].begin();
-      dirtyEdges[i].push_back(it->firstEdge());
+      initDirtyEdges[i].push_back(it->firstEdge());
       for (; it != neighbors[i].end(); ++it) {
-        dirtyEdges[i].push_back(it->secondEdge());
+        initDirtyEdges[i].push_back(it->secondEdge());
       }
     } else {
       for (int column : {0, 1}) {
-        dirtyEdges[i].push_back(faces.edgeAcrossFrom(target->face(column),
-                                                     target->endpoint(1 - i)));
+        initDirtyEdges[i].push_back(faces.edgeAcrossFrom(
+            target->face(column), target->endpoint(1 - i)));
         if (target->onBoundary()) break;
       }
       for (auto& nb : neighbors[i]) {
-        dirtyEdges[i].push_back(nb.secondEdge());
+        initDirtyEdges[i].push_back(nb.secondEdge());
       }
     }
   }
 
   // replace edge endpoint
-  for (auto& edge : dirtyEdges[delOrd]) {
+  for (auto& edge : initDirtyEdges[delOrd]) {
     edge->replaceEndpoint(vDel, vKept);
   }
 
   // update error of edges
-  dirtyEdges[0].insert(dirtyEdges[0].end(), dirtyEdges[1].begin(),
-                       dirtyEdges[1].end());
-  for (auto& dirty : dirtyEdges[0]) {
-    if (options.fixBoundary && dirty->bothEndsOnBoundary()) {
-      heap.remove(dirty);
-      continue;
-    }
-    double errorPrev = dirty->error();
-    dirty->planCollapse(options.fixBoundary);
-    heap.fix(dirty, errorPrev);
+  for (int i : {0, 1}) {
+    dirtyEdges.insert(dirtyEdges.end(), initDirtyEdges[i].begin(),
+                      initDirtyEdges[i].end());
   }
 
   // take away face 0 and 1
@@ -351,22 +337,15 @@ int Collapser::collapse() {
   // special case: component is separated
   if (neck && edgeValid[0] && edgeValid[1]) {
     Edge* seed = edgeKept[1];
+    vertices.reduceQByHalf(vKept);
     idx vFork = vertices.duplicate(vKept);
     std::vector<Neighbor> dirtyNeighbors;
-    std::map<idx, int> visited;
-    for (auto& nm : nonMani) visited.emplace(nm.first, 0);
-    assert(visited.find(seed->endpoint(0) + seed->endpoint(1) - vFork) ==
-           visited.end());
 
     for (int column : {0, 1}) {
       Neighbor nb(seed, column, vKept, faces);
       while (true) {
         dirtyNeighbors.push_back(nb);
-
-        auto itVisit = visited.find(nb.secondV());
-        if (itVisit != visited.end()) {
-          ++itVisit->second;
-        }
+        visitNonMani(vKept, nb.secondV());
         if (nb.secondEdge()->onBoundary()) break;
         nb.rotate();
       }
@@ -374,48 +353,51 @@ int Collapser::collapse() {
     }
 
     seed->replaceEndpoint(vKept, vFork);
+    dirtyEdges.push_back(seed);
     for (auto& nb : dirtyNeighbors) {
       faces.setV(nb.f(), nb.center(), vFork);
       nb.secondEdge()->replaceEndpoint(vKept, vFork);
+      dirtyEdges.push_back(nb.secondEdge());
     }
 
-    nonManiGroup.emplace(vKept, nonMani);
-    updateNonManiGroup(visited, nonManiGroup.begin(), vFork);
-  } else {
-    if (!nonMani.empty()) nonManiGroup.emplace(vKept, nonMani);
+    updateNonManiGroup(vKept, vFork);
   }
 
-  while (!nonManiGroup.empty()) {
-    cleanup();
+  while (cleanup())
+    ;
+
+  for (auto& dirty : dirtyEdges) {
+    if (options.fixBoundary && dirty->bothEndsOnBoundary()) {
+      heap.remove(dirty);
+      continue;
+    }
+    double errorPrev = dirty->error();
+    dirty->planCollapse(options.fixBoundary);
+    heap.fix(dirty, errorPrev);
   }
 
   return accept();
 }
 
-void Collapser::updateNonManiGroup(const std::map<idx, int>& visited,
-                                   NonManiGroup::iterator current, idx vFork) {
-  auto& nonMani = current->second;
-  for (auto it = nonMani.begin(), last = nonMani.end(); it != last;) {
-    switch (visited.at(it->first)) {
-      case 1:
-        it = nonMani.erase(it);
-        break;
-      case 0:
-        ++it;
-        break;
-      case 2: {
-        auto insertRes = nonManiGroup.emplace(vFork, NonManiInfo{});
-        insertRes.first->second.emplace(it->first, it->second);
-        it = nonMani.erase(it);
-        break;
+void Collapser::updateNonManiGroup(idx vKept, idx vFork) {
+  for (auto& nm : nonMani) {
+    if (nm.vKept == vKept) {
+      if (nm.status >= 0) {
+        switch (nm.status) {
+          case 1:
+            nm.status = -1;
+            break;
+          case 0:
+            break;
+          case 2:
+            nm.vKept = vFork;
+            nm.status = 0;
+            break;
+          default:
+            assert(false);
+        }
       }
-      default:
-        assert(false);
     }
-  }
-
-  if (nonMani.empty()) {
-    nonManiGroup.erase(current);
   }
 }
 

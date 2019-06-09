@@ -5,7 +5,6 @@
 #ifndef MESH_SIMPL_VERTICES_HPP
 #define MESH_SIMPL_VERTICES_HPP
 
-#include <assert.h>
 #include <ext/alloc_traits.h>
 #include <utility>
 #include <vector>
@@ -33,27 +32,17 @@ class Vertices : private Erasables {
         _boundary(size(), false) {}
 
   // Get/set position of a vertex
-  const vec3d& position(idx v) const {
-    return _positions[v];
-  }
+  const vec3d& position(idx v) const { return _positions[v]; }
   const vec3d& operator[](idx v) const { return position(v); }
-  void setPosition(idx v, const vec3d& pos) {
-    _positions[v] = pos;
-  }
+  void setPosition(idx v, const vec3d& pos) { _positions[v] = pos; }
 
   // Get/set quadric of a vertex
-  const Quadric& q(idx v) const {
-    return _quadrics[v];
-  }
+  const Quadric& q(idx v) const { return _quadrics[v]; }
   void increaseQ(idx v, const Quadric& by) { setQ(v, q(v) + by); }
-  void setQ(idx v, const Quadric& val) {
-    _quadrics[v] = val;
-  }
+  void setQ(idx v, const Quadric& val) { _quadrics[v] = val; }
 
   // Get/set if a vertex is on boundary
-  bool isBoundary(idx v) const {
-    return _boundary[v];
-  }
+  bool isBoundary(idx v) const { return _boundary[v]; }
   void setBoundary(idx v, bool val) { _boundary[v] = val; }
 
   // Erase unreferenced vertices
@@ -67,6 +56,8 @@ class Vertices : private Erasables {
       }
     }
   }
+
+  void reduceQByHalf(idx v) { _quadrics[v] *= 0.5; }
 
   idx duplicate(idx src) {
     idx v = size();
