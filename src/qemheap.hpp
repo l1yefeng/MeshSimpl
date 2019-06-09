@@ -5,7 +5,6 @@
 #ifndef MESH_SIMPL_QEMHEAP_HPP
 #define MESH_SIMPL_QEMHEAP_HPP
 
-#include <cassert>
 #include <cstddef>
 #include <vector>
 

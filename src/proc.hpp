@@ -6,9 +6,7 @@
 namespace MeshSimpl {
 namespace Internal {
 
-class Edge;
 class Faces;
-class QEMHeap;
 class Vertices;
 
 void weightQuadrics(Quadric& quadric, double faceArea, WEIGHTING strategy);

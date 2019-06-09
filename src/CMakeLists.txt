@@ -20,7 +20,9 @@ add_library(${PROJECT_NAME}
             simplify.hpp
             types.hpp
             util.cpp
-            util.hpp)
+            util.hpp
+            vertices.cpp
+            vertices.hpp)
 
 target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_11)
 

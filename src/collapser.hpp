@@ -5,13 +5,11 @@
 #ifndef MESH_SIMPL_COLLAPSER_HPP
 #define MESH_SIMPL_COLLAPSER_HPP
 
-#include <algorithm>
 #include <array>
 #include <cassert>
 #include <initializer_list>
-#include <iostream>
 #include <map>
-#include <set>
+#include <utility>
 #include <vector>
 
 #include "edge.hpp"
