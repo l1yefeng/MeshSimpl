@@ -26,8 +26,8 @@ void Edge::planCollapse(bool fixBoundary) {
 
     // computes the inverse of matrix A in quadric
     const double aDet = _q[0] * (_q[3] * _q[5] - _q[4] * _q[4]) -
-                         _q[1] * (_q[1] * _q[5] - _q[4] * _q[2]) +
-                         _q[2] * (_q[1] * _q[4] - _q[3] * _q[2]);
+                        _q[1] * (_q[1] * _q[5] - _q[4] * _q[2]) +
+                        _q[2] * (_q[1] * _q[4] - _q[3] * _q[2]);
 
     if (aDet != 0) {
       // invertible, find position yielding minimal error
@@ -41,8 +41,8 @@ void Edge::planCollapse(bool fixBoundary) {
           (_q[0] * _q[3] - _q[1] * _q[1]) * aDetInv,
       };
       _center = {-dot({aInv[0], aInv[1], aInv[2]}, b),
-                -dot({aInv[1], aInv[3], aInv[4]}, b),
-                -dot({aInv[2], aInv[4], aInv[5]}, b)};
+                 -dot({aInv[1], aInv[3], aInv[4]}, b),
+                 -dot({aInv[2], aInv[4], aInv[5]}, b)};
       _error = dot(b, _center) + c;
     } else {
       // not invertible, choose from endpoints and midpoint

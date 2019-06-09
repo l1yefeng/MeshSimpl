@@ -6,13 +6,13 @@
 #include <tuple>
 #include <utility>
 
-#include "nonmaniring.hpp"
+#include "collapser.hpp"
 #include "util.hpp"
 
 namespace MeshSimpl {
 namespace Internal {
 
-void NonManiRing::collect() {
+void Collapser::collect() {
   for (order i : {0, 1}) {
     idx v = target->endpoint(i);
     if (!vertices.isBoundary(v)) {
@@ -37,7 +37,7 @@ void NonManiRing::collect() {
   }
 }
 
-void NonManiRing::findCoincideEdges(NonManiInfo& nonMani) {
+void Collapser::findCoincideEdges(NonManiInfo& nonMani) {
   // comparision used in sorting and finding intersection
   const auto cmp = [](const Neighbor* nb0, const Neighbor* nb1) -> bool {
     return nb0->secondV() < nb1->secondV();
@@ -68,7 +68,7 @@ void NonManiRing::findCoincideEdges(NonManiInfo& nonMani) {
   }
 }
 
-void NonManiRing::cleanup(std::map<idx, NonManiInfo>& nonManiGroup) {
+void Collapser::cleanup(std::map<idx, NonManiInfo>& nonManiGroup) {
   assert(!nonManiGroup.empty());
   // the original vKept or a fork
   idx vKept = nonManiGroup.begin()->first;
@@ -218,7 +218,7 @@ void NonManiRing::cleanup(std::map<idx, NonManiInfo>& nonManiGroup) {
   }
 }
 
-int NonManiRing::collapse() {
+Collapser::ReturnType Collapser::collapse() {
   collect();
 
   order delOrd = vertices.isBoundary(target->endpoint(0)) ? 1 : 0;
@@ -285,7 +285,7 @@ int NonManiRing::collapse() {
     }
     eraseF(f0);
     eraseF(f1);
-    return vRemoved;
+    return accept();
   }
 
   // maps from center vertex to a group of coincide edges
@@ -376,7 +376,7 @@ int NonManiRing::collapse() {
   if (!edgeValid[0] && (!edgeKept[1] || !edgeValid[1])) {
     eraseV(vKept);
     assert(vRemoved == (edgeKept[1] ? 4 : 3));
-    return vRemoved;
+    return accept();
   }
 
   // special case: component is separated
@@ -420,7 +420,7 @@ int NonManiRing::collapse() {
     cleanup(nonManiGroup);
   }
 
-  return vRemoved;
+  return accept();
 }
 
 }  // namespace Internal

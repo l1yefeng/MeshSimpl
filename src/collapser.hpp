@@ -2,8 +2,8 @@
 // Created by nickl on 5/31/19.
 //
 
-#ifndef MESH_SIMPL_NONMANIRING_HPP
-#define MESH_SIMPL_NONMANIRING_HPP
+#ifndef MESH_SIMPL_COLLAPSER_HPP
+#define MESH_SIMPL_COLLAPSER_HPP
 
 #include <algorithm>
 #include <array>
@@ -25,7 +25,7 @@
 namespace MeshSimpl {
 namespace Internal {
 
-class NonManiRing {
+class Collapser {
  private:
   Vertices& vertices;
   Faces& faces;
@@ -38,11 +38,15 @@ class NonManiRing {
   int fRemoved;
 
   typedef std::map<idx, std::array<Edge*, 2>> NonManiInfo;
+  typedef std::pair<int, int> ReturnType;
 
-  int reject() {
+  ReturnType accept() { return {vRemoved, fRemoved}; }
+
+  ReturnType reject() {
     heap.penalize(target);
     assert(vRemoved == 0);
-    return vRemoved;
+    assert(fRemoved == 0);
+    return {vRemoved, fRemoved};
   }
 
   void eraseV(idx v) {
@@ -80,8 +84,8 @@ class NonManiRing {
   void cleanup(std::map<idx, NonManiInfo>& nonManiGroup);
 
  public:
-  NonManiRing(Vertices& vertices, Faces& faces, QEMHeap& heap, Edge* target,
-              const SimplifyOptions& options)
+  Collapser(Vertices& vertices, Faces& faces, QEMHeap& heap, Edge* target,
+            const SimplifyOptions& options)
       : vertices(vertices),
         faces(faces),
         heap(heap),
@@ -91,10 +95,10 @@ class NonManiRing {
         vRemoved(0),
         fRemoved(0) {}
 
-  int collapse();
+  ReturnType collapse();
 };
 
 }  // namespace Internal
 }  // namespace MeshSimpl
 
-#endif  // MESH_SIMPL_NONMANIRING_HPP
+#endif  // MESH_SIMPL_COLLAPSER_HPP

@@ -4,6 +4,8 @@ project(MeshSimpl VERSION ${MESH_SIMPL_VERSION} LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 11)
 
 add_library(${PROJECT_NAME}
+            collapser.cpp
+            collapser.hpp
             edge.cpp
             edge.hpp
             erasable.hpp
@@ -18,7 +20,7 @@ add_library(${PROJECT_NAME}
             simplify.hpp
             types.hpp
             util.cpp
-            util.hpp nonmaniring.cpp nonmaniring.hpp)
+            util.hpp)
 
 target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_11)
 

@@ -19,9 +19,7 @@ class Erasable {
  public:
   Erasable() = default;
 
-  void erase() {
-    _erased = true;
-  }
+  void erase() { _erased = true; }
 
   bool exists() const { return !_erased; }
 };

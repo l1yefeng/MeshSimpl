@@ -6,9 +6,9 @@
 #include <limits>
 #include <stdexcept>
 
+#include "collapser.hpp"
 #include "edge.hpp"
 #include "faces.hpp"
-#include "nonmaniring.hpp"
 #include "proc.hpp"
 #include "qemheap.hpp"
 #include "simplify.hpp"
@@ -71,9 +71,9 @@ void simplify(Positions &positions, Indices &indices,
     if (edge->error() >= std::numeric_limits<double>::max()) break;
 
     // [5] collapse the least-error edge until mesh is simplified enough
-    NonManiRing ring(vertices, faces, heap, edge, options);
-    int vRemoved = ring.collapse();
-    nv -= vRemoved;
+    Collapser collapser(vertices, faces, heap, edge, options);
+    std::pair<int, int> removed = collapser.collapse();
+    nv -= removed.first;
   }
 
   // edges are useless
