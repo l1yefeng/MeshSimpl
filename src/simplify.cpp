@@ -18,12 +18,19 @@ namespace MeshSimpl {
 
 using namespace Internal;
 
+namespace Internal {
 void validateOptions(const SimplifyOptions &options) {
   if (options.strength > 1)
     throw std::invalid_argument("ERROR::INVALID_OPTION: strength > 1");
   if (options.strength < 0)
     throw std::invalid_argument("ERROR::INVALID_OPTION: strength < 0");
+  if (options.borderConstraint < 0)
+    throw std::invalid_argument("ERROR::INVALID_OPTION: border constraint < 0");
+  if (options.foldOverAngleThreshold > 1 || options.foldOverAngleThreshold < -1)
+    throw std::invalid_argument(
+        "ERROR::INVALID_OPTION: fold-over angle not between -1 and 1");
 }
+}  // namespace Internal
 
 void simplify(Positions &positions, Indices &indices,
               const SimplifyOptions &options) {
@@ -44,7 +51,7 @@ void simplify(Positions &positions, Indices &indices,
   buildConnectivity(vertices, faces, edges);
 
   // [2] compute quadrics of vertices
-  computeQuadrics(vertices, faces, edges, options);
+  computeQuadrics(vertices, faces, options);
 
   // [3] assigning edge errors using quadrics
   for (auto &edge : edges) edge.planCollapse(options.fixBoundary);
@@ -53,7 +60,7 @@ void simplify(Positions &positions, Indices &indices,
   QEMHeap heap(edges);
   if (options.fixBoundary) {
     for (auto &edge : edges) {
-      if (edge.bothEndsOnBoundary()) heap.remove(&edge);
+      if (edge.bothEndsOnBoundary()) heap.markRemoved(&edge);
     }
   }
 

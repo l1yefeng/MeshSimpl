@@ -84,18 +84,18 @@ static void BM_PreProcessing(benchmark::State& state) {
     buildConnectivity(vertices, faces, edges);
 
     // [2] compute quadrics of vertices
-    computeQuadrics(vertices, faces, edges, options);
+    computeQuadrics(vertices, faces, options);
 
     // [3] assigning edge errors using quadrics
     for (auto& edge : edges) edge.planCollapse(options.fixBoundary);
 
     // [4] create priority queue on quadric error
-
     QEMHeap heap(edges);
-    for (idx e = 0; e < edges.size(); ++e) {
-      if (!(options.fixBoundary && edges[e].bothEndsOnBoundary())) heap.push(e);
+    if (options.fixBoundary) {
+      for (auto &edge : edges) {
+        if (edge.bothEndsOnBoundary()) heap.markRemoved(&edge);
+      }
     }
-    heap.heapilize();
   }
 }
 

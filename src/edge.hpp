@@ -17,11 +17,6 @@
 namespace MeshSimpl {
 namespace Internal {
 
-// Edge defines the struct of an edge
-//
-// Only some convenient methods are defined for the purpose of less repetition.
-// Methods to initialize (adding first and second face), and update are not
-// provided.
 class Edge : public Erasable {
  private:
   Vertices &vertices;
@@ -41,6 +36,11 @@ class Edge : public Erasable {
   // wings
   vec2i _ff = {};
   std::array<order, 2> _ordInFF = {{INVALID, INVALID}};
+
+  void swapWings() {
+    std::swap(_ff[0], _ff[1]);
+    std::swap(_ordInFF[0], _ordInFF[1]);
+  }
 
  public:
   // Construct an edge with two endpoints indexes.
@@ -102,17 +102,9 @@ class Edge : public Erasable {
     return _vv[0] == v ? 0 : 1;
   }
 
-  // Returns the order of the endpoint next collapse should delete.
-  // By keeping one endpoint and deleting the other, followed by update on the
-  // kept endpoint (position, quadric, etc), the edge is collapsed into a new
-  // vertex (the center)
-  order delEndpointOrder() const { return vertices.isBoundary(_vv[0]) ? 1 : 0; }
-
   const vec2i &endpoints() const { return _vv; }
 
   idx endpoint(order ord) const { return endpoints()[ord]; }
-
-  idx operator[](order ord) const { return endpoint(ord); }
 
   //
   // public methods for update
@@ -127,11 +119,6 @@ class Edge : public Erasable {
 
   void setErrorInfty() { _error = std::numeric_limits<double>::max(); }
 
-  void swapWings() {
-    std::swap(_ff[0], _ff[1]);
-    std::swap(_ordInFF[0], _ordInFF[1]);
-  }
-
   void replaceEndpoint(idx prevV, idx newV);
 
   // Drop one wing: if it has two wings before then now it has one; if it
@@ -140,8 +127,6 @@ class Edge : public Erasable {
   // Returns true if still has one wing; false if invalid
   // User should probably erase this edge after receiving a false return value
   bool dropWing(idx face);
-
-  void replaceWing(idx prevF, idx newF, order newOrdInFace);
 };
 
 }  // namespace Internal

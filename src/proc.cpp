@@ -39,7 +39,7 @@ void weightQuadrics(Quadric &quadric, double faceArea, WEIGHTING strategy) {
   }
 }
 
-void computeQuadrics(Vertices &vertices, Faces &faces, Edges &edges,
+void computeQuadrics(Vertices &vertices, const Faces &faces,
                      const SimplifyOptions &options) {
   for (idx f = 0; f < faces.size(); ++f) {
     // calculate the plane of this face (n and d: n'v+d=0 defines the plane)
@@ -162,7 +162,7 @@ void buildConnectivity(Vertices &vertices, Faces &faces, Edges &edges) {
 
     faces.setSide(edge.face(0), edge.ordInF(0), &edges.back());
     if (!twoWings) {
-      for (order i : {0, 1}) vertices.setBoundary(edge[i], true);
+      for (order i : {0, 1}) vertices.setBoundary(edge.endpoint(i), true);
     } else {
       faces.setSide(edge.face(1), edge.ordInF(1), &edges.back());
     }

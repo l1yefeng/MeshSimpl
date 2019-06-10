@@ -9,8 +9,12 @@
 
 namespace MeshSimpl {
 
+namespace Internal {
 void validateOptions(const SimplifyOptions& options);
+}  // namespace Internal
 
+// Simplify the mesh defined by vertex positions and face indices with an
+// optional configuration. Change is written in-place.
 void simplify(Positions& positions, Indices& indices,
               const SimplifyOptions& options = {});
 

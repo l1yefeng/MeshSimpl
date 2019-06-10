@@ -368,7 +368,7 @@ int Collapser::collapse() {
 
   for (auto& dirty : dirtyEdges) {
     if (options.fixBoundary && dirty->bothEndsOnBoundary()) {
-      heap.remove(dirty);
+      heap.markRemoved(dirty);
       continue;
     }
     double errorPrev = dirty->error();

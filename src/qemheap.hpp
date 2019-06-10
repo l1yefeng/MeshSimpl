@@ -22,7 +22,8 @@ class QEMHeap {
   // store a reference of the list of edges and store all handles
   explicit QEMHeap(Edges &edges);
 
-  // Returns the edge id with minimum ecol error
+  // Returns the edge id with minimum ecol error in heap. It is possible that
+  // the output is an erased edge or it has been removed from heap
   Edge *top() const { return &edges[keys[1]]; }
 
   // Remove the top edge from heap
@@ -41,9 +42,11 @@ class QEMHeap {
   // Returns the size of the heap
   size_t size() const { return n; };
 
+  // Returns true if the edge exists in heap and is not marked as removed
   bool contains(const Edge *edge) const;
 
-  void remove(const Edge *edge);
+  // Mark removed but does not touch actual heap data
+  void markRemoved(const Edge *edge);
 
  private:
   std::vector<idx> keys;        // binary heap array, indexed from 1

@@ -77,12 +77,5 @@ bool Edge::dropWing(idx face) {
   return ordInF(0) != INVALID;
 }
 
-void Edge::replaceWing(idx prevF, idx newF, order newOrdInFace) {
-  order ord = wingOrder(prevF);
-  assert(ordInF(ord) != INVALID);
-
-  setWing(ord, newF, newOrdInFace);
-}
-
 }  // namespace Internal
 }  // namespace MeshSimpl

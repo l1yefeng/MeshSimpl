@@ -56,7 +56,7 @@ bool QEMHeap::contains(const Edge *edge) const {
   return true;
 }
 
-void QEMHeap::remove(const Edge *edge) {
+void QEMHeap::markRemoved(const Edge *edge) {
   idx e = edge - edges.data();
   removed[e] = true;
 }

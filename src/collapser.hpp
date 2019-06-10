@@ -35,6 +35,11 @@ class Collapser {
   int fRemoved;
   std::vector<Edge*> dirtyEdges;
 
+  // Represent a pair of coincided edges. Although there is never a non-manifold
+  // edge created during the whole process, the coincided edges will become
+  // non-manifold in output if not handled beforehand thus the name.
+  // NOTE: they are two different edges, with identical endpoints, certainly
+  // different wings.
   struct NonManiInfo {
     idx vKept, vOther;
     std::array<Edge*, 2> edges;
@@ -75,8 +80,10 @@ class Collapser {
   // Store neighbors around endpoint(i) into neighbors[i], where i in {0, 1}
   void collect();
 
+  // Find potential coincided edges (if collapse) and push to nonMani
   void findCoincideEdges(idx vKept);
 
+  // Return true if no face will be flipped
   bool checkGeom() const {
     for (int i : {0, 1}) {
       for (const auto& nb : neighbors[i]) {
@@ -89,6 +96,10 @@ class Collapser {
     return true;
   }
 
+  // Eliminate (not completely) coincided edges. This method will create a fork
+  // for each endpoint of a pair of coincided edges and split the egdes by
+  // assign the forked endpoints to one of them. As a result, one or more pair
+  // of coincided edges (with common endpoint vKept) will be separated
   bool cleanup();
 
   void updateNonManiGroup(idx vKept, idx vFork);
