@@ -3,6 +3,7 @@
 //
 
 #include <algorithm>
+#include <iterator>
 #include <tuple>
 
 #include "collapser.hpp"
@@ -68,7 +69,7 @@ void Collapser::findCoincideEdges(idx vKept) {
 }
 
 bool Collapser::cleanup() {
-  auto it = frontNM();
+  auto it = nonMani.begin();
   if (it == nonMani.end()) return false;
 
   // use the first non-manifold edge to separate this mess
@@ -114,7 +115,7 @@ bool Collapser::cleanup() {
       edgesReplaceEnd.clear();
       facesSetV.clear();
       for (auto& nm : nonMani) {
-        if (nm.vKept == vKept && nm.status > 0) {
+        if (nm.vKept == vKept) {
           nm.status = 0;
         }
       }
@@ -194,7 +195,8 @@ bool Collapser::cleanup() {
   return true;
 }
 
-int Collapser::collapse() {
+int Collapser::collapse(Edge* edge) {
+  target = edge;
   collect();
 
   order delOrd = vertices.isBoundary(target->endpoint(0)) ? 1 : 0;
@@ -252,10 +254,10 @@ int Collapser::collapse() {
     idx f0 = target->face(0);
     idx f1 = target->face(1);
     for (order ord : {0, 1, 2}) {
-      Edge* edge = faces.side(f0, ord);
-      assert(edge->face(0) + edge->face(1) == f0 + f1);
+      Edge* edg = faces.side(f0, ord);
+      assert(edg->face(0) + edg->face(1) == f0 + f1);
 
-      edge->erase();
+      edg->erase();
     }
     eraseF(f0);
     eraseF(f1);
@@ -294,14 +296,14 @@ int Collapser::collapse() {
   }
 
   // replace edge endpoint
-  for (auto& edge : initDirtyEdges[delOrd]) {
-    edge->replaceEndpoint(vDel, vKept);
+  for (auto& edg : initDirtyEdges[delOrd]) {
+    edg->replaceEndpoint(vDel, vKept);
   }
 
   // update error of edges
   for (int i : {0, 1}) {
-    dirtyEdges.insert(dirtyEdges.end(), initDirtyEdges[i].begin(),
-                      initDirtyEdges[i].end());
+    std::move(initDirtyEdges[i].begin(), initDirtyEdges[i].end(),
+              std::back_inserter(dirtyEdges));
   }
 
   // take away face 0 and 1
@@ -380,26 +382,38 @@ int Collapser::collapse() {
 }
 
 void Collapser::updateNonManiGroup(idx vKept, idx vFork) {
-  for (auto& nm : nonMani) {
-    if (nm.vKept == vKept) {
-      if (nm.status >= 0) {
-        switch (nm.status) {
-          case 1:
-            nm.status = -1;
-            break;
-          case 0:
-            break;
-          case 2:
-            nm.vKept = vFork;
-            nm.status = 0;
-            break;
-          default:
-            assert(false);
-        }
+  for (auto it = nonMani.begin(); it != nonMani.end();) {
+    if (it->vKept == vKept) {
+      switch (it->status) {
+        case 1:
+          it = nonMani.erase(it);
+          break;
+        case 0:
+          ++it;
+          break;
+        case 2:
+          it->status = 0;
+          it->vKept = vFork;
+          ++it;
+          break;
+        default:
+          assert(false);
       }
+    } else {
+      ++it;
+    }
+  }
+}
+
+void Collapser::visitNonMani(idx vKept, idx vOther) {
+  for (auto& nm : nonMani) {
+    if (nm.vKept == vKept && nm.vOther == vOther) {
+      ++nm.status;
+      assert(nm.status == 1 || nm.status == 2);
+      return;
     }
   }
 }
 
 }  // namespace Internal
-}
+}  // namespace MeshSimpl

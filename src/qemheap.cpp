@@ -33,11 +33,10 @@ void QEMHeap::pop() {
   keys.resize(n + 1);
 }
 
-void QEMHeap::fix(const Edge *ptr, double errorPrev) {
-  idx e = ptr - edges.data();
-  size_t k = handles[e];
-  assert(contains(ptr));
-  if (ptr->error() > errorPrev)
+void QEMHeap::fix(const Edge *edge, double errorPrev) {
+  size_t k = handles[id(edge)];
+  assert(contains(edge));
+  if (edge->error() > errorPrev)
     sink(k);
   else
     swim(k);
@@ -45,21 +44,15 @@ void QEMHeap::fix(const Edge *ptr, double errorPrev) {
 
 void QEMHeap::penalize(Edge *edge) {
   assert(contains(edge));
-  idx e = edge - edges.data();
   edge->setErrorInfty();
-  sink(handles[e]);
+  sink(handles[id(edge)]);
 }
 
-bool QEMHeap::contains(const Edge *edge) const {
-  idx e = edge - edges.data();
-  if (removed[e]) return false;
-  return true;
-}
+bool QEMHeap::contains(const Edge *edge) const { return !removed[id(edge)]; }
 
-void QEMHeap::markRemoved(const Edge *edge) {
-  idx e = edge - edges.data();
-  removed[e] = true;
-}
+void QEMHeap::markRemoved(const Edge *edge) { markRemovedById(id(edge)); }
+
+void QEMHeap::markRemovedById(idx e) { removed[e] = true; }
 
 bool QEMHeap::greater(size_t i, size_t j) const {
   assert(!std::isnan(edges[keys[i]].error()));

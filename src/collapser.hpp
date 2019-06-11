@@ -5,7 +5,6 @@
 #ifndef MESH_SIMPL_COLLAPSER_HPP
 #define MESH_SIMPL_COLLAPSER_HPP
 
-#include <algorithm>
 #include <array>
 #include <cassert>
 #include <initializer_list>
@@ -49,26 +48,26 @@ class Collapser {
   };
   std::vector<NonManiInfo> nonMani;
 
-  void visitNonMani(idx vKept, idx vOther) {
-    for (auto& nm : nonMani) {
-      if (nm.status >= 0 && nm.vKept == vKept && nm.vOther == vOther) {
-        ++nm.status;
-        assert(nm.status == 1 || nm.status == 2);
-        return;
-      }
-    }
+  void visitNonMani(idx vKept, idx vOther);
+
+  void reset() {
+    fRemoved = 0;
+    target = nullptr;
+    for (auto& n : neighbors) n.clear();
+    dirtyEdges.clear();
+    nonMani.clear();
   }
 
-  std::vector<NonManiInfo>::iterator frontNM() {
-    return std::find_if(nonMani.begin(), nonMani.end(),
-                        [](const NonManiInfo& nm) { return nm.status >= 0; });
+  int accept() {
+    int temp = fRemoved;
+    reset();
+    return temp;
   }
-
-  int accept() { return fRemoved; }
 
   int reject() {
     heap.penalize(target);
     assert(fRemoved == 0);
+    reset();
     return fRemoved;
   }
 
@@ -105,18 +104,18 @@ class Collapser {
   void updateNonManiGroup(idx vKept, idx vFork);
 
  public:
-  Collapser(Vertices& vertices, Faces& faces, QEMHeap& heap, Edge* target,
+  Collapser(Vertices& vertices, Faces& faces, QEMHeap& heap,
             const SimplifyOptions& options)
       : vertices(vertices),
         faces(faces),
         heap(heap),
-        target(target),
+        target(nullptr),
         options(options),
         neighbors(),
         fRemoved(0),
         nonMani() {}
 
-  int collapse();
+  int collapse(Edge* edge);
 };
 
 }  // namespace Internal

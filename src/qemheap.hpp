@@ -8,12 +8,11 @@
 #include <cstddef>
 #include <vector>
 
+#include "edge.hpp"
 #include "types.hpp"
 
 namespace MeshSimpl {
 namespace Internal {
-
-class Edge;
 
 // Reference: https://algs4.cs.princeton.edu/24pq/MinPQ.java
 class QEMHeap {
@@ -31,7 +30,7 @@ class QEMHeap {
 
   // Fix the priority of an edge after the error value is modified;
   // Param `errorPrev` is used to determine the direction of priority change
-  void fix(const Edge *ptr, double errorPrev);
+  void fix(const Edge *edge, double errorPrev);
 
   // Suppress this edge until it is, if ever, updated next time
   void penalize(Edge *edge);
@@ -47,6 +46,7 @@ class QEMHeap {
 
   // Mark removed but does not touch actual heap data
   void markRemoved(const Edge *edge);
+  void markRemovedById(idx e);
 
  private:
   std::vector<idx> keys;        // binary heap array, indexed from 1
@@ -71,6 +71,8 @@ class QEMHeap {
 
   // Adjust the priority of node k: direction is towards lower priority
   void sink(size_t k);
+
+  idx id(const Edge *edge) const { return edge - edges.data(); }
 };
 
 }  // namespace Internal

@@ -4,6 +4,7 @@
 
 #include <cstddef>
 #include <limits>
+#include <memory>
 #include <stdexcept>
 
 #include "collapser.hpp"
@@ -59,12 +60,15 @@ void simplify(Positions &positions, Indices &indices,
   // [4] create priority queue on quadric error
   QEMHeap heap(edges);
   if (options.fixBoundary) {
-    for (auto &edge : edges) {
-      if (edge.bothEndsOnBoundary()) heap.markRemoved(&edge);
+    for (idx e = 0; e < edges.size(); ++e) {
+      if (edges[e].bothEndsOnBoundary()) {
+        heap.markRemovedById(e);
+      }
     }
   }
 
   int nf = nfToDecimate;
+  Collapser collapser(vertices, faces, heap, options);
   while (!heap.empty() && nf > 0) {
     // target the least-error edge, if it is what we saw last iteration,
     // it means loop should stop because all remaining edges have been penalized
@@ -76,8 +80,7 @@ void simplify(Positions &positions, Indices &indices,
     if (edge->error() >= std::numeric_limits<double>::max()) break;
 
     // [5] collapse the least-error edge until mesh is simplified enough
-    Collapser collapser(vertices, faces, heap, edge, options);
-    int removed = collapser.collapse();
+    int removed = collapser.collapse(edge);
     nf -= removed;
   }
 
