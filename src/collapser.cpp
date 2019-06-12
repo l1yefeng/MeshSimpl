@@ -301,9 +301,8 @@ int Collapser::collapse(Edge* edge) {
   }
 
   // update error of edges
-  for (int i : {0, 1}) {
-    std::move(initDirtyEdges[i].begin(), initDirtyEdges[i].end(),
-              std::back_inserter(dirtyEdges));
+  for (auto& ide : initDirtyEdges) {
+    std::move(ide.begin(), ide.end(), std::back_inserter(dirtyEdges));
   }
 
   // take away face 0 and 1
