@@ -20,25 +20,6 @@
 namespace MeshSimpl {
 namespace Internal {
 
-void weightQuadrics(Quadric &quadric, double faceArea, WEIGHTING strategy) {
-  assert(faceArea != 0);
-  switch (strategy) {
-    case BY_AREA:
-      quadric *= faceArea;
-      break;
-    case BY_AREA_INV:
-      if (faceArea <= std::numeric_limits<double>::epsilon())
-        quadric *= 0.0;
-      else
-        quadric *= 1 / faceArea;
-      break;
-    case UNIFORM:
-    default:
-      if (faceArea <= std::numeric_limits<double>::epsilon()) quadric *= 0.0;
-      break;
-  }
-}
-
 void computeQuadrics(Vertices &vertices, const Faces &faces,
                      const SimplifyOptions &options) {
   for (idx f = 0; f < faces.size(); ++f) {
@@ -58,7 +39,7 @@ void computeQuadrics(Vertices &vertices, const Faces &faces,
 
     // calculate quadric Q = (A, b, c) = (nn', dn, d*d)
     Quadric q = makeQuadric(normal, d);
-    weightQuadrics(q, area, options.weighting);
+    if (options.weightByArea) q *= area;
 
     for (order k : {0, 1, 2}) vertices.increaseQ(faces.v(f, k), q);
   }
@@ -85,7 +66,7 @@ void computeQuadrics(Vertices &vertices, const Faces &faces,
         const double d = -dot(normal, faces.vPos(f, next(k), vertices));
         Quadric q = makeQuadric(normal, d);
         q *= options.borderConstraint;
-        weightQuadrics(q, magnitude(nFace), options.weighting);
+        if (options.weightByArea) q *= magnitude(nFace);
 
         vertices.increaseQ(faces.v(f, next(k)), q);
         vertices.increaseQ(faces.v(f, prev(k)), q);
@@ -192,19 +173,6 @@ bool isFaceFlipped(const Vertices &vertices, const Faces &faces, idx f,
   } else {
     return false;
   }
-}
-
-bool isFaceElongated(const vec3d &pos0, const vec3d &pos1, const vec3d &pos2,
-                     double ratio) {
-  const vec3d vec01 = pos1 - pos0;
-  const vec3d vec02 = pos2 - pos0;
-  const vec3d vec12 = pos2 - pos1;
-  const double a = magnitude(vec01);
-  const double b = magnitude(vec12);
-  const double c = magnitude(vec02);
-  const double s = (a + b + c) / 2.0;
-  const double aspectRatio = 8.0 * (s - a) * (s - b) * (s - c) / (a * b * c);
-  return aspectRatio < ratio;
 }
 
 }  // namespace Internal

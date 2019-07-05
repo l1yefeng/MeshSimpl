@@ -25,7 +25,6 @@ void write_to_obj(const string& filename, const vector<vec3d>& vertices,
 int main(int argc, char* argv[]) {
   string in, out;
   SimplifyOptions options;
-  string weighting;
 
   auto cli =
       ((value("input", in)) % "input .obj file path",
@@ -34,34 +33,17 @@ int main(int argc, char* argv[]) {
            "do not move vertices on boundary",
        (option("-t", "--topo-modifiable").set(options.topologyModifiable)) %
            "permit change of topology during simplification",
-       (option("-w", "--weighting") & value("strategy", weighting)) %
-           "one of { uniform, by-area, by-area-inv }",
+       (option("-w", "--weight-by-area").set(options.weightByArea)) %
+           "quadrics are scaled by triangle area",
        (option("-s", "--strength") & number("ratio", options.strength)) %
            "0.8 means remove 80% vertices",
        (option("--border-constraint") &
         number("constant", options.borderConstraint)) %
-           "default is 2, assign larger constant to make border more reluctant "
-           "to shrink",
-       (option("--fold-over") &
-        number("angle", options.foldOverAngleThreshold)) %
-           "default is cos(160), change of angle of faces cannot be larger "
-           "than this angle",
-       (option("--triangle-quality") &
-        number("ratio", options.aspectRatioAtLeast)) %
-           "default is 0.02, aspect_ratio cannot be smaller than this value");
+           ("assign larger constant to make border more reluctant to shrink "
+            "(default to " +
+            to_string(options.borderConstraint) + ")"));
 
   if (!parse(argc, argv, cli)) {
-    cout << make_man_page(cli, argv[0]);
-    return 1;
-  }
-
-  if (weighting == "uniform")
-    options.weighting = UNIFORM;
-  else if (weighting == "by-area")
-    options.weighting = BY_AREA;
-  else if (weighting == "by-area-inv")
-    options.weighting = BY_AREA_INV;
-  else if (!weighting.empty()) {
     cout << make_man_page(cli, argv[0]);
     return 1;
   }

@@ -22,8 +22,6 @@ typedef std::vector<vec3d> Positions;
 
 static const order INVALID = -1;
 
-enum WEIGHTING { UNIFORM, BY_AREA, BY_AREA_INV };
-
 struct SimplifyOptions {
   // simplifies until face count is 1-strength of the original,
   // only accept value in range [0, 1)
@@ -32,10 +30,7 @@ struct SimplifyOptions {
   // weight the quadrics by triangle area, i.e., Q becomes Q * weight
   // a larger weight makes the computed error larger thus "later" to modify
   // during the iterations of edge collapse operations.
-  //  - UNIFORM: no weighting
-  //  - BY_AREA: larger face -> larger error
-  //  - BY_AREA_INV: larger face -> smaller error
-  WEIGHTING weighting = UNIFORM;
+  bool weightByArea = false;
 
   // when "fixBoundary" is true, we completely do not collapse anything on
   // boundary; otherwise, we add a "constraint plane" that is perpendicular to
@@ -53,11 +48,6 @@ struct SimplifyOptions {
 
   // used to check if, during edge collapse, faces get folded;
   double foldOverAngleThreshold = std::cos(80.0 / 180.0 * std::acos(-1));
-
-  // used to check if, during edge collapse, faces become extremely elongated;
-  // aspect ratio = 8(s-a)(s-b)(s-c)/abc, faces with lower aspect ratio -> lower
-  // quality
-  double aspectRatioAtLeast = 0.02;
 };
 
 namespace Internal {
