@@ -192,6 +192,11 @@ bool Collapser::cleanup() {
     faces.setV(std::get<0>(fsv), std::get<1>(fsv), std::get<2>(fsv));
 
   updateNonManiGroup(vKept, vKeptFork);
+
+  if (options.fixBoundary) {
+    heap.unmarkRemoved(e1);
+  }
+
   return true;
 }
 

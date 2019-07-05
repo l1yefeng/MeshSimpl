@@ -47,6 +47,7 @@ class QEMHeap {
   // Mark removed but does not touch actual heap data
   void markRemoved(const Edge *edge);
   void markRemovedById(idx e);
+  void unmarkRemoved(const Edge *edge) { removed[id(edge)] = false; }
 
  private:
   std::vector<idx> keys;        // binary heap array, indexed from 1
