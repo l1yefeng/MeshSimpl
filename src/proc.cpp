@@ -5,7 +5,6 @@
 #include <array>
 #include <cassert>
 #include <initializer_list>
-#include <limits>
 #include <map>
 #include <sstream>
 #include <stdexcept>

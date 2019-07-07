@@ -2,7 +2,6 @@
 // Created by nickl on 6/9/19.
 //
 
-#include <stddef.h>
 #include <array>
 #include <initializer_list>
 
@@ -20,7 +19,7 @@ void Vertices::compactPositionsAndDie(Positions& positions, Indices& indices) {
   }
 
   // get rid of deleted vertices and keep the mapping valid
-  for (size_t lo = 0, hi = size() - 1; true; ++lo, --hi) {
+  for (int lo = 0, hi = size() - 1; true; ++lo, --hi) {
     while (lo <= hi && exists(lo)) ++lo;
     while (lo < hi && !exists(hi)) --hi;
     if (lo >= hi) {

@@ -7,10 +7,10 @@
 
 #include <array>
 #include <cassert>
-#include <cstddef>
 #include <memory>
 #include <utility>
 #include <vector>
+
 #include "erasable.hpp"
 #include "types.hpp"
 
@@ -72,20 +72,7 @@ class Faces : public Erasables {
 
   vec3d edgeVec(idx f, order k, const Vertices& vertices) const;
 
-  void compactIndicesAndDie(Indices& indices) {
-    for (size_t lo = 0, hi = size() - 1; true; ++lo, --hi) {
-      while (lo <= hi && exists(lo)) ++lo;
-      while (lo < hi && !exists(hi)) --hi;
-      if (lo >= hi) {
-        _indices.resize(lo);
-        break;
-      }
-      std::swap(_indices[lo], _indices[hi]);
-    }
-
-    // move to output
-    indices = std::move(_indices);
-  }
+  void compactIndicesAndDie(Indices& indices);
 
   // Return the order of a vertex v in some face f
   order orderOf(idx f, idx v) const {
