@@ -73,20 +73,12 @@ class Edge : public Erasable {
     return vertices.isBoundary(_vv[0]) && vertices.isBoundary(_vv[1]);
   }
 
-  bool neitherEndOnBoundary() const {
-    return !vertices.isBoundary(_vv[0]) && !vertices.isBoundary(_vv[1]);
-  }
-
-  bool oneEndOnBoundary() const {
-    return !bothEndsOnBoundary() && !neitherEndOnBoundary();
-  }
-
   idx face(order ord) const { return _ff[ord]; }
 
   // Returns the order of this edge in face(ord)
   order ordInF(order ord) const { return _ordInFF[ord]; }
 
-  // Returns true if egde is on border
+  // Returns true if edge is on border
   // NOTE: different from both endpoints on border
   bool onBoundary() const { return ordInF(1) == INVALID; }
 
@@ -115,7 +107,7 @@ class Edge : public Erasable {
   //  - what is current sum of endpoints quadrics
   //  - which position to collapse into (center)
   //  - what will be the error
-  void planCollapse(bool fixBoundary);
+  bool planCollapse(bool fixBoundary);
 
   void setErrorInfty() { _error = std::numeric_limits<double>::max(); }
 

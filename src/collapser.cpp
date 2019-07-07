@@ -373,13 +373,12 @@ int Collapser::collapse(Edge* edge) {
     ;
 
   for (auto& dirty : dirtyEdges) {
-    if (options.fixBoundary && dirty->bothEndsOnBoundary()) {
-      heap.markRemoved(dirty);
-      continue;
-    }
     double errorPrev = dirty->error();
-    dirty->planCollapse(options.fixBoundary);
-    heap.fix(dirty, errorPrev);
+    if (dirty->planCollapse(options.fixBoundary)) {
+      heap.fix(dirty, errorPrev);
+    } else {
+      heap.markRemoved(dirty);
+    }
   }
 
   return accept();
