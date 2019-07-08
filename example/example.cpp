@@ -1,16 +1,17 @@
-#include <algorithm>  // for max
-#include <array>      // for array
-#include <chrono>     // for milliseconds, duration_cast, operator-, stea...
-#include <cmath>      // for floor
-#include <fstream>
-#include <iomanip>   // for operator<<, setw, setprecision
-#include <iostream>  // for operator<<, basic_ostream, endl, basic_ostre...
-#include <string>    // for string, operator==, operator<<, getline, ope...
-#include <vector>    // for vector
+#include "clipp.h"
 
-#include "clipp.h"       // for operator%, operator,, group, parameter, option
-#include "simplify.hpp"  // for simplify
-#include "types.hpp"     // for vec3d, vec3i, SimplifyOptions, BY_AREA, BY_A...
+#include <simplify.hpp>
+#include <types.hpp>
+
+#include <algorithm>
+#include <array>
+#include <chrono>
+#include <cmath>
+#include <fstream>
+#include <iomanip>
+#include <iostream>
+#include <string>
+#include <vector>
 
 using namespace std;
 using namespace clipp;

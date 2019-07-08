@@ -11,7 +11,7 @@ add_subdirectory(src)
 # example
 if(LIB_MESH_SIMPL_EXAMPLE)
   set(TARGET_EXAMPLE "example")
-  add_executable(${TARGET_EXAMPLE} example/main.cpp)
+  add_executable(${TARGET_EXAMPLE} example/example.cpp)
   target_include_directories(${TARGET_EXAMPLE} PRIVATE src)
   target_link_libraries(${TARGET_EXAMPLE} MeshSimpl)
 endif()
