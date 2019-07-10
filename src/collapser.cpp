@@ -194,7 +194,9 @@ bool Collapser::cleanup() {
   updateNonManiGroup(vKept, vKeptFork);
 
   if (options.fixBoundary) {
-    heap.unmarkRemoved(e1);
+    for (auto& ere : edgesReplaceEnd) {
+      heap.unmarkRemoved(std::get<0>(ere));
+    }
   }
 
   return true;
