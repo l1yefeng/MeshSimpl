@@ -23,8 +23,6 @@ QEMHeap::QEMHeap(Edges &edges)
     keys[handles[e] = ++n] = e;
   }
   keys.resize(n + 1);
-  for (size_t k = n / 2; k >= 1; --k) sink(k);
-  assert(isMinHeap());
 }
 
 void QEMHeap::pop() {

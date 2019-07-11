@@ -55,17 +55,13 @@ void simplify(Positions &positions, Indices &indices,
   computeQuadrics(vertices, faces, options);
 
   // [3] assigning edge errors using quadrics
-  for (auto &edge : edges) edge.planCollapse(options.fixBoundary);
-
-  // [4] create priority queue on quadric error
   QEMHeap heap(edges);
-  if (options.fixBoundary) {
-    for (idx e = 0; e < edges.size(); ++e) {
-      if (edges[e].bothEndsOnBoundary()) {
-        heap.markRemovedById(e);
-      }
+  for (size_t e = 0; e < edges.size(); ++e) {
+    if (!edges[e].planCollapse(options.fixBoundary)) {
+      heap.markRemovedById(e);
     }
   }
+  heap.prioritize();
 
   int nf = nfToDecimate;
   Collapser collapser(vertices, faces, heap, options);
@@ -79,7 +75,7 @@ void simplify(Positions &positions, Indices &indices,
     }
     if (edge->error() >= std::numeric_limits<double>::max()) break;
 
-    // [5] collapse the least-error edge until mesh is simplified enough
+    // [4] collapse the least-error edge until mesh is simplified enough
     int removed = collapser.collapse(edge);
     nf -= removed;
   }

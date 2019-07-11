@@ -21,6 +21,11 @@ class QEMHeap {
   // store a reference of the list of edges and store all handles
   explicit QEMHeap(Edges &edges);
 
+  void prioritize() {
+    for (size_t k = n / 2; k >= 1; --k) sink(k);
+    assert(isMinHeap());
+  }
+
   // Returns the edge id with minimum ecol error in heap. It is possible that
   // the output is an erased edge or it has been removed from heap
   Edge *top() const { return &edges[keys[1]]; }
