@@ -27,6 +27,7 @@ void Collapser::collect() {
       for (order column : {0, 1}) {
         Neighbor nb(target, column, v, faces);
         while (!nb.secondEdge()->onBoundary()) {
+          assert(nb.f() != target->face(1 - column));
           nb.rotate();
           neighbors[i].push_back(nb);
         }
