@@ -2,8 +2,8 @@
 Mesh simplification implementation
 
 - Restriction on input:
-    - Cannot handle non-manifold mesh
-    - Cannot handle mesh with wrong oriented face
+    - No non-manifold edge: will throw an exception
+    - No non-manifold vertex: undefined behavior
 
 - To-do-next:
     1. Use OOP better to improve program
@@ -22,7 +22,7 @@ Terms
     edges around a face are its sides
     vertices of an edge are its endpoints
     vertices of a face are its corners
-    
+
 =====
 How was topology changed during simplification?
 =====

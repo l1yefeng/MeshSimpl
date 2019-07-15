@@ -72,7 +72,7 @@ class Neighbor {
     _second = currEdge->ordInF(1 - ford);
     _first = getFirst(_second);
 
-    assert(faces[_f][center()] == prevCenter);
+    if (faces[_f][center()] != prevCenter) _first = center();
   }
 
   Edge* firstEdge() const { return faces.side(f(), _second); }
