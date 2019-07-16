@@ -23,31 +23,23 @@ class Edge;
 class Faces : public Erasables {
  private:
   Indices _indices;
-
-  struct Face {
-    vec3i& vvv;
-    std::array<Edge*, 3> sides;
-    explicit Face(vec3i& corners) : vvv(corners), sides() {}
-  };
-
-  std::vector<Face> _faces;
+  std::vector<std::array<Edge*, 3>> _sides;
 
  public:
   // Embed indices and allocate space for sides
   explicit Faces(Indices& indices)
-      : Erasables(indices.size()), _indices(std::move(indices)), _faces() {
-    _faces.reserve(size());
-    for (idx f = 0; f < size(); ++f) _faces.emplace_back(_indices[f]);
-  }
+      : Erasables(indices.size()),
+        _indices(std::move(indices)),
+        _sides(size()) {}
 
   // Get/set side: edge of a face
   Edge* side(idx f, order ord) const {
     assert(exists(f));
-    return _faces[f].sides[ord];
+    return _sides[f][ord];
   }
   void setSide(idx f, order ord, Edge* edge) {
     assert(exists(f));
-    _faces[f].sides[ord] = edge;
+    _sides[f][ord] = edge;
   }
   Edge* edgeAcrossFrom(idx f, idx v) const { return side(f, orderOf(f, v)); }
 
@@ -58,11 +50,11 @@ class Faces : public Erasables {
   }
   void setV(idx f, order ord, idx v) {
     assert(exists(f));
-    _faces[f].vvv[ord] = v;
+    _indices[f][ord] = v;
   }
   const vec3i& indices(idx f) const {
     assert(exists(f));
-    return _faces[f].vvv;
+    return _indices[f];
   }
   const vec3i& operator[](idx f) const { return indices(f); }
 
