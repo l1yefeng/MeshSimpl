@@ -369,6 +369,11 @@ int Collapser::collapse(Edge* edge) {
       dirtyEdges.push_back(nb.secondEdge());
     }
 
+    if (options.fixBoundary) {
+      heap.unmarkRemoved(seed);
+      for (auto& nb : dirtyNeighbors) heap.unmarkRemoved(nb.secondEdge());
+    }
+
     updateNonManiGroup(vKept, vFork);
   }
 
