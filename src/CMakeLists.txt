@@ -14,6 +14,7 @@ add_library(${PROJECT_NAME}
             neighbor.hpp
             proc.cpp
             proc.hpp
+            quadric.hpp
             qemheap.cpp
             qemheap.hpp
             simplify.cpp
@@ -22,7 +23,8 @@ add_library(${PROJECT_NAME}
             util.cpp
             util.hpp
             vertices.cpp
-            vertices.hpp)
+            vertices.hpp
+            )
 
 target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_11)
 

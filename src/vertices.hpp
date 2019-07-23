@@ -11,8 +11,8 @@
 
 #include "erasable.hpp"
 #include "faces.hpp"
+#include "quadric.hpp"
 #include "types.hpp"
-#include "util.hpp"
 
 namespace MeshSimpl {
 namespace Internal {

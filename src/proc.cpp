@@ -10,6 +10,7 @@
 #include <stdexcept>
 #include <utility>
 
+#include "quadric.hpp"
 #include "edge.hpp"
 #include "faces.hpp"
 #include "proc.hpp"
@@ -37,7 +38,7 @@ void computeQuadrics(Vertices &vertices, const Faces &faces,
     const double d = -dot(normal, faces.vPos(f, 0, vertices));
 
     // calculate quadric Q = (A, b, c) = (nn', dn, d*d)
-    Quadric q = makeQuadric(normal, d);
+    Quadric q (normal, d);
     if (options.weightByArea) q *= area;
 
     for (order k : {0, 1, 2}) vertices.increaseQ(faces.v(f, k), q);
@@ -63,7 +64,7 @@ void computeQuadrics(Vertices &vertices, const Faces &faces,
           continue;
 
         const double d = -dot(normal, faces.vPos(f, next(k), vertices));
-        Quadric q = makeQuadric(normal, d);
+        Quadric q(normal, d);
         q *= options.borderConstraint;
         if (options.weightByArea) q *= magnitude(nFace);
 

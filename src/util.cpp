@@ -6,24 +6,6 @@
 
 namespace MeshSimpl {
 
-Internal::Quadric &operator+=(Internal::Quadric &lfs,
-                              const Internal::Quadric &rhs) {
-  for (unsigned int i = 0; i < 10; ++i) lfs[i] += rhs[i];
-  return lfs;
-}
-
-Internal::Quadric &operator*=(Internal::Quadric &lfs, double rhs) {
-  for (auto &x : lfs) x *= rhs;
-  return lfs;
-}
-
-Internal::Quadric operator+(const Internal::Quadric &a,
-                            const Internal::Quadric &b) {
-  Internal::Quadric q;
-  for (unsigned int i = 0; i < 10; ++i) q[i] = a[i] + b[i];
-  return q;
-}
-
 vec3d &operator/=(vec3d &lfs, double rhs) {
   for (auto &x : lfs) x /= rhs;
   return lfs;

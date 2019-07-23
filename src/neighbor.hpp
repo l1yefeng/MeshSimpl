@@ -41,14 +41,14 @@ class Neighbor {
   }
 
   void replace(const Edge* firstEdge, order toWingOrder, idx vCenter) {
+    assert(firstEdge->exists());
+    assert(firstEdge->ordInF(toWingOrder) != INVALID);
+
     _f = firstEdge->face(toWingOrder);
     _ccw = firstEdge->ordInF(toWingOrder) !=
            next(faces.orderOf(firstEdge->face(toWingOrder), vCenter));
     _second = firstEdge->ordInF(toWingOrder);
     _first = getFirst(_second);
-
-    assert(firstEdge->exists());
-    assert(firstEdge->ordInF(toWingOrder) != INVALID);
   }
 
   idx f() const { return _f; }

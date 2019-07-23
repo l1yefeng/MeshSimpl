@@ -7,9 +7,9 @@
 
 #include <array>
 #include <cassert>
-#include <memory>
 #include <utility>
 #include <vector>
+#include <ext/alloc_traits.h>
 
 #include "erasable.hpp"
 #include "types.hpp"
@@ -23,6 +23,8 @@ class Edge;
 class Faces : public Erasables {
  private:
   Indices _indices;
+  // FIXME: BAD idea to use pointers. this program never resizes the vector
+  // edges so these pointers are never invalidated, but it still is bad manner
   std::vector<std::array<Edge*, 3>> _sides;
 
  public:

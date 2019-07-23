@@ -11,6 +11,7 @@
 #include <utility>
 
 #include "erasable.hpp"
+#include "quadric.hpp"
 #include "types.hpp"
 #include "vertices.hpp"
 

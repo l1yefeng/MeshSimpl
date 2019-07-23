@@ -52,9 +52,6 @@ struct SimplifyOptions {
 
 namespace Internal {
 
-// A quadric Q consists of a symmetric 3x3 matrix A, a vec3 b, and a scalar c
-typedef std::array<double, 10> Quadric;
-
 // Defined in edge.hpp
 class Edge;
 

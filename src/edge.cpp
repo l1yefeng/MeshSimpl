@@ -2,6 +2,8 @@
 // Created by nickl on 5/11/19.
 //
 
+#include <tuple>
+
 #include "edge.hpp"
 #include "util.hpp"
 #include "vertices.hpp"
@@ -21,35 +23,19 @@ bool Edge::planCollapse(bool fixBoundary) {
     } else if (onBounds[0] != onBounds[1]) {
       // the plan is: new position is the position of the vertex on border
       _center = vertices.position(_vv[onBounds[0] ? 0 : 1]);
-      _error = qError(_q, _center);
+      _error = _q.error(_center);
       return true;
     }
   }
 
   // the plan is: new position leads to the lowest error
-  const vec3d b{_q[6], _q[7], _q[8]};
-  const double c = _q[9];
 
   // computes the inverse of matrix A in quadric
-  const double aDet = _q[0] * (_q[3] * _q[5] - _q[4] * _q[4]) -
-                      _q[1] * (_q[1] * _q[5] - _q[4] * _q[2]) +
-                      _q[2] * (_q[1] * _q[4] - _q[3] * _q[2]);
+  const double aDet = _q.aDeterminant();
 
   if (aDet != 0) {
     // invertible, find position yielding minimal error
-    const double aDetInv = 1.0 / aDet;
-    const std::array<double, 6> aInv{
-        (_q[3] * _q[5] - _q[4] * _q[4]) * aDetInv,
-        (_q[2] * _q[4] - _q[1] * _q[5]) * aDetInv,
-        (_q[1] * _q[4] - _q[2] * _q[3]) * aDetInv,
-        (_q[0] * _q[5] - _q[2] * _q[2]) * aDetInv,
-        (_q[1] * _q[2] - _q[0] * _q[4]) * aDetInv,
-        (_q[0] * _q[3] - _q[1] * _q[1]) * aDetInv,
-    };
-    _center = {-dot({aInv[0], aInv[1], aInv[2]}, b),
-               -dot({aInv[1], aInv[3], aInv[4]}, b),
-               -dot({aInv[2], aInv[4], aInv[5]}, b)};
-    _error = dot(b, _center) + c;
+    std::tie(_center, _error) = _q.optimal(aDet);
 
     // prevent the optimal position from being too far. it is anticipated that
     // such thing happens rarely, when there are coincide faces and the optimal
@@ -75,9 +61,9 @@ bool Edge::planCollapse(bool fixBoundary) {
 
   // not invertible, choose from endpoints and midpoint
   _center = midpoint(vertices.position(_vv[0]), vertices.position(_vv[1]));
-  _error = qError(_q, _center);
+  _error = _q.error(_center);
   for (const idx v : _vv) {
-    const double err = qError(_q, vertices.position(v));
+    const double err = _q.error(vertices.position(v));
     if (err < _error) {
       _center = vertices.position(v);
       _error = err;
