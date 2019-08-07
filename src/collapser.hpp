@@ -8,6 +8,7 @@
 #include <array>
 #include <cassert>
 #include <initializer_list>
+#include <set>
 #include <vector>
 
 #include "edge.hpp"
@@ -32,7 +33,7 @@ class Collapser {
 
   std::array<std::vector<Neighbor>, 2> neighbors;
   int fRemoved;
-  std::vector<Edge*> dirtyEdges;
+  std::set<Edge*> dirtyEdges;
 
   // Represent a pair of coincided edges. Although there is never a non-manifold
   // edge created during the whole process, the coincided edges will become

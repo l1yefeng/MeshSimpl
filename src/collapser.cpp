@@ -102,7 +102,7 @@ bool Collapser::cleanup() {
   order traverseOrd = 0;
   Neighbor nb(e0, traverseOrd, vKept, faces);
   assert(faces.v(nb.f(), nb.center()) == vKept);
-  while (true) {
+  while (true) {  // edges around vKept must have been added to dirtyEdges
     edgesReplaceEnd.emplace_back(nb.secondEdge(), vKept, vKeptFork);
     facesSetV.emplace_back(nb.f(), nb.center(), vKeptFork);
 
@@ -161,6 +161,32 @@ bool Collapser::cleanup() {
     assert(nb.secondEdge() != e0);
   }
 
+  //  insert edges around vOther to dirtyEdges
+  nb.replace(e0, 0, vOther);
+  dirtyEdges.insert(nb.secondEdge());
+  while (!nb.secondEdge()->onBoundary()) {
+    nb.rotate();
+    dirtyEdges.insert(nb.secondEdge());
+    if (nb.secondEdge() == e0) {
+      break;  // completes a circle and all edges were inserted
+    }
+  }
+  if (nb.secondEdge()->onBoundary()) {  // unfinished because met border
+    dirtyEdges.insert(e0);
+    if (!e0->onBoundary()) {
+      nb.replace(e0, 1, vOther);
+      dirtyEdges.insert(nb.secondEdge());
+      while (!nb.secondEdge()->onBoundary()) {
+        nb.rotate();
+        dirtyEdges.insert(nb.secondEdge());
+        assert(nb.secondEdge() != e0);
+        if (nb.secondEdge()->onBoundary()) {
+          break;  //  all edges were inserted
+        }
+      }
+    }
+  }
+
   if (vertices.isBoundary(vOther)) {
     vertices.setBoundary(vOtherFork, hitBoundary);
     vertices.setBoundary(vOther, !hitBoundary);
@@ -188,18 +214,11 @@ bool Collapser::cleanup() {
 
   for (auto& ere : edgesReplaceEnd) {
     std::get<0>(ere)->replaceEndpoint(std::get<1>(ere), std::get<2>(ere));
-    dirtyEdges.push_back(std::get<0>(ere));
   }
   for (auto& fsv : facesSetV)
     faces.setV(std::get<0>(fsv), std::get<1>(fsv), std::get<2>(fsv));
 
   updateNonManiGroup(vKept, vKeptFork);
-
-  if (options.fixBoundary) {
-    for (auto& ere : edgesReplaceEnd) {
-      heap.unmarkRemoved(std::get<0>(ere));
-    }
-  }
 
   return true;
 }
@@ -283,7 +302,7 @@ int Collapser::collapse(Edge* edge) {
     faces.setV(nb.f(), nb.center(), vKept);
   }
 
-  std::array<std::vector<Edge*>, 2> initDirtyEdges;
+  std::array<std::vector<Edge*>, 2> initDirtyEdges;  // all edges around vv
   // collect edges who need update around endpoint 0 and 1
   for (int i : {0, 1}) {
     if (!vertices.isBoundary(target->endpoint(i))) {
@@ -311,7 +330,9 @@ int Collapser::collapse(Edge* edge) {
 
   // update error of edges
   for (auto& ide : initDirtyEdges) {
-    std::move(ide.begin(), ide.end(), std::back_inserter(dirtyEdges));
+    for (auto e : ide) {
+      dirtyEdges.insert(e);
+    }
   }
 
   // take away face 0 and 1
@@ -363,16 +384,9 @@ int Collapser::collapse(Edge* edge) {
     }
 
     seed->replaceEndpoint(vKept, vFork);
-    dirtyEdges.push_back(seed);
     for (auto& nb : dirtyNeighbors) {
       faces.setV(nb.f(), nb.center(), vFork);
       nb.secondEdge()->replaceEndpoint(vKept, vFork);
-      dirtyEdges.push_back(nb.secondEdge());
-    }
-
-    if (options.fixBoundary) {
-      heap.unmarkRemoved(seed);
-      for (auto& nb : dirtyNeighbors) heap.unmarkRemoved(nb.secondEdge());
     }
 
     updateNonManiGroup(vKept, vFork);
@@ -380,6 +394,18 @@ int Collapser::collapse(Edge* edge) {
 
   while (cleanup())
     ;
+
+  // when border is not fixed, never does any edge need to be marked removed
+  if (options.fixBoundary) {
+    for (auto dirty : dirtyEdges) {
+      // some edge might not be included in heap before this operation (both
+      // endpoints on border) but now should be because of change of
+      // endpoint(s). unmark to add it back to heap and then update. it will be
+      // updated if needs to and will be marked as deleted again if is still a
+      // border with both endpoints on border
+      heap.unmarkRemoved(dirty);
+    }
+  }
 
   for (auto& dirty : dirtyEdges) {
     double errorPrev = dirty->error();
