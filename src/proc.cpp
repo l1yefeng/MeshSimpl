@@ -10,10 +10,10 @@
 #include <stdexcept>
 #include <utility>
 
-#include "quadric.hpp"
 #include "edge.hpp"
 #include "faces.hpp"
 #include "proc.hpp"
+#include "quadric.hpp"
 #include "util.hpp"
 #include "vertices.hpp"
 
@@ -38,7 +38,7 @@ void computeQuadrics(Vertices &vertices, const Faces &faces,
     const double d = -dot(normal, faces.vPos(f, 0, vertices));
 
     // calculate quadric Q = (A, b, c) = (nn', dn, d*d)
-    Quadric q (normal, d);
+    Quadric q(normal, d);
     if (options.weightByArea) q *= area;
 
     for (order k : {0, 1, 2}) vertices.increaseQ(faces.v(f, k), q);
@@ -173,6 +173,20 @@ bool isFaceFlipped(const Vertices &vertices, const Faces &faces, idx f,
   } else {
     return false;
   }
+}
+
+bool isElongated(const vec3d &pos0, const vec3d &pos1, const vec3d &pos2,
+                 double ratio) {
+  assert(ratio > 0.0);
+  const vec3d vec01 = pos1 - pos0;
+  const vec3d vec02 = pos2 - pos0;
+  const vec3d vec12 = pos2 - pos1;
+  const double a = magnitude(vec01);
+  const double b = magnitude(vec12);
+  const double c = magnitude(vec02);
+  const double s = (a + b + c) / 2.0;
+  const double aspectRatioRecip = 8 * (s - a) * (s - b) * (s - c) / (a * b * c);
+  return aspectRatioRecip < ratio;
 }
 
 }  // namespace Internal

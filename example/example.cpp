@@ -42,6 +42,12 @@ int main(int argc, char* argv[]) {
         number("constant", options.borderConstraint)) %
            ("assign larger constant to make border more reluctant to shrink "
             "(default to " +
+            to_string(options.borderConstraint) + ")"),
+       (option("--aspect-ratio") &
+        number("ratio", options.aspectRatioThreshold)) %
+           ("faces with aspect ratio larger than 1/ratio won't be created; "
+            "assign non-positive value to disable the checking "
+            "(default to " +
             to_string(options.borderConstraint) + ")"));
 
   if (!parse(argc, argv, cli)) {

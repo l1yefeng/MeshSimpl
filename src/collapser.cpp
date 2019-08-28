@@ -278,6 +278,7 @@ int Collapser::collapse(Edge* edge) {
   }
 
   // special case: two faces folded (#f=2, #v=3)
+  // at this time topologyModifiable must be true
   if (!vertices.isBoundary(vDel) && neighbors[delOrd].empty()) {
     idx f0 = target->face(0);
     idx f1 = target->face(1);
@@ -290,6 +291,19 @@ int Collapser::collapse(Edge* edge) {
     eraseF(f0);
     eraseF(f1);
     return accept();
+  }
+
+  // reject if this operation creates extremely elongated faces
+  if (options.aspectRatioThreshold > 0.0) {
+    for (order ord : {0, 1}) {
+      for (const auto& nb : neighbors[ord]) {
+        if (isElongated(target->center(), vertices.position(nb.firstV()),
+                        vertices.position(nb.secondV()),
+                        options.aspectRatioThreshold)) {
+          return reject();
+        }
+      }
+    }
   }
 
   // there is topo change or not, collapse the target now. cleanup afterwords

@@ -30,6 +30,9 @@ void validateOptions(const SimplifyOptions &options) {
   if (options.foldOverAngleThreshold > 1 || options.foldOverAngleThreshold < -1)
     throw std::invalid_argument(
         "ERROR::INVALID_OPTION: fold-over angle not between -1 and 1");
+  if (options.aspectRatioThreshold > 1.0)
+    throw std::invalid_argument(
+        "ERROR::INVALID_OPTION: aspect-ratio-threshold cannot exceed 1");
 }
 }  // namespace Internal
 

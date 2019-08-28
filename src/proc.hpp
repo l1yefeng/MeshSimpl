@@ -28,6 +28,11 @@ void buildConnectivity(Vertices& vertices, Faces& faces, Edges& edges);
 bool isFaceFlipped(const Vertices& vertices, const Faces& faces, idx f,
                    order moved, const vec3d& position, double angle);
 
+// Returns true if the triangle formed by input positions is extremely elongated
+// evaluated by having aspect ratio value larger than `1/ratio`
+bool isElongated(const vec3d& pos0, const vec3d& pos1, const vec3d& pos2,
+                 double ratio);
+
 }  // namespace Internal
 }  // namespace MeshSimpl
 

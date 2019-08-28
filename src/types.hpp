@@ -48,6 +48,13 @@ struct SimplifyOptions {
 
   // used to check if, during edge collapse, faces get folded;
   double foldOverAngleThreshold = std::cos(80.0 / 180.0 * std::acos(-1));
+
+  // used to check if a face is extremely elongated;
+  // AR = 8*(s-a)*(s-b)*(s-c) / (a*b*c) where s = (a+b+c) / 2
+  // BUT please provide a reciprocal, i.e., op will fail when
+  //    AR > 1 / aspectRatioThreshold
+  // if aspectRatioThreshold <= 0, this checking is skipped
+  double aspectRatioThreshold = 0.02;
 };
 
 namespace Internal {
