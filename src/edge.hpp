@@ -74,6 +74,10 @@ class Edge : public Erasable {
     return vertices.isBoundary(_vv[0]) && vertices.isBoundary(_vv[1]);
   }
 
+  bool neitherEndOnBoundary() const {
+    return !vertices.isBoundary(_vv[0]) && !vertices.isBoundary(_vv[1]);
+  }
+
   idx face(order ord) const { return _ff[ord]; }
 
   // Returns the order of this edge in face(ord)

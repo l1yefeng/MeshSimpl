@@ -259,7 +259,7 @@ int Collapser::collapse(Edge* edge) {
     }
 
     // reject if what remains is a tetrahedron
-    if (target->bothEndsOnBoundary() && neighbors[0].size() == 1 &&
+    if (target->neitherEndOnBoundary() && neighbors[0].size() == 1 &&
         neighbors[1].size() == 1) {
       return reject();
     }
