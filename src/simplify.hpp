@@ -10,7 +10,8 @@
 namespace MeshSimpl {
 
 namespace Internal {
-void validateOptions(const SimplifyOptions& options);
+void validateOptions(const SimplifyOptions& options,
+                     const Positions& positions);
 }  // namespace Internal
 
 // Simplify the mesh defined by vertex positions and face indices with an

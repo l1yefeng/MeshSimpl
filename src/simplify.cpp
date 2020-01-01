@@ -2,6 +2,8 @@
 // Created by nickl on 1/8/19.
 //
 
+#include "simplify.hpp"
+
 #include <cstddef>
 #include <limits>
 #include <memory>
@@ -12,7 +14,6 @@
 #include "faces.hpp"
 #include "proc.hpp"
 #include "qemheap.hpp"
-#include "simplify.hpp"
 #include "vertices.hpp"
 
 namespace MeshSimpl {
@@ -20,7 +21,8 @@ namespace MeshSimpl {
 using namespace Internal;
 
 namespace Internal {
-void validateOptions(const SimplifyOptions &options) {
+void validateOptions(const SimplifyOptions &options,
+                     const Positions &positions) {
   if (options.strength > 1)
     throw std::invalid_argument("ERROR::INVALID_OPTION: strength > 1");
   if (options.strength < 0)
@@ -33,12 +35,17 @@ void validateOptions(const SimplifyOptions &options) {
   if (options.aspectRatioThreshold > 1.0)
     throw std::invalid_argument(
         "ERROR::INVALID_OPTION: aspect-ratio-threshold cannot exceed 1");
+  if (!options.fixedVertices.empty() ||
+      options.fixedVertices.size() != positions.size())
+    throw std::invalid_argument(
+        "ERROR::INVALID_OPTION: fixedVertices is neither empty nor equal with "
+        "'positions' in size");
 }
 }  // namespace Internal
 
 void simplify(Positions &positions, Indices &indices,
               const SimplifyOptions &options) {
-  validateOptions(options);
+  validateOptions(options, positions);
 
   const size_t NF = indices.size();
   const size_t nfToDecimate = std::lround(options.strength * NF);

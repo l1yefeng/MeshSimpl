@@ -55,6 +55,12 @@ struct SimplifyOptions {
   //    AR > 1 / aspectRatioThreshold
   // if aspectRatioThreshold <= 0, this checking is skipped
   double aspectRatioThreshold = 0.02;
+
+  // provide a list of booleans of the same size as vertices, true
+  // indicating the corresponding vertex must not be moved;
+  // OR provide an empty list to fix nobody.
+  // if non-empty, the option fixBoundary is ineffective
+  std::vector<bool> fixedVertices = {};
 };
 
 namespace Internal {
