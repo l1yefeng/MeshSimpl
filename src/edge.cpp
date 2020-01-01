@@ -11,21 +11,22 @@
 namespace MeshSimpl {
 namespace Internal {
 
-bool Edge::planCollapse(bool fixBoundary) {
+bool Edge::planCollapse() {
   _q = vertices.q(_vv[0]) + vertices.q(_vv[1]);
 
-  if (fixBoundary) {
-    std::array<bool, 2> onBounds{vertices.isBoundary(_vv[0]),
-                                 vertices.isBoundary(_vv[1])};
-    if (onBounds[0] && onBounds[1]) {
-      // the plan is: no plan is needed because it will never by modified
-      return false;
-    } else if (onBounds[0] != onBounds[1]) {
-      // the plan is: new position is the position of the vertex on border
-      _center = vertices.position(_vv[onBounds[0] ? 0 : 1]);
-      _error = _q.error(_center);
-      return true;
-    }
+  std::array<bool, 2> vvFixed{vertices.isFixed(_vv[0]),
+                              vertices.isFixed(_vv[1])};
+
+  if (vvFixed[0] && vvFixed[1]) {
+    // the plan is: no plan is needed because it will never by modified
+    return false;
+  }
+
+  if (vvFixed[0] != vvFixed[1]) {
+    // the plan is: new position is the position of the vertex who's fixed
+    _center = vertices.position(_vv[vvFixed[0] ? 0 : 1]);
+    _error = _q.error(_center);
+    return true;
   }
 
   // the plan is: new position leads to the lowest error

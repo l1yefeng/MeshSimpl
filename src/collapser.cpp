@@ -410,7 +410,7 @@ int Collapser::collapse(Edge* edge) {
     ;
 
   // when border is not fixed, never does any edge need to be marked removed
-  if (options.fixBoundary) {
+  if (!options.fixedVertices.empty() || options.fixBoundary) {
     for (auto dirty : dirtyEdges) {
       // some edge might not be included in heap before this operation (both
       // endpoints on border) but now should be because of change of
@@ -423,7 +423,7 @@ int Collapser::collapse(Edge* edge) {
 
   for (auto& dirty : dirtyEdges) {
     double errorPrev = dirty->error();
-    if (dirty->planCollapse(options.fixBoundary)) {
+    if (dirty->planCollapse()) {
       heap.fix(dirty, errorPrev);
     } else {
       heap.markRemoved(dirty);

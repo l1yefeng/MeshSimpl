@@ -112,7 +112,7 @@ class Edge : public Erasable {
   //  - what is current sum of endpoints quadrics
   //  - which position to collapse into (center)
   //  - what will be the error
-  bool planCollapse(bool fixBoundary);
+  bool planCollapse();
 
   void setErrorInfty() { _error = std::numeric_limits<double>::max(); }
 

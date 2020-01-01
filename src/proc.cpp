@@ -44,7 +44,8 @@ void computeQuadrics(Vertices &vertices, const Faces &faces,
     for (order k : {0, 1, 2}) vertices.increaseQ(faces.v(f, k), q);
   }
 
-  if (!options.fixBoundary) {
+  // compute constraints for boundaries unless they are always fixed
+  if (!options.fixedVertices.empty() || !options.fixBoundary) {
     for (idx f = 0; f < faces.size(); ++f) {
       if (!faces.onBoundary(f)) continue;
 

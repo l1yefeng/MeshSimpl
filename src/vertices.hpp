@@ -17,11 +17,12 @@
 namespace MeshSimpl {
 namespace Internal {
 
-class Vertices : private Erasables {
+class Vertices : public Erasables {
  private:
   Positions _positions;
   std::vector<Quadric> _quadrics;
   std::vector<bool> _boundary;
+  std::vector<bool> _fixed;
 
  public:
   // Embed positions and allocate space for quadrics
@@ -29,7 +30,8 @@ class Vertices : private Erasables {
       : Erasables(positions.size()),
         _positions(std::move(positions)),
         _quadrics(size()),
-        _boundary(size(), false) {}
+        _boundary(size(), false),
+        _fixed(size(), false) {}
 
   // Get/set position of a vertex
   const vec3d& position(idx v) const { return _positions[v]; }
@@ -43,7 +45,11 @@ class Vertices : private Erasables {
 
   // Get/set if a vertex is on boundary
   bool isBoundary(idx v) const { return _boundary[v]; }
-  void setBoundary(idx v, bool val) { _boundary[v] = val; }
+  void setBoundary(idx v, bool b) { _boundary[v] = b; }
+
+  // Get/set if a vertex is fixed
+  bool isFixed(idx v) const { return _fixed[v]; }
+  void setFixed(idx v, bool b) { _fixed[v] = b; }
 
   // Erase unreferenced vertices
   void eraseUnref(const Faces& faces) {
@@ -65,6 +71,7 @@ class Vertices : private Erasables {
     _positions.push_back(_positions[src]);
     _quadrics.push_back(_quadrics[src]);
     _boundary.push_back(_boundary[src]);
+    _fixed.push_back(_fixed[src]);
     return v;
   }
 
