@@ -107,7 +107,7 @@ class Edge : public Erasable {
   // public methods for update
   //
 
-  // Plane next collapse.
+  // Plan next collapse.
   // Will set
   //  - what is current sum of endpoints quadrics
   //  - which position to collapse into (center)
