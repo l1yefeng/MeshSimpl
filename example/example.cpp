@@ -45,7 +45,7 @@ int main(int argc, char* argv[]) {
       (option("--border-constraint") & number("constant", options.borderConstraint))
        % ("assign larger constant to make border more reluctant to shrink (default to " + to_string(options.borderConstraint) + ")"),
       (option("--aspect-ratio") & number("ratio", options.aspectRatioThreshold))
-       % ("faces with aspect ratio larger than 1/ratio won't be created; assign non-positive value to disable the checking (default to " + to_string(options.borderConstraint) + ")"),
+       % ("faces with aspect ratio larger than 1/ratio won't be created; assign non-positive value to disable the checking (default to " + to_string(options.aspectRatioThreshold) + ")"),
       (option("--fixed-vertices") & value("file", fixedVerticesFile))
        % "a file with a vertex number on each line, included vertices will be fixed during the simplification"
       // clang-format on
